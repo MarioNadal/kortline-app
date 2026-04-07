@@ -1,10 +1,9 @@
-const CACHE = "driveline-v1";
+const CACHE = "kortline-v1";
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
   "./manifest.json"
 ];
-
 // Install: cache key files
 self.addEventListener("install", function(event) {
   event.waitUntil(
@@ -14,7 +13,6 @@ self.addEventListener("install", function(event) {
   );
   self.skipWaiting();
 });
-
 // Activate: clean old caches
 self.addEventListener("activate", function(event) {
   event.waitUntil(
@@ -27,7 +25,6 @@ self.addEventListener("activate", function(event) {
   );
   self.clients.claim();
 });
-
 // Fetch: network first, fallback to cache
 self.addEventListener("fetch", function(event) {
   if (event.request.method !== "GET") return;
