@@ -1,7 +1,7 @@
 {
   "name": "CB Jaca",
   "short_name": "CB Jaca",
-  "description": "Gesti\u00f3n Club Baloncesto Jaca",
+  "description": "Gestión Club Baloncesto Jaca",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -11,15 +11,15 @@
   "categories": ["sports", "utilities"],
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='92' fill='%230d2244'/><text x='256' y='290' font-size='280' text-anchor='middle'>%F0%9F%8F%80</text></svg>",
+      "src": "./icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='35' fill='%230d2244'/><text x='96' y='112' font-size='106' text-anchor='middle'>%F0%9F%8F%80</text></svg>",
+      "src": "./icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     }
   ]
