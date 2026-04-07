@@ -91,7 +91,8 @@ No requiere servidor, base de datos ni configuración. Listo para usar.
 | Versión | Fecha | Descripción |
 |---|---|---|
 | v0.9 | Mar 2026 | App interna CB Jaca — pase de lista y asistencia |
-| v1.0 | Abr 2026 | Rebrand a Kortline, logos SVG v1, partidos, marcador en vivo, exportación PDF/Excel |
+| v1.0.0 | Abr 2026 | Rebrand a Kortline, logos SVG v1, partidos, marcador en vivo, exportación PDF/Excel |
+| v1.1.0 | Abr 2026 | Sistema de backup/restore: export JSON, import, recordatorio automático cada 7 días, compartir backup por WhatsApp/iCloud/Drive |
 
 ---
 
