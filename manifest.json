@@ -1,13 +1,13 @@
 {
   "id": "/cbjaca/",
-  "name": "CB Jaca",
-  "short_name": "CB Jaca",
-  "description": "Gestión Club Baloncesto Jaca",
+  "name": "Driveline",
+  "short_name": "Driveline",
+  "description": "Gestión deportiva Driveline Basketball",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#060c18",
-  "theme_color": "#060c18",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a",
   "orientation": "portrait",
   "categories": ["sports", "utilities"],
   "icons": [
