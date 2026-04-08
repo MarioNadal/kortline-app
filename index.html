@@ -612,7 +612,45 @@ function addTimeout(team){
   const who=team==="our"?(t?.name||"Nuestro equipo"):(m.rival||"Rival");
   const entry={pid:team==="our"?"team":"rival-to",action:"timeout",pts:0,q:m.live.q,clockAt:m.live.clockSec,desc:"T.M. — "+who};
   m.live.log=[...(m.live.log||[]),entry];
-  save();render();toast("⏱ T.M. — "+who);
+  // Parar el reloj y arrancar el minuto de T.M.
+  m.live.clockRunning=false;
+  clearInterval(_liveTimer);_liveTimer=null;
+  save();render();
+  _startTimeoutTimer(who);
+}
+let _tmTimer=null;
+function _startTimeoutTimer(teamName){
+  document.getElementById("tm-overlay")?.remove();
+  if(_tmTimer){clearInterval(_tmTimer);_tmTimer=null;}
+  let sec=60;
+  const el=document.createElement("div");
+  el.id="tm-overlay";
+  el.style.cssText="position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9995;width:calc(100% - 32px);max-width:398px;";
+  function _tmRender(){
+    el.innerHTML=`<div style="background:linear-gradient(135deg,rgba(13,34,68,.97),rgba(7,15,30,.97));border:2px solid rgba(245,158,11,.55);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 32px rgba(0,0,0,.7)">
+      <div style="width:52px;height:52px;border-radius:10px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+        <span id="tm-overlay-count" style="font-family:var(--font-d);font-weight:900;font-size:26px;color:#f59e0b;line-height:1">${sec}</span>
+        <span style="font-size:8px;color:var(--td);font-weight:700;letter-spacing:.5px">SEG</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:9px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#f59e0b;margin-bottom:2px">⏱ TIEMPO MUERTO</div>
+        <div style="font-weight:800;font-size:14px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(teamName)}</div>
+      </div>
+      <button onclick="clearInterval(_tmTimer);_tmTimer=null;document.getElementById('tm-overlay')?.remove();_clockAlert('▶ ¡Reanudamos!',1500)" style="background:rgba(245,158,11,.2);border:1px solid rgba(245,158,11,.4);border-radius:8px;padding:8px 14px;color:#f59e0b;font-weight:800;font-size:13px;cursor:pointer;flex-shrink:0">▶ Reanudar</button>
+    </div>`;
+  }
+  _tmRender();
+  document.body.appendChild(el);
+  _tmTimer=setInterval(()=>{
+    sec--;
+    const cnt=document.getElementById("tm-overlay-count");
+    if(cnt)cnt.textContent=sec;
+    if(sec<=0){
+      clearInterval(_tmTimer);_tmTimer=null;
+      el.remove();
+      _clockAlert("▶ ¡Fin del T.M.! Reanudamos",2000);
+    }
+  },1000);
 }
 const DAYSF=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const CATEGORIES=["Escuela","Benjamín","Alevín","Infantil","Cadete","Junior","Senior","3x3","Otro"];
@@ -680,7 +718,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.3",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.4",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1998,7 +2036,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.3.1 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.4.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -3284,42 +3322,87 @@ function liveGame(){
   const last=log.length>0?log[log.length-1]:null;
   const undoBtn=last?`<button onclick="undoLiveAction()" style="display:flex;align-items:center;gap:6px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--s2);cursor:pointer;color:var(--td);font-size:13px;font-weight:600;margin-bottom:10px">↩️ ${esc(last.desc)}</button>`:"";
 
-  // Log panel
-  const logEntries=(live.log||[]).slice().reverse();
-  const qlabelsShort=qlabels;
-  const logPanel=logEntries.length===0?"":`
-    <div style="margin-top:14px">
-      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:0;user-select:none">
-        <span style="font-size:14px">📋</span>
-        <span style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);flex:1">Historial de acciones</span>
-        <span style="font-size:12px;background:var(--s3);color:var(--td);border-radius:6px;padding:2px 8px;font-weight:700">${logEntries.length}</span>
-        <span style="font-size:11px;color:var(--tm)">▼</span>
-      </div>
-      <div style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
-        ${logEntries.map((e,ri)=>{
-          const realIdx=(live.log||[]).length-1-ri;
-          const pdata=convP.find(p=>p.id===e.pid);
-          const pname=e.pid==="rival"?"Rival":e.pid==="rival-to"?"Rival":e.pid==="team"?"Equipo":(pdata?pdata.name.split(" ")[0]:"?");
-          const pnum=e.pid==="rival"?"R":e.pid==="rival-to"?"R":e.pid==="team"?"T":(pdata?.number||"?");
-          const ac=_ACTCOLOR[e.action]||"var(--td)";
-          const al=_ACTLABELS[e.action]||e.action;
-          const ql=qlabelsShort[(e.q||1)-1]||"Q1";
-          const clockStr=e.clockAt!=null?_fmtClock(e.clockAt):"";
-          return`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:${ri%2===0?"var(--s2)":"var(--s)"}">
-            <span style="font-size:10px;font-weight:800;color:var(--tm);min-width:36px;line-height:1.3">${ql}<br><span style="font-size:9px;color:var(--tm);letter-spacing:.5px">${clockStr}</span></span>
-            <div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,${t.color},${t.color}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${pnum}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(pname)}</div>
-              <div style="font-size:11px;font-weight:700;color:${ac};margin-top:1px">${al}</div>
-            </div>
-            <button onclick="deleteLogEntry(${realIdx})" style="width:30px;height:30px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
-          </div>`;
-        }).join("")}
-        <div style="padding:8px 12px;text-align:center">
-          <button onclick="_confirm('¿Limpiar el historial de acciones?','🗑 Limpiar',()=>{const m=mById(S.teamId,S.matchId);if(m&&m.live)m.live.log=[];save();render();})" style="font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer">🗑 Limpiar historial</button>
+  // Log panel — agrupado por cuartos
+  const logPanel=(()=>{
+    const allLog=live.log||[];
+    if(allLog.length===0)return"";
+
+    // Agrupar por cuarto manteniendo índices reales
+    const byQ={};
+    allLog.forEach((e,realIdx)=>{
+      const q=e.q||1;
+      if(!byQ[q])byQ[q]=[];
+      byQ[q].push({e,realIdx});
+    });
+
+    // Cuartos ordenados descendente (actual primero)
+    const sortedQs=Object.keys(byQ).map(Number).sort((a,b)=>b-a);
+
+    const sections=sortedQs.map(q=>{
+      const items=byQ[q];                        // orden original (asc en tiempo)
+      const isCur=q===curQ;
+      const qLabel=qlabels[q-1]||("Q"+q);
+      const uid_q="log-q-"+q;
+
+      // Resumen: pts nuestros y del rival en este cuarto desde el log
+      let ourPts=0,rivPts=0;
+      items.forEach(({e})=>{
+        const isRivPid=!!(m.rivalPlayers||[]).find(p=>p.id===e.pid);
+        if(isRivPid||e.pid==="rival")rivPts+=e.pts||0;
+        else ourPts+=e.pts||0;
+      });
+      const ptsSummary=ourPts>0||rivPts>0
+        ?`<span style="font-size:10px;color:var(--td);margin-left:4px">${ourPts>0?`<span style="color:#22c55e">+${ourPts}</span>`:""}${rivPts>0?`<span style="color:#ef4444"> ${ourPts>0?"/ ":""}-${rivPts}</span>`:""}</span>`
+        :"";
+
+      // Filas — mostrar en orden inverso dentro de cada cuarto (más reciente arriba)
+      const rows=[...items].reverse().map(({e,realIdx},rowI)=>{
+        const isRivPid=!!(m.rivalPlayers||[]).find(p=>p.id===e.pid);
+        const pdata=convP.find(p=>p.id===e.pid);
+        const pname=e.pid==="rival"||e.pid==="rival-to"?"Rival":e.pid==="team"?"Equipo":(pdata?pdata.name.split(" ")[0]:"?");
+        const pnum=e.pid==="rival"||e.pid==="rival-to"?"R":e.pid==="team"?"T":(pdata?.number||"?");
+        const ac=_ACTCOLOR[e.action]||"var(--td)";
+        const al=_ACTLABELS[e.action]||e.action;
+        const clockStr=e.clockAt!=null?_fmtClock(e.clockAt):"";
+        const badgeColor=isRivPid?"#ef4444":t.color;
+        return`<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);background:${rowI%2===0?"var(--s2)":"var(--s)"}">
+          <span style="font-size:9px;font-weight:700;color:var(--tm);min-width:30px;line-height:1.3;text-align:right">${clockStr}</span>
+          <div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,${badgeColor},${badgeColor}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${pnum}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(pname)}</div>
+            <div style="font-size:11px;font-weight:700;color:${ac};margin-top:1px">${al}${e.pts>0?` <span style="color:${isRivPid?"#ef4444":"#22c55e"};font-size:10px">(+${e.pts})</span>`:""}</div>
+          </div>
+          <button onclick="deleteLogEntry(${realIdx})" style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
+        </div>`;
+      }).join("");
+
+      return`<div style="margin-bottom:4px">
+        <div onclick="var b=document.getElementById('${uid_q}');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.log-chevron').textContent=b.style.display==='none'?'▶':'▼'"
+          style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 12px;background:${isCur?"rgba(249,115,22,.1)":"var(--s2)"};border:1px solid ${isCur?"rgba(249,115,22,.3)":"var(--border)"};border-radius:${isCur?"9px 9px 0 0":"9px"};user-select:none">
+          <span style="font-family:var(--font-d);font-weight:900;font-size:13px;color:${isCur?"var(--orange)":"var(--td)"};">${qLabel}</span>
+          ${isCur?`<span style="font-size:8px;font-weight:800;background:rgba(249,115,22,.2);color:var(--orange);border-radius:4px;padding:1px 5px;letter-spacing:.5px">EN CURSO</span>`:""}
+          <span style="flex:1"></span>
+          ${ptsSummary}
+          <span style="font-size:10px;background:var(--s3);color:var(--td);border-radius:5px;padding:1px 7px;font-weight:700;margin-left:4px">${items.length}</span>
+          <span class="log-chevron" style="font-size:10px;color:var(--tm);margin-left:2px">${isCur?"▼":"▶"}</span>
         </div>
+        <div id="${uid_q}" style="display:${isCur?"block":"none"};border:1px solid ${isCur?"rgba(249,115,22,.2)":"var(--border)"};border-top:none;border-radius:0 0 9px 9px;overflow:hidden">
+          ${rows}
+        </div>
+      </div>`;
+    }).join("");
+
+    return`<div style="margin-top:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">📋 Historial de acciones</span>
+        <span style="font-size:11px;background:var(--s3);color:var(--td);border-radius:6px;padding:1px 7px;font-weight:700">${allLog.length}</span>
+      </div>
+      ${sections}
+      <div style="padding:8px 0;text-align:center">
+        <button onclick="_confirm('¿Limpiar el historial de acciones?','🗑 Limpiar',()=>{const m=mById(S.teamId,S.matchId);if(m&&m.live)m.live.log=[];save();render();})" style="font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer">🗑 Limpiar historial</button>
       </div>
     </div>`;
+  })();
 
   // Stats table
   function totSt(fn){return convP.reduce((s,p)=>s+(fn(live.stats[p.id]||{})||0),0);}
@@ -3601,7 +3684,7 @@ function liveGame(){
     <!-- Stats -->
     ${rivalEnabled?`
     <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px">
-      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">Nuestro equipo</button>
+      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">${esc(t.name.length>14?t.name.slice(0,13)+'…':t.name)}</button>
       <button onclick="setStatsView('rival')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${live.statsView==='rival'?'#ef4444':'transparent'};color:${live.statsView==='rival'?'white':'var(--td)'}">${esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+'…':m.rival||'Rival')}</button>
     </div>`:""}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -4225,11 +4308,10 @@ function openLandscapeStats(){
   const convP=conv.length>0?players.filter(p=>conv.includes(p.id)):players;
   const onCourt=live.onCourt||[];
   const rivalEnabled=(m.rivalStatsEnabled||(m.rivalPlayers||[]).length>0)&&(m.rivalPlayers||[]).length>0;
-  // Request landscape
   requestLandscape();
 
-  function totSt(fn){return convP.reduce((s,p)=>s+(fn(live.stats?.[p.id]||{})||0),0);}
-  function totRiv(fn){return (m.rivalPlayers||[]).reduce((s,p)=>s+(fn(live.rivalStats?.[p.id]||{})||0),0);}
+  // Totals helpers — each takes its own player list
+  function sumSt(plist, statsObj, fn){return plist.reduce((s,p)=>s+(fn(statsObj[p.id]||{})||0),0);}
 
   function buildTable(plist, statsObj, isRival){
     const accentColor=isRival?"#ef4444":(t?.color||"var(--orange)");
@@ -4252,7 +4334,27 @@ function openLandscapeStats(){
       </tr>`;
     }).join("");
 
-    const totPts=totSt?.(s=>(s.p1m||0)+(s.p2m||0)*2+(s.p3m||0)*3)||0;
+    // ── Fila de totales (usa su propia lista)
+    const s=fn=>sumSt(plist,statsObj,fn);
+    const tPts=s(x=>(x.p1m||0)+(x.p2m||0)*2+(x.p3m||0)*3);
+    const t2m=s(x=>x.p2m||0),t2a2=s(x=>(x.p2m||0)+(x.p2a||0));
+    const t3m=s(x=>x.p3m||0),t3a2=s(x=>(x.p3m||0)+(x.p3a||0));
+    const t1m=s(x=>x.p1m||0),t1a2=s(x=>(x.p1m||0)+(x.p1a||0));
+    const totRow=`<tr class="totrow">
+      <td colspan="2" style="color:var(--td);font-size:9px;font-weight:700;padding:5px 8px;position:sticky;left:0;background:var(--s2)">${isRival?esc((m.rival||"Rival").slice(0,8)):esc((t?.name||"Equipo").split(" ")[0])}</td>
+      <td style="font-family:var(--font-d);font-weight:900;font-size:14px;color:${accentColor}">${tPts}</td>
+      <td style="color:var(--td)">${t2m}/${t2a2}</td>
+      <td style="color:var(--td)">${t3m}/${t3a2}</td>
+      <td style="color:var(--td)">${t1m}/${t1a2}</td>
+      <td style="color:var(--td)">${s(x=>x.ro||0)}</td>
+      <td style="color:var(--td)">${s(x=>x.rd||0)}</td>
+      <td style="color:var(--td)">${s(x=>x.ast||0)}</td>
+      <td style="color:var(--td)">${s(x=>x.foul||0)}</td>
+      <td style="color:var(--td)">${s(x=>x.stl||0)}</td>
+      <td style="color:var(--td)">${s(x=>x.blk||0)}</td>
+      <td style="color:var(--td)">${s(x=>x.to||0)}</td>
+    </tr>`;
+
     return `<div style="overflow-x:auto;border-radius:10px;border:1px solid ${isRival?"rgba(239,68,68,.3)":"var(--border)"}">
       <table class="stats-table" style="font-size:10px">
         <thead><tr style="background:var(--s2)">
@@ -4261,7 +4363,7 @@ function openLandscapeStats(){
           <th style="color:${accentColor}">PTS</th>
           <th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>
         </tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${rows}${totRow}</tbody>
       </table>
     </div>`;
   }
@@ -4275,23 +4377,44 @@ function openLandscapeStats(){
 
   // Score summary
   const nQ=m.quarters||4;const pL=nQ===4?"Q":"P";const curQ=live.q||1;
+  const otC=live.otCount||0;
+  const otLabels=otC===1?["OT"]:Array.from({length:otC},(_,i)=>"OT"+(i+1));
+  const qlbls=[...[...Array(nQ).keys()].map(i=>pL+(i+1)),...otLabels];
+  const curLabel=qlbls[curQ-1]||pL+curQ;
   const allQS=(live.qScores||[[0,0]]).map(s=>s||[0,0]);
   const totOur=allQS.reduce((a,r)=>a+(r[0]||0),0);
   const totRiv2=allQS.reduce((a,r)=>a+(r[1]||0),0);
+  const diff=totOur-totRiv2;
+  const diffColor=diff>0?"#22c55e":diff<0?"#ef4444":"#f59e0b";
+  const tc=t?.color||"var(--orange)";
+
+  // Per-quarter pills
+  const qPills=allQS.slice(0,nQ+otC).map((qs,i)=>{
+    if(!qs[0]&&!qs[1])return"";
+    const lbl=qlbls[i]||"OT";
+    const win=qs[0]>qs[1],lose=qs[0]<qs[1];
+    return`<span style="font-size:9px;font-weight:700;background:${win?"rgba(34,197,94,.15)":lose?"rgba(239,68,68,.12)":"rgba(245,158,11,.12)"};color:${win?"#22c55e":lose?"#ef4444":"#f59e0b"};border-radius:5px;padding:2px 5px">${lbl} ${qs[0]}–${qs[1]}</span>`;
+  }).filter(Boolean).join(" ");
 
   el.innerHTML=`
-  <div style="background:var(--s);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0">
-    <button onclick="closeLandscapeStats()" style="width:36px;height:36px;border-radius:8px;background:var(--s2);border:1px solid var(--border);color:var(--tx);cursor:pointer;font-size:18px;flex-shrink:0">←</button>
-    <div style="flex:1">
-      <div style="font-family:var(--font-d);font-weight:900;font-size:16px">${esc(t?.name||"")} <span style="color:var(--td);font-weight:400">vs</span> ${esc(m.rival||"Rival")}</div>
-      <div style="font-size:11px;color:var(--td)">${pL}${curQ} · ${totOur} – ${totRiv2}</div>
+  <div style="background:var(--s);border-bottom:1px solid var(--border);padding:6px max(14px,env(safe-area-inset-right)) 6px max(14px,env(safe-area-inset-left));display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <button onclick="closeLandscapeStats()" style="width:34px;height:34px;border-radius:8px;background:var(--s2);border:1px solid var(--border);color:var(--tx);cursor:pointer;font-size:16px;flex-shrink:0">←</button>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-family:var(--font-d);font-weight:900;font-size:22px;color:${tc}">${totOur}</span>
+        <span style="font-family:var(--font-d);font-weight:900;font-size:16px;color:var(--tm)">:</span>
+        <span style="font-family:var(--font-d);font-weight:900;font-size:22px;color:var(--tx)">${totRiv2}</span>
+        <span style="font-size:11px;font-weight:800;background:${diffColor}22;color:${diffColor};border:1px solid ${diffColor}44;border-radius:5px;padding:2px 6px">${diff>0?"+"+diff:String(diff)}</span>
+        <span style="font-size:10px;font-weight:700;color:var(--td)">${curLabel}</span>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:2px">${qPills||`<span style="font-size:10px;color:var(--tm)">${esc(t?.name||"")} vs ${esc(m.rival||"Rival")}</span>`}</div>
     </div>
-    ${rivalEnabled?`<div style="display:flex;gap:4px">
-      <button id="ls-tab-our" onclick="lsTab('our')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${(live.statsView||'our')==='our'?(t?.color||'var(--orange)'):'var(--s2)'};color:${(live.statsView||'our')==='our'?'white':'var(--td)'}">${(t?.name||"Nuestro").split(" ")[0]}</button>
-      <button id="ls-tab-riv" onclick="lsTab('rival')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${live.statsView==='rival'?'#ef4444':'var(--s2)'};color:${live.statsView==='rival'?'white':'var(--td)'}">${(m.rival||"Rival").length>10?m.rival.slice(0,8)+"…":m.rival||"Rival"}</button>
+    ${rivalEnabled?`<div style="display:flex;gap:4px;flex-shrink:0">
+      <button id="ls-tab-our" onclick="lsTab('our')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:11px;cursor:pointer;background:${(live.statsView||'our')==='our'?(t?.color||'var(--orange)'):'var(--s2)'};color:${(live.statsView||'our')==='our'?'white':'var(--td)'}">${esc((t?.name||"Nuestro").split(" ")[0])}</button>
+      <button id="ls-tab-riv" onclick="lsTab('rival')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:11px;cursor:pointer;background:${live.statsView==='rival'?'#ef4444':'var(--s2)'};color:${live.statsView==='rival'?'white':'var(--td)'}">${esc((m.rival||"Rival").length>10?m.rival.slice(0,8)+"…":m.rival||"Rival")}</button>
     </div>`:""}
   </div>
-  <div id="ls-table-wrap" style="flex:1;overflow:auto;padding:10px 8px">
+  <div id="ls-table-wrap" style="flex:1;overflow:auto;padding:8px max(8px,env(safe-area-inset-right)) 8px max(8px,env(safe-area-inset-left))">
     <div id="ls-our">${ourTable}</div>
     ${rivalEnabled?`<div id="ls-riv" style="display:none">${rivTable}</div>`:""}
   </div>`;

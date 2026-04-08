@@ -36,16 +36,25 @@ Generación automática de resúmenes para compartir — versión padres (quién
 Gestión del calendario de partidos por equipo. Registro de resultados con marcador por cuartos. El resultado (Victoria/Derrota/Empate) y el marcador se actualizan en tiempo real mientras se introducen las puntuaciones — sin necesidad de guardar manualmente.
 
 ### 🔴 Marcador en vivo
-Pantalla de marcador con reloj de juego, control de periodos, tiempos muertos y registro en tiempo real de estadísticas individuales.
+Pantalla de marcador con reloj de juego, control de periodos, estadísticas individuales en tiempo real y seguimiento completo del partido.
+
+### ⏱️ Tiempo muerto con cuenta atrás
+Al registrar un tiempo muerto, el reloj se detiene automáticamente y aparece un contador de **60 segundos** con el nombre del equipo que lo pide. Botón "▶ Reanudar" para adelantar el minuto. El overlay es visible incluso en pantalla completa de estadísticas.
 
 ### ⏱️ Prórroga (OT)
-Al terminar el último cuarto en empate, la app detecta la situación automáticamente y ofrece activar la prórroga. Soporte para OT1, OT2, OT3... Las pestañas de OT solo aparecen si realmente se juegan. Desde el detalle del partido también se puede añadir prórroga manualmente para partidos introducidos a mano.
+Al terminar el último cuarto en empate, la app detecta la situación automáticamente y ofrece activar la prórroga. Soporte para OT1, OT2, OT3... Las pestañas de OT solo aparecen si realmente se juegan.
+
+### 📋 Historial de acciones por cuarto
+El historial del partido en vivo agrupa las acciones por cuarto con secciones desplegables. El cuarto en curso aparece abierto por defecto; los anteriores aparecen cerrados mostrando un resumen (`+8 pts / -5`). Cada acción muestra dorsal, nombre, tipo y puntos.
+
+### 📊 Estadísticas en pantalla completa
+Tabla de estadísticas landscape con fila de totales para ambos equipos, marcador prominente con diferencia, desglose de parciales por cuarto y soporte de safe-area para iPhone con muesca en horizontal.
 
 ### 📊 Compartir resultado de partido
-Desde el detalle del partido y desde el marcador en vivo, comparte el resultado por WhatsApp con marcador, diferencia (+/−), desglose por cuartos y lema del club. Si el partido está en vivo, muestra el cuarto actual y el tiempo restante.
+Desde el detalle del partido y desde el marcador en vivo, comparte el resultado por WhatsApp con marcador, diferencia (+/−), desglose por cuartos y lema del club.
 
 ### 📅 Eventos y Convocatorias
-Gestión de eventos por equipo: partidos, tecnificaciones o cualquier otro tipo de convocatoria. Selección de jugadores con sugerencia automática basada en el porcentaje de asistencia. Genera un mensaje listo para compartir por WhatsApp con los datos del evento y el lema personalizado del club.
+Gestión de eventos por equipo: partidos, tecnificaciones o cualquier otro tipo de convocatoria. Selección de jugadores con sugerencia automática basada en el porcentaje de asistencia.
 
 ### 📤 Exportación
 Exporta los datos a **PDF** (jsPDF + autotable) o **Excel** (SheetJS/XLSX).
@@ -71,11 +80,11 @@ Exporta los datos a **PDF** (jsPDF + autotable) o **Excel** (SheetJS/XLSX).
 
 ```
 kortline/
-├── index.html          ← App completa (single-file PWA)
-├── manifest.json       ← Configuración PWA
-├── sw.js               ← Service Worker (caché offline)
+├── index.html                    ← App completa (single-file PWA)
+├── manifest.json                 ← Configuración PWA
+├── sw.js                         ← Service Worker (caché offline)
 ├── README.md
-├── MANUAL.md           ← Manual de usuario
+├── MANUAL_USUARIO_KORTLINE.md    ← Manual de usuario
 └── assets/
     └── logos/
         ├── logo-icon.svg
@@ -103,7 +112,20 @@ kortline/
 | v1.1.0 | Abr 2026 | Sistema de backup/restore: export JSON, import, recordatorio automático, compartir backup |
 | v1.2.0 | Abr 2026 | Eventos y convocatorias por WhatsApp, sugerencia automática por asistencia, configuración de abreviatura y lema del club |
 | v1.3.0 | Abr 2026 | Compartir resultado de partido con marcador en vivo, OT dinámica detectada automáticamente por empate |
-| v1.3.1 | Abr 2026 | Correcciones y mejoras UX: marcador y badge actualizan en tiempo real, auto-guardado al salir del campo, OT solo visible si fue necesaria, etiquetas OT1/OT2 correctas, grid dinámico de cuartos, botón quitar OT, sincronización bidireccional live↔manual, múltiples guards contra errores en qScores |
+| v1.3.1 | Abr 2026 | Correcciones UX: marcador y badge en tiempo real, auto-guardado, OT solo visible si necesaria, sincronización bidireccional live↔manual |
+| v1.4.0 | Abr 2026 | T.M. con cuenta atrás de 60s, historial de acciones agrupado por cuartos, pantalla completa de stats mejorada (totales, parciales, safe-area), nombre del equipo en toggle de stats |
+
+---
+
+## Bugs conocidos resueltos en v1.4.0
+
+| # | Descripción | Versión detectada | Fix |
+|---|---|---|---|
+| B-01 | T.M. no paraba el reloj ni mostraba cuenta atrás | v1.3.1 | `addTimeout()` para reloj + overlay 60s |
+| B-02 | "Nuestro equipo" hardcodeado en toggle de stats del marcador en vivo | v1.3.1 | Sustituido por `t.name` |
+| B-03 | Overlay de T.M. quedaba tapado por pantalla completa de stats (z-index igual) | v1.3.1 | T.M. z-index 9990 → 9995 |
+| B-04 | Pantalla completa de stats sin fila de totales (variable `totPts` calculada pero no renderizada) | v1.0.0 | Añadida fila `totrow` en ambas tablas |
+| B-05 | Totales de la tabla del rival usaban el reductor del equipo local (`totSt`) | v1.0.0 | Refactorizado a `sumSt(plist, statsObj, fn)` |
 
 ---
 

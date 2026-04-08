@@ -1,6 +1,6 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.3.1**  
+**Versión 1.4.0**  
 *Kortline — De la Pista al Dato*
 
 ---
@@ -110,7 +110,7 @@ Botón **📤** junto al marcador. Genera un mensaje con resultado, marcador, di
 ## Marcador en vivo
 
 ### Iniciar seguimiento
-Equipo → Partidos → partido → **🔴 Iniciar en Vivo** (o **Continuar en vivo** si ya había empezado).
+Equipo → Partidos → partido → **▶ Empezar partido** (o **🔴 Continuar partido** si ya había empezado).
 
 ### Registrar acciones
 1. **Toca un jugador** en la cuadrícula "En Pista"
@@ -122,6 +122,16 @@ Si no tienes estadísticas del rival activadas, usa los botones **+** y **−** 
 ### Reloj
 El reloj cuenta hacia atrás (tiempo que queda). Toca el tiempo para editarlo manualmente. Botón **▶/⏸** para iniciar/pausar, **↺** para resetear.
 
+### Tiempo muerto
+Pulsa el botón **T.M** (esquina superior derecha del reloj) y selecciona qué equipo lo pide. Al confirmar:
+- El **reloj se detiene automáticamente**
+- Aparece un **contador de 60 segundos** en la parte inferior con el nombre del equipo
+- Pulsa **▶ Reanudar** para terminar el tiempo muerto antes de que acabe el minuto
+- Al llegar a 0 se cierra solo con un aviso "¡Fin del T.M.! Reanudamos"
+- El overlay es visible incluso desde la pantalla completa de estadísticas
+
+Los puntos del contador en el marcador muestran cuántos T.M. ha usado cada equipo en esa mitad (máximo 2 en la primera, 3 en la segunda).
+
 ### Prórroga automática
 Al llegar a 0 el reloj del último cuarto **en empate**, aparece automáticamente:
 
@@ -132,15 +142,28 @@ Fin del Q4  ·  47 — 47
 [ 🏀 Jugar OT ]  [ 🏁 Finalizar partido ]
 ```
 
-Pulsa **Jugar OT** para activar 5 minutos de prórroga. Las pestañas Q1-Q4 no se tocan, se añade una nueva OT. Si esa OT también termina en empate, se ofrece OT2, y así sucesivamente.
+Pulsa **Jugar OT** para activar 5 minutos de prórroga. Las pestañas Q1–Q4 no se tocan, se añade una nueva pestaña OT. Si esa OT también termina en empate, se ofrece OT2, y así sucesivamente.
 
 Si necesitas activar la prórroga manualmente (sin que el reloj haya llegado a 0), pulsa **✏️** junto al periodo activo y aparecerá un botón de activación si hay empate.
+
+### Historial de acciones por cuarto
+El historial del partido se encuentra al final de la pantalla, agrupado por cuartos:
+- El **cuarto en curso** aparece abierto y con borde naranja y etiqueta **EN CURSO**
+- Los **cuartos anteriores** aparecen cerrados, mostrando en el encabezado el resumen de puntos (`+8 pts 🟢 / -5 🔴`) y el número de acciones
+- Pulsa cualquier encabezado para expandir o colapsar ese cuarto
+- Las acciones muestran reloj, dorsal, nombre, tipo y puntos anotados
+- El botón **✕** de cada fila elimina esa acción y descuenta los puntos del cuarto correspondiente
+- El botón **↩️** (encima de los botones de acción) deshace la última acción registrada
 
 ### Compartir marcador en vivo
 Botón **📤** (verde) en el header. Genera el mensaje con cuarto actual y tiempo restante: `🔴 EN VIVO · Q3 · 04:23`.
 
 ### Estadísticas en pantalla completa
-Gira el móvil o pulsa **📊 Pantalla completa** para ver la tabla de estadísticas en landscape.
+Gira el móvil o pulsa **📊 Pantalla completa** para ver la tabla de estadísticas en landscape. La vista incluye:
+- **Marcador grande** con diferencia de puntos en color (verde/rojo)
+- **Parciales por cuarto** (`Q1 8–6 ✅ · Q2 7–9 ❌ · ...`)
+- **Tabla completa** con fila de totales para ambos equipos
+- Soporte de muesca (safe-area) en iPhones en horizontal
 
 ### Finalizar partido
 Botón **🏁** en el header → confirma el resultado. El partido pasa a "finalizado".
@@ -204,4 +227,4 @@ Sí, sin límite. Cada equipo tiene su plantilla, historial y configuración ind
 
 ---
 
-*Kortline v1.3.1 · Mario Nadal Ara · github.com/MarioNadal*
+*Kortline v1.4.0 · Mario Nadal Ara · github.com/MarioNadal*
