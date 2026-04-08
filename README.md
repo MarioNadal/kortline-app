@@ -33,13 +33,19 @@ Listado completo de sesiones registradas con filtros por mes. Acceso directo a e
 Generación automática de resúmenes para compartir — versión padres (quién ha venido) y versión interna (datos completos).
 
 ### 🏟️ Partidos
-Gestión del calendario de partidos por equipo. Registro de resultados y detalle de cada encuentro.
+Gestión del calendario de partidos por equipo. Registro de resultados con marcador por cuartos. El resultado (Victoria/Derrota/Empate) y el marcador se actualizan en tiempo real mientras se introducen las puntuaciones — sin necesidad de guardar manualmente.
 
 ### 🔴 Marcador en vivo
-Pantalla de marcador con reloj de juego, control de períodos, tiempos muertos y registro en tiempo real.
+Pantalla de marcador con reloj de juego, control de periodos, tiempos muertos y registro en tiempo real de estadísticas individuales.
 
-### 📅 Eventos y Convocatorias *(nuevo en v1.2.0)*
-Gestión de eventos por equipo: partidos, tecnificaciones o cualquier otro tipo de convocatoria. Selección de jugadores convocados con sugerencia automática basada en el porcentaje de asistencia. Genera un mensaje listo para compartir por WhatsApp con los datos del evento y el lema personalizado del club.
+### ⏱️ Prórroga (OT)
+Al terminar el último cuarto en empate, la app detecta la situación automáticamente y ofrece activar la prórroga. Soporte para OT1, OT2, OT3... Las pestañas de OT solo aparecen si realmente se juegan. Desde el detalle del partido también se puede añadir prórroga manualmente para partidos introducidos a mano.
+
+### 📊 Compartir resultado de partido
+Desde el detalle del partido y desde el marcador en vivo, comparte el resultado por WhatsApp con marcador, diferencia (+/−), desglose por cuartos y lema del club. Si el partido está en vivo, muestra el cuarto actual y el tiempo restante.
+
+### 📅 Eventos y Convocatorias
+Gestión de eventos por equipo: partidos, tecnificaciones o cualquier otro tipo de convocatoria. Selección de jugadores con sugerencia automática basada en el porcentaje de asistencia. Genera un mensaje listo para compartir por WhatsApp con los datos del evento y el lema personalizado del club.
 
 ### 📤 Exportación
 Exporta los datos a **PDF** (jsPDF + autotable) o **Excel** (SheetJS/XLSX).
@@ -69,10 +75,11 @@ kortline/
 ├── manifest.json       ← Configuración PWA
 ├── sw.js               ← Service Worker (caché offline)
 ├── README.md
+├── MANUAL.md           ← Manual de usuario
 └── assets/
     └── logos/
-        ├── logo-icon.svg   ← Icono 512×512 (tablero + aro + balón)
-        └── logo-full.svg   ← Logo horizontal con texto KORTLINE
+        ├── logo-icon.svg
+        └── logo-full.svg
 ```
 
 ---
@@ -85,8 +92,6 @@ kortline/
 
 **En móvil:** "Añadir a pantalla de inicio" para instalar como app nativa.
 
-No requiere servidor, base de datos ni configuración. Listo para usar.
-
 ---
 
 ## Historial de versiones
@@ -95,8 +100,10 @@ No requiere servidor, base de datos ni configuración. Listo para usar.
 |---|---|---|
 | v0.9 | Mar 2026 | App interna CB Jaca — pase de lista y asistencia |
 | v1.0.0 | Abr 2026 | Rebrand a Kortline, logos SVG v1, partidos, marcador en vivo, exportación PDF/Excel |
-| v1.1.0 | Abr 2026 | Sistema de backup/restore: export JSON, import, recordatorio automático cada 7 días, compartir backup por WhatsApp/iCloud/Drive |
-| v1.2.0 | Abr 2026 | Eventos y convocatorias por WhatsApp: partidos, tecnificaciones y otros. Sugerencia automática por asistencia. Configuración de abreviatura y lema del club. |
+| v1.1.0 | Abr 2026 | Sistema de backup/restore: export JSON, import, recordatorio automático, compartir backup |
+| v1.2.0 | Abr 2026 | Eventos y convocatorias por WhatsApp, sugerencia automática por asistencia, configuración de abreviatura y lema del club |
+| v1.3.0 | Abr 2026 | Compartir resultado de partido con marcador en vivo, OT dinámica detectada automáticamente por empate |
+| v1.3.1 | Abr 2026 | Correcciones y mejoras UX: marcador y badge actualizan en tiempo real, auto-guardado al salir del campo, OT solo visible si fue necesaria, etiquetas OT1/OT2 correctas, grid dinámico de cuartos, botón quitar OT, sincronización bidireccional live↔manual, múltiples guards contra errores en qScores |
 
 ---
 

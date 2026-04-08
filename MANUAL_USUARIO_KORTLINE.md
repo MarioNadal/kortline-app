@@ -1,175 +1,207 @@
 # Kortline — Manual de Usuario
-**Versión 1.1.0**  
-*De la Pista al Dato*
 
----
-
-## Instalación
-
-Kortline no requiere instalación desde ninguna tienda de aplicaciones. Abre el enlace en tu navegador y ya puedes usarla.
-
-**Para instalarla como app en el móvil (recomendado):**
-
-- **iPhone (Safari):** Pulsa el botón de compartir ↑ → "Añadir a pantalla de inicio"
-- **Android (Chrome):** Pulsa los 3 puntos ⋮ → "Añadir a pantalla de inicio" o "Instalar aplicación"
-
-Una vez instalada aparecerá como cualquier otra app y se abrirá en pantalla completa.
+**Versión 1.3.1**  
+*Kortline — De la Pista al Dato*
 
 ---
 
 ## Primeros pasos
 
-### Crear un equipo
+### Instalación como app
+Kortline funciona desde el navegador, pero puedes instalarla como app nativa:
+- **iOS (Safari):** Compartir → Añadir a pantalla de inicio
+- **Android (Chrome):** Menú ⋮ → Añadir a pantalla de inicio
 
-1. Ve a **Equipos** (icono 👥 en la barra inferior)
-2. Pulsa **+ Nuevo equipo**
-3. Escribe el nombre del equipo
-4. Marca los días de entrenamiento y la hora de cada día
-5. Pulsa **Guardar**
+### Configuración inicial del club
+Antes de empezar, pulsa el **logo** en la esquina superior izquierda:
+
+- **Nombre del club** — aparece en mensajes y encabezados
+- **Abreviatura** — versión corta para los mensajes WhatsApp (ej. `CB JACA`)
+- **Lema / cierre** — texto opcional al final de todas las convocatorias (ej. `¡Vamos FamiliaCBJaca! 🏀`). Si se deja vacío no aparece nada.
+- **Logo** — imagen personalizada del club
+
+---
+
+## Gestión de equipos
+
+### Crear un equipo
+Pantalla **Equipos** → **＋**. Configura nombre, categoría, entrenador/es, días y horarios, y color identificativo.
 
 ### Añadir jugadores
-
-1. Entra en el equipo que acabas de crear
-2. Pulsa **+ Jugador**
-3. Escribe el nombre y pulsa **Guardar**
-4. Repite para cada jugador
+Dentro del equipo → sección **Plantilla** → **＋ Añadir**. Cada jugador tiene nombre, dorsal, posición y notas opcionales.
 
 ---
 
-## Pasar lista
+## Pase de lista
 
-1. Desde **Hoy** (pantalla de inicio) pulsa **📋 Pasar lista** en el equipo correspondiente
-2. Pulsa el nombre de cada jugador para marcar su estado:
-   - ⬜ Sin marcar → ✅ Presente → ❌ Ausente → ↩️ vuelve a sin marcar
-3. Para marcar una ausencia justificada: pulsa el icono de nota junto al jugador ausente, selecciona el motivo y añade una nota si quieres
-4. Una vez terminada la lista pulsa **Guardar**
+### Pasar lista hoy
+Desde **Hoy** → **📋 Pasar lista** en el equipo correspondiente.
 
-**Opciones adicionales al pasar lista:**
-- 📷 **Foto** — adjunta una foto de la sesión
-- ⭐ **Valoración colectiva** — puntúa del 1 al 10 cómo ha entrenado el equipo
-- 👤 **Valoración individual** — puntúa a cada jugador presente
+### Estados de asistencia
+Toca el botón derecho de cada jugador para ciclar entre:
+- ✓ **Presente** · ✗ **Ausente** · ⏱ **Tarde** · ◎ **Justificado**
 
----
+Para justificados, pulsa `+ Motivo` para añadir la razón (enfermedad, lesión, examen, etc.).
 
-## Compartir resumen por WhatsApp
-
-Después de pasar lista, pulsa el botón verde 📤 junto al equipo en la pantalla **Hoy**, o entra en la sesión desde el **Historial**.
-
-Hay dos formatos de resumen:
-- **Versión padres** — quién ha venido y quién no, sin más detalle
-- **Versión interna** — datos completos con notas, valoraciones y estadísticas
+### Funciones opcionales (activar en ⚙️ Ajustes)
+- ⭐ Valoración colectiva del entrenamiento (1–10)
+- 👤 Valoración individual por jugador
+- 📋 Campo de ejercicios del día
+- 📷 Foto de la sesión
 
 ---
 
 ## Estadísticas
 
-Entra en un equipo y pulsa **📊 Estadísticas**.
+### Vista tabla
+Muestra el % de asistencia de cada jugador con semáforo:
+- 🟢 ≥90% · 🟡 ≥umbral FEB · 🔴 <umbral (riesgo)
 
-Puedes ver los datos en dos vistas:
-- **Tabla** — todos los jugadores con su % de asistencia, partidos jugados, rachas y estado de riesgo FEB
-- **Gráficas** — evolución de la asistencia en el tiempo
+El umbral FEB es configurable en ⚙️ Ajustes (por defecto 75%).
 
-**Riesgo FEB:** los jugadores por debajo del umbral configurado (por defecto 75%) aparecen marcados en rojo. La FEB exige un mínimo del 75% de asistencia para poder competir.
+También detecta **rachas de ausencias consecutivas** y **valoración media** si está activada.
+
+### Vista gráfica
+Accede desde el botón 📊 del equipo. Incluye tendencia de asistencia, barras por jugador, distribución y evolución mensual.
 
 ---
 
-## Historial
+## Compartir por WhatsApp
 
-Muestra todas las sesiones registradas ordenadas por fecha. Puedes filtrar por mes.
+### Asistencia del día
+Desde el pase de lista → botón **📤** (esquina superior derecha). Genera dos versiones:
+- **Para padres/grupo** — solo nombres y asistencia
+- **Uso interno** — con motivos de justificación, notas y valoraciones
 
-Desde cada sesión puedes:
-- Ver el detalle completo de quién estuvo
-- Editar la lista si cometiste un error
-- Compartir el resumen por WhatsApp
+### Resumen semanal
+Disponible en la misma pantalla, con los últimos 7 entrenamientos.
 
 ---
 
 ## Partidos
 
-Desde la pantalla de un equipo pulsa **🏟️ Partidos**.
+### Crear un partido
+Equipo → **🏟️ PARTIDOS** → **＋**. Configura rival, fecha, hora, lugar, formato de cuartos y opciones de estadísticas.
 
-- **Añadir partido** — fecha, rival, localización y hora
-- **Empezar partido** — abre el marcador en vivo
-- **Ver detalle** — resultado y datos del partido
+### Introducir marcador
+En el detalle del partido aparece la cuadrícula de cuartos. Al escribir cualquier puntuación:
+- El **marcador total** se actualiza instantáneamente
+- El **badge de resultado** (🏆 Victoria / ❌ Derrota / 🤝 Empate) se actualiza al momento
+- El guardado se produce **automáticamente** al saltar al siguiente campo — no hay botón de guardar
 
-### Marcador en vivo
+### Prórroga manual
+Si el partido termina en empate y no usaste el seguimiento en vivo, pulsa **＋ Añadir prórroga** debajo de la cuadrícula. Se añade la columna OT. Si necesitas OT2 o OT3, vuelve a pulsarlo. Para quitar una OT añadida por error, pulsa la **✕** que aparece en la esquina de la última OT.
 
-El marcador incluye:
-- Reloj de juego con control de períodos
-- Marcador para ambos equipos
-- Registro de tiempos muertos
+**Etiquetas:**
+- 1 prórroga → `OT`
+- 2 prórrogas → `OT1`, `OT2`
+- 3 prórrogas → `OT1`, `OT2`, `OT3`
+
+### Convocatoria
+En el detalle del partido → sección **👥 Convocatoria** → **✏️ Editar** para seleccionar convocados, titulares y capitán. Máximo 12 convocados (FIBA).
+
+**Compartir convocatoria:** botón **📤 Lista** junto a la sección de convocatoria.
+
+### Compartir resultado
+Botón **📤** junto al marcador. Genera un mensaje con resultado, marcador, diferencia (+/− pts) y desglose por cuartos.
 
 ---
 
-## Exportación de datos
+## Marcador en vivo
 
-Desde la pantalla de un equipo puedes exportar los datos a:
-- **PDF** — informe de asistencia listo para imprimir o enviar
-- **Excel** — hoja de cálculo con todos los datos del equipo
+### Iniciar seguimiento
+Equipo → Partidos → partido → **🔴 Iniciar en Vivo** (o **Continuar en vivo** si ya había empezado).
+
+### Registrar acciones
+1. **Toca un jugador** en la cuadrícula "En Pista"
+2. Pulsa la acción: +2, +3, +1 TL, fallos, rebotes, asistencias, robos, tapones, faltas...
+
+### Marcador del rival
+Si no tienes estadísticas del rival activadas, usa los botones **+** y **−** bajo el marcador rival.
+
+### Reloj
+El reloj cuenta hacia atrás (tiempo que queda). Toca el tiempo para editarlo manualmente. Botón **▶/⏸** para iniciar/pausar, **↺** para resetear.
+
+### Prórroga automática
+Al llegar a 0 el reloj del último cuarto **en empate**, aparece automáticamente:
+
+```
+🤝 ¡EMPATE!
+Fin del Q4  ·  47 — 47
+¿Se juega prórroga?
+[ 🏀 Jugar OT ]  [ 🏁 Finalizar partido ]
+```
+
+Pulsa **Jugar OT** para activar 5 minutos de prórroga. Las pestañas Q1-Q4 no se tocan, se añade una nueva OT. Si esa OT también termina en empate, se ofrece OT2, y así sucesivamente.
+
+Si necesitas activar la prórroga manualmente (sin que el reloj haya llegado a 0), pulsa **✏️** junto al periodo activo y aparecerá un botón de activación si hay empate.
+
+### Compartir marcador en vivo
+Botón **📤** (verde) en el header. Genera el mensaje con cuarto actual y tiempo restante: `🔴 EN VIVO · Q3 · 04:23`.
+
+### Estadísticas en pantalla completa
+Gira el móvil o pulsa **📊 Pantalla completa** para ver la tabla de estadísticas en landscape.
+
+### Finalizar partido
+Botón **🏁** en el header → confirma el resultado. El partido pasa a "finalizado".
+
+---
+
+## Eventos y Convocatorias
+
+### Crear un evento
+Equipo → **📅 EVENTOS Y CONVOCATORIAS** → **＋**. Tipos:
+- 🏟️ **Partido** — con campo para el rival
+- 🔧 **Tecnificación** — con nombre/descripción
+- 📌 **Otro** — genérico
+
+Rellena fecha, hora, hora de concentración, lugar y mensaje opcional del entrenador.
+
+### Convocatoria automática
+Al crear un evento, la app **pre-selecciona todos los jugadores ordenados por % de asistencia** (los que más vienen aparecen primero). Puedes ajustar manualmente.
+
+### Gestionar convocados
+- Toca un jugador para incluirlo/excluirlo
+- El badge de % (🟢/🟡/🔴) ayuda a decidir
+- Botones **Todos** / **Ninguno** para selección rápida
+
+### Compartir convocatoria de evento
+Botón **📤** en la card del evento. El mensaje incluye tipo, fecha, hora, concentración, lugar, lista numerada de convocados con dorsal, mensaje del entrenador y lema del club.
 
 ---
 
 ## Copia de seguridad
 
-> ⚠️ Los datos de Kortline se guardan en el navegador de tu dispositivo. Si cambias de móvil, limpias el navegador o desinstalar la app, los datos se pierden. El backup es tu única protección.
+### Exportar datos
+⚙️ Ajustes → **Exportar** → descarga un archivo `.json` con todos los datos.
 
-### Exportar backup manual
+### Importar datos
+⚙️ Ajustes → **Importar** → selecciona el archivo. **Sobreescribe todos los datos actuales.**
 
-1. Ve a ⚙️ **Configuración** (icono en la esquina superior)
-2. Entra en **💾 Copia de seguridad**
-3. Pulsa **⬇️ Exportar**
-4. El archivo se descarga en tu carpeta de Descargas
-5. Se abre un menú para compartirlo además a WhatsApp, iCloud, Google Drive, email, etc.
+### Autobackup
+La app guarda automáticamente en cada cambio. Restaurable desde ⚙️ Ajustes → **Restaurar último autobackup**.
 
-El archivo se llama `kortline-backup-YYYY-MM-DD.json` con la fecha del día.
-
-### Importar backup
-
-1. Ve a ⚙️ **Configuración** → **💾 Copia de seguridad**
-2. Pulsa **⬆️ Importar**
-3. Selecciona el archivo `.json` de tu backup
-4. Confirma — se restaurarán todos los datos
-
-> ⚠️ Importar sobreescribe todos los datos actuales.
-
-### Recordatorio automático
-
-Si llevan más de 7 días sin exportar un backup, la app te avisará con un banner al abrirla. No ignores este aviso.
-
-**Recomendación:** exporta el backup y guárdalo en iCloud o Google Drive una vez a la semana.
-
----
-
-## Configuración del club
-
-Pulsa el icono ⚙️ en la esquina superior de la pantalla principal.
-
-Desde aquí puedes:
-- Cambiar el **nombre del club**
-- Subir el **logo del club** (se mostrará en la app y en los PDFs)
-- Activar o desactivar funciones: valoración colectiva, valoración individual, ejercicios de sesión, foto del entrenamiento
-- Ajustar el **umbral de riesgo FEB** (60%–85%)
+> 💡 Exporta un backup antes de cambiar de dispositivo o limpiar el navegador.
 
 ---
 
 ## Preguntas frecuentes
 
-**¿Los datos se sincronizan entre dispositivos?**  
-No. Cada dispositivo tiene sus propios datos. Para pasar los datos de un móvil a otro, exporta el backup en el móvil antiguo e impórtalo en el nuevo.
+**¿Funciona sin internet?**
+Sí, una vez cargada funciona completamente offline.
 
-**¿Funciona sin internet?**  
-Sí, una vez cargada la app funciona completamente sin conexión.
+**¿Puedo usarla en varios dispositivos?**
+Los datos son locales. Para sincronizar, exporta el backup en un dispositivo e impórtalo en el otro.
 
-**¿Puedo tener varios equipos?**  
-Sí, sin límite de equipos ni de jugadores.
+**¿Qué pasa si cierro el navegador?**
+Los datos se guardan automáticamente en cada cambio. No se pierde nada.
 
-**¿Qué pasa si desinstalo la app?**  
-En Android e iOS, desinstalar la PWA puede borrar los datos. Asegúrate de tener un backup antes de desinstalar.
+**¿Cómo cambio el umbral de riesgo FEB?**
+⚙️ Ajustes → **Estadísticas y exportación** → selecciona el umbral (60–85%). El estándar FEB es 75%.
 
-**¿Dónde se guarda el archivo de backup?**  
-En la carpeta **Descargas** de tu dispositivo. Desde ahí puedes moverlo a donde quieras.
+**¿Puedo tener varios equipos?**
+Sí, sin límite. Cada equipo tiene su plantilla, historial y configuración independientes.
 
 ---
 
-*Kortline v1.1.0 — Desarrollada por Mario Nadal Ara*  
-*De la Pista al Dato*
+*Kortline v1.3.1 · Mario Nadal Ara · github.com/MarioNadal*

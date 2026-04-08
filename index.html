@@ -405,8 +405,10 @@ function startClock(){
       const curQ=m.live.q||1;
       const pLabel=nQ===4?"Q":"P";
       const periodName=curQ<=nQ?pLabel+curQ:"OT";
-      if(curQ<nQ){
-        // 1-minute break before auto-advancing
+      const otCount=m.live.otCount||0;
+      const totalPeriods=nQ+otCount;
+      const isLastPeriod=curQ>=totalPeriods;
+      if(!isLastPeriod){
         m.live.q=curQ+1;
         m.live.clockSec=(m.live.clockMins||m.qMins||10)*60;
         m.live.clockRunning=false;
@@ -414,8 +416,16 @@ function startClock(){
         _clockAlert("🔔 Fin del "+periodName,2500);
         _startBreakTimer(pLabel+(curQ+1));
       } else {
+        const qs=(m.live.qScores||[]).map(s=>s||[0,0]);
+        const ourT=qs.reduce((s,q)=>s+(q[0]||0),0);
+        const rivT=qs.reduce((s,q)=>s+(q[1]||0),0);
         save();render();
-        _clockAlert("🏀 ¡Tiempo! Fin del "+periodName,3500);
+        if(ourT===rivT&&ourT>0){
+          _clockAlert("🤝 ¡EMPATE! "+ourT+" – "+rivT,1500);
+          setTimeout(()=>_showOTPrompt(m,curQ,otCount),1600);
+        } else {
+          _clockAlert("🏀 ¡Final! "+periodName+" — "+(ourT>rivT?"Victoria":"Derrota")+" "+ourT+"–"+rivT,3500);
+        }
       }
     }
   },1000);
@@ -670,7 +680,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.2",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.3",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1198,7 +1208,7 @@ function hoy(){
     const t=S.teams.find(x=>x.id===m._tid);
     if(!t)return"";
     const live=m.live||{};
-    const qs=live.qScores||[];
+    const qs=(live.qScores||[]).map(s=>s||[0,0]);
     const ourTotal=qs.reduce((a,r)=>a+(r[0]||0),0);
     const rivTotal=qs.reduce((a,r)=>a+(r[1]||0),0);
     const inProgress=live.q>1||(qs.length>0&&(ourTotal+rivTotal)>0)||live.clockRunning;
@@ -1696,19 +1706,18 @@ function shareScreen(){
   ${navBar()}`;
 }
 
+
 /* ═══════════════════════════════════════
    EVENTOS Y CONVOCATORIAS
 ═══════════════════════════════════════ */
 function evtList(tid){return S.events[tid]||[];}
 function evtById(tid,eid){return(S.events[tid]||[]).find(e=>e.id===eid)||null;}
-
 function eventos(){
   const t=S.teams.find(x=>x.id===S.teamId);if(!t){S.screen="team";render();return"";}
   const today=td();
   const evts=[...evtList(S.teamId)].sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
   const upcoming=evts.filter(e=>e.fecha>=today);
   const past=evts.filter(e=>e.fecha<today);
-
   function evtCard(e){
     const isPast=e.fecha<today;
     const convCnt=(e.convocados||[]).length;
@@ -1740,12 +1749,10 @@ function eventos(){
       </div>
     </div>`;
   }
-
   const emptyState=`<div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📅</div><div style="font-family:var(--font-d);font-weight:900;font-size:18px;margin-bottom:6px">Sin eventos</div><div style="font-size:14px;color:var(--tm);line-height:1.6">Crea un partido o tecnificación<br/>para generar convocatorias.</div></div>`;
   const content=evts.length===0?emptyState:
     (upcoming.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin-bottom:8px">📌 PRÓXIMOS</div>${upcoming.map(evtCard).join("")}`:"")
     +(past.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin:${upcoming.length>0?"16px":"0"} 0 8px">🕐 PASADOS</div>${past.map(evtCard).join("")}`:"");
-
   return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="S.screen='team';render()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📅 Eventos</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${evts.length} evento${evts.length!==1?"s":""}</div></div>
@@ -1754,10 +1761,8 @@ function eventos(){
   <div class="content">${content}</div>
   ${navBar()}`;
 }
-
 function buildEventoText(tid,eid){
-  const t=S.teams.find(x=>x.id===tid);
-  const e=evtById(tid,eid);if(!t||!e)return"";
+  const t=S.teams.find(x=>x.id===tid);const e=evtById(tid,eid);if(!t||!e)return"";
   const players=pl(tid);
   const convP=players.filter(p=>(e.convocados||[]).includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
   const abrev=(S.clubAbrev||S.clubName||"CLUB").toUpperCase();
@@ -1768,16 +1773,12 @@ function buildEventoText(tid,eid){
   if(e.lugar)lines.push(`📍 ${e.lugar}`);
   if(e.horaConc)lines.push(`⏰ Concentración: ${e.horaConc}h`);
   if(e.tipo==="partido"&&e.rival)lines.push(`🆚 ${e.rival}`);
-  if(convP.length){
-    lines.push(`\n*CONVOCADOS (${convP.length}):*`);
-    convP.forEach((p,i)=>lines.push(`${i+1}. ${p.name}${p.number?" — #"+p.number:""}`));
-  }
+  if(convP.length){lines.push(`\n*CONVOCADOS (${convP.length}):*`);convP.forEach((p,i)=>lines.push(`${i+1}. ${p.name}${p.number?" — #"+p.number:""}`));}
   if(e.mensaje)lines.push(`\n💬 ${e.mensaje}`);
   if(lema)lines.push(`\n${lema}`);
   lines.push(`\n_${S.clubName}_`);
   return lines.join("\n");
 }
-
 function shareEventoConv(){
   const eid=S.eventId;if(!eid)return;
   const text=buildEventoText(S.teamId,eid);
@@ -1785,18 +1786,9 @@ function shareEventoConv(){
   const el=document.createElement("div");el.id="m-share-evento";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
   el.onclick=ev=>{if(ev.target===el)el.remove();};
-  el.innerHTML=`<div class="modal">
-    <div class="mhandle"></div>
-    <div class="mtitle">📤 Compartir convocatoria</div>
-    <div style="font-size:12px;color:var(--td);margin-bottom:10px;background:var(--s2);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">Vista previa del mensaje</div>
-    <div class="share-preview" id="ev-prev" style="max-height:200px;overflow-y:auto">${esc(text)}</div>
-    <button class="btn-wa" onclick="shareText(document.getElementById('ev-prev').innerText)">💬 Compartir por WhatsApp</button>
-    <button class="btn-copy" onclick="navigator.clipboard?.writeText(document.getElementById('ev-prev').innerText).then(()=>toast('📋 Copiado'))">📋 Copiar texto</button>
-    <button class="btn-s" onclick="document.getElementById('m-share-evento').remove()">Cerrar</button>
-  </div>`;
+  el.innerHTML=`<div class="modal"><div class="mhandle"></div><div class="mtitle">📤 Compartir convocatoria</div><div style="font-size:12px;color:var(--td);margin-bottom:10px;background:var(--s2);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">Vista previa del mensaje</div><div class="share-preview" id="ev-prev" style="max-height:200px;overflow-y:auto">${esc(text)}</div><button class="btn-wa" onclick="shareText(document.getElementById('ev-prev').innerText)">💬 Compartir por WhatsApp</button><button class="btn-copy" onclick="navigator.clipboard?.writeText(document.getElementById('ev-prev').innerText).then(()=>toast('📋 Copiado'))">📋 Copiar texto</button><button class="btn-s" onclick="document.getElementById('m-share-evento').remove()">Cerrar</button></div>`;
   document.body.appendChild(el);
 }
-
 function openEventoModal(init){
   const id=init?"m-edit-evt":"m-add-evt";
   document.getElementById(id)?.remove();
@@ -1804,44 +1796,25 @@ function openEventoModal(init){
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
   el.onclick=ev=>{if(ev.target===el)el.remove();};
   const tipo=init?.tipo||"partido";
-  el.innerHTML=`<div class="modal" style="max-height:92vh;overflow-y:auto">
-    <div class="mhandle"></div>
-    <div class="mtitle">${init?"Editar evento":"Nuevo evento"}</div>
-    <div class="fg"><label class="fl">Tipo de evento</label>
-      <div style="display:flex;gap:8px" id="${id}-tipos">
-        ${[["partido","🏟️ Partido"],["tecnificacion","🔧 Tecnificación"],["otro","📌 Otro"]].map(([v,l])=>`<button onclick="evtTipoSel(this,'${id}')" data-tipo="${v}" style="flex:1;padding:9px 4px;border-radius:8px;border:2px solid ${tipo===v?"var(--orange)":"var(--border)"};background:${tipo===v?"rgba(240,99,24,.15)":"var(--s2)"};color:${tipo===v?"var(--orange)":"var(--td)"};cursor:pointer;font-weight:700;font-size:11px;line-height:1.3">${l}</button>`).join("")}
-      </div>
-    </div>
+  el.innerHTML=`<div class="modal" style="max-height:92vh;overflow-y:auto"><div class="mhandle"></div><div class="mtitle">${init?"Editar evento":"Nuevo evento"}</div>
+    <div class="fg"><label class="fl">Tipo de evento</label><div style="display:flex;gap:8px" id="${id}-tipos">${[["partido","🏟️ Partido"],["tecnificacion","🔧 Tecnificación"],["otro","📌 Otro"]].map(([v,l])=>`<button onclick="evtTipoSel(this,'${id}')" data-tipo="${v}" style="flex:1;padding:9px 4px;border-radius:8px;border:2px solid ${tipo===v?"var(--orange)":"var(--border)"};background:${tipo===v?"rgba(240,99,24,.15)":"var(--s2)"};color:${tipo===v?"var(--orange)":"var(--td)"};cursor:pointer;font-weight:700;font-size:11px;line-height:1.3">${l}</button>`).join("")}</div></div>
     <div class="fg" id="${id}-rival-wrap" style="${tipo!=="partido"?"display:none":""}"><label class="fl">Rival</label><input class="fi" id="${id}-rival" value="${esc(init?.rival||"")}" placeholder="Nombre del equipo rival"/></div>
-    <div class="fg" id="${id}-tit-wrap" style="${tipo==="partido"?"display:none":""}"><label class="fl">Nombre / descripción</label><input class="fi" id="${id}-tit" value="${esc(init?.titulo||"")}" placeholder="ej. Tecnificación bases · Pretemporada"/></div>
-    <div class="frow">
-      <div class="fg" style="flex:1.3"><label class="fl">Fecha</label><input class="fi" type="date" id="${id}-fecha" value="${esc(init?.fecha||td())}"/></div>
-      <div class="fg" style="flex:1"><label class="fl">Hora</label><input class="fi" type="time" id="${id}-hora" value="${esc(init?.hora||"")}"/></div>
-    </div>
+    <div class="fg" id="${id}-tit-wrap" style="${tipo==="partido"?"display:none":""}"><label class="fl">Nombre / descripción</label><input class="fi" id="${id}-tit" value="${esc(init?.titulo||"")}" placeholder="ej. Tecnificación bases"/></div>
+    <div class="frow"><div class="fg" style="flex:1.3"><label class="fl">Fecha</label><input class="fi" type="date" id="${id}-fecha" value="${esc(init?.fecha||td())}"/></div><div class="fg" style="flex:1"><label class="fl">Hora</label><input class="fi" type="time" id="${id}-hora" value="${esc(init?.hora||"")}"/></div></div>
     <div class="fg"><label class="fl">⏰ Hora concentración</label><input class="fi" type="time" id="${id}-conc" value="${esc(init?.horaConc||"")}" placeholder="Opcional"/></div>
     <div class="fg"><label class="fl">📍 Lugar</label><input class="fi" id="${id}-lugar" value="${esc(init?.lugar||"")}" placeholder="ej. Pabellón La Nevera"/></div>
     <div class="fg"><label class="fl">💬 Mensaje del entrenador <span style="color:var(--tm)">(opcional)</span></label><textarea class="fi" id="${id}-msg" rows="2" placeholder="Aparecerá al final de la convocatoria..." style="resize:none">${esc(init?.mensaje||"")}</textarea></div>
     <button class="btn-p" onclick="saveEvento('${id}','${init?.id||""}')">${init?"Guardar cambios":"Crear y convocar →"}</button>
     <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
   </div>`;
-  document.body.appendChild(el);
-  el._tipo=tipo;
+  document.body.appendChild(el);el._tipo=tipo;
 }
-
 function evtTipoSel(btn,id){
-  const tipo=btn.dataset.tipo;
-  const modal=document.getElementById(id);if(modal)modal._tipo=tipo;
-  document.querySelectorAll(`#${id}-tipos button`).forEach(b=>{
-    const sel=b===btn;
-    b.style.borderColor=sel?"var(--orange)":"var(--border)";
-    b.style.background=sel?"rgba(240,99,24,.15)":"var(--s2)";
-    b.style.color=sel?"var(--orange)":"var(--td)";
-  });
+  const tipo=btn.dataset.tipo;const modal=document.getElementById(id);if(modal)modal._tipo=tipo;
+  document.querySelectorAll(`#${id}-tipos button`).forEach(b=>{const sel=b===btn;b.style.borderColor=sel?"var(--orange)":"var(--border)";b.style.background=sel?"rgba(240,99,24,.15)":"var(--s2)";b.style.color=sel?"var(--orange)":"var(--td)";});
   const rw=document.getElementById(id+"-rival-wrap");const tw=document.getElementById(id+"-tit-wrap");
-  if(rw)rw.style.display=tipo==="partido"?"":"none";
-  if(tw)tw.style.display=tipo!=="partido"?"":"none";
+  if(rw)rw.style.display=tipo==="partido"?"":"none";if(tw)tw.style.display=tipo!=="partido"?"":"none";
 }
-
 function saveEvento(mid,eid){
   const modal=document.getElementById(mid);
   const tipo=modal?._tipo||(eid?(evtById(S.teamId,eid)?.tipo||"partido"):"partido");
@@ -1853,85 +1826,32 @@ function saveEvento(mid,eid){
   const lugar=document.getElementById(mid+"-lugar")?.value.trim()||"";
   const mensaje=document.getElementById(mid+"-msg")?.value.trim()||"";
   if(!S.events[S.teamId])S.events[S.teamId]=[];
-  if(eid){
-    S.events[S.teamId]=S.events[S.teamId].map(e=>e.id===eid?{...e,tipo,rival,titulo,fecha,hora,horaConc,lugar,mensaje}:e);
-    document.getElementById(mid)?.remove();save();render();toast("✅ Evento actualizado");
-  } else {
-    const newEvt={id:uid(),tipo,rival,titulo,fecha,hora,horaConc,lugar,mensaje,convocados:[]};
-    S.events[S.teamId].push(newEvt);save();
-    document.getElementById(mid)?.remove();
-    S.eventId=newEvt.id;
-    // Auto-suggest convocados before opening the modal
-    _evtAutoSuggest(S.teamId,newEvt.id);
-    openEventoConvModal();
-  }
+  if(eid){S.events[S.teamId]=S.events[S.teamId].map(e=>e.id===eid?{...e,tipo,rival,titulo,fecha,hora,horaConc,lugar,mensaje}:e);document.getElementById(mid)?.remove();save();render();toast("✅ Evento actualizado");}
+  else{const newEvt={id:uid(),tipo,rival,titulo,fecha,hora,horaConc,lugar,mensaje,convocados:[]};S.events[S.teamId].push(newEvt);save();document.getElementById(mid)?.remove();S.eventId=newEvt.id;_evtAutoSuggest(S.teamId,newEvt.id);openEventoConvModal();}
 }
-
 function _evtAutoSuggest(tid,eid){
-  const e=evtById(tid,eid);if(!e)return;
-  const players=pl(tid);if(!players.length)return;
-  if((e.convocados||[]).length>0)return; // already has convocados
+  const e=evtById(tid,eid);if(!e)return;const players=pl(tid);if(!players.length)return;if((e.convocados||[]).length>0)return;
   const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(tid+"_")).map(([,v])=>v);
-  if(allSess.length>0){
-    const ranked=[...players].sort((a,b)=>{
-      const pa=allSess.filter(s=>(s[a.id]||"present")==="present"||(s[a.id])==="late").length;
-      const pb=allSess.filter(s=>(s[b.id]||"present")==="present"||(s[b.id])==="late").length;
-      return pb-pa;
-    });
-    e.convocados=ranked.map(p=>p.id);
-  } else {
-    e.convocados=players.map(p=>p.id);
-  }
-  save();
+  if(allSess.length>0){const ranked=[...players].sort((a,b)=>{const pa=allSess.filter(s=>(s[a.id]||"present")==="present"||(s[a.id])==="late").length;const pb=allSess.filter(s=>(s[b.id]||"present")==="present"||(s[b.id])==="late").length;return pb-pa;});e.convocados=ranked.map(p=>p.id);}
+  else{e.convocados=players.map(p=>p.id);}save();
 }
-
-function delEvento(eid){
-  _confirm("¿Eliminar este evento y su convocatoria?","🗑 Eliminar",()=>{
-    S.events[S.teamId]=(S.events[S.teamId]||[]).filter(e=>e.id!==eid);
-    save();render();toast("🗑 Evento eliminado");
-  });
-}
-
+function delEvento(eid){_confirm("¿Eliminar este evento y su convocatoria?","🗑 Eliminar",()=>{S.events[S.teamId]=(S.events[S.teamId]||[]).filter(e=>e.id!==eid);save();render();toast("🗑 Evento eliminado");});}
 function openEventoConvModal(){
-  const eid=S.eventId;if(!eid)return;
-  const t=S.teams.find(x=>x.id===S.teamId);
-  const e=evtById(S.teamId,eid);if(!e){render();return;}
+  const eid=S.eventId;if(!eid)return;const t=S.teams.find(x=>x.id===S.teamId);const e=evtById(S.teamId,eid);if(!e){render();return;}
   const players=[...pl(S.teamId)].sort((a,b)=>(a.number||99)-(b.number||99));
-
   function convRows(cids){
-    if(!players.length)return'<div style="padding:20px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores en la plantilla. Añádelos desde el equipo.</div>';
-    return players.map(p=>{
-      const inc=cids.includes(p.id);
-      // calc attendance % for badge
-      const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
-      const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
-      return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')">
-        <div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div>
-        <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
-        <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>
-        ${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}
-      </div>`;
+    if(!players.length)return'<div style="padding:20px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores en la plantilla.</div>';
+    const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
+    return players.map(p=>{const inc=cids.includes(p.id);const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
+      return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')"><div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div><div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}</div>`;
     }).join("");
   }
-
-  const cids=e.convocados||[];
-  const typeLabel=e.tipo==="partido"?`🏟️ vs ${esc(e.rival||"Rival")}`:e.tipo==="tecnificacion"?"🔧 Tecnificación":esc(e.titulo||"Evento");
-  document.getElementById("m-evt-conv")?.remove();
-  const el=document.createElement("div");el.id="m-evt-conv";
+  const cids=e.convocados||[];const typeLabel=e.tipo==="partido"?`🏟️ vs ${esc(e.rival||"Rival")}`:e.tipo==="tecnificacion"?"🔧 Tecnificación":esc(e.titulo||"Evento");
+  document.getElementById("m-evt-conv")?.remove();const el=document.createElement("div");el.id="m-evt-conv";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
   el.onclick=ev=>{if(ev.target===el){el.remove();render();}};
-  el.innerHTML=`<div class="modal" style="max-height:94vh;overflow-y:auto">
-    <div class="mhandle"></div>
-    <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:2px">CONVOCATORIA</div>
-    <div style="font-weight:900;font-size:18px;margin-bottom:2px">${typeLabel}</div>
-    <div style="font-size:12px;color:var(--td);margin-bottom:12px">${e.fecha?fd(e.fecha,true):""}${e.hora?" · "+e.hora+"h":""}</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div id="ev-conv-count" style="font-size:13px;font-weight:700;color:var(--orange)">${cids.length} convocado${cids.length!==1?"s":""}</div>
-      <div style="display:flex;gap:6px">
-        <button onclick="evtConvAll()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Todos</button>
-        <button onclick="evtConvNone()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Ninguno</button>
-      </div>
-    </div>
+  el.innerHTML=`<div class="modal" style="max-height:94vh;overflow-y:auto"><div class="mhandle"></div><div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:2px">CONVOCATORIA</div><div style="font-weight:900;font-size:18px;margin-bottom:2px">${typeLabel}</div><div style="font-size:12px;color:var(--td);margin-bottom:12px">${e.fecha?fd(e.fecha,true):""}${e.hora?" · "+e.hora+"h":""}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div id="ev-conv-count" style="font-size:13px;font-weight:700;color:var(--orange)">${cids.length} convocado${cids.length!==1?"s":""}</div><div style="display:flex;gap:6px"><button onclick="evtConvAll()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Todos</button><button onclick="evtConvNone()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Ninguno</button></div></div>
     <div style="font-size:11px;color:var(--tm);margin-bottom:8px">El % de asistencia ayuda a decidir la convocatoria. Toca para marcar/desmarcar.</div>
     <div class="card" id="ev-conv-list" style="margin-bottom:12px;max-height:42vh;overflow-y:auto">${convRows(cids)}</div>
     <button class="btn-wa" onclick="document.getElementById('m-evt-conv').remove();S.eventId='${eid}';shareEventoConv()">📤 Guardar y compartir</button>
@@ -1940,40 +1860,90 @@ function openEventoConvModal(){
   </div>`;
   document.body.appendChild(el);
 }
-
 function evtTogglePlayer(pid){
-  const e=evtById(S.teamId,S.eventId);if(!e)return;
-  if(!e.convocados)e.convocados=[];
-  if(e.convocados.includes(pid)){e.convocados=e.convocados.filter(x=>x!==pid);}
-  else{e.convocados.push(pid);}
-  save();
-  // Actualizar lista sin re-render completo
-  const t=S.teams.find(x=>x.id===S.teamId);
-  const players=[...pl(S.teamId)].sort((a,b)=>(a.number||99)-(b.number||99));
-  const cids=e.convocados;
-  const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
+  const e=evtById(S.teamId,S.eventId);if(!e)return;if(!e.convocados)e.convocados=[];
+  if(e.convocados.includes(pid)){e.convocados=e.convocados.filter(x=>x!==pid);}else{e.convocados.push(pid);}save();
+  const t=S.teams.find(x=>x.id===S.teamId);const players=[...pl(S.teamId)].sort((a,b)=>(a.number||99)-(b.number||99));
+  const cids=e.convocados;const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
   const list=document.getElementById("ev-conv-list");
-  if(list){list.innerHTML=players.map(p=>{
-    const inc=cids.includes(p.id);
-    const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
-    return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')">
-      <div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div>
-      <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
-      <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>
-      ${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}
-    </div>`;
+  if(list){list.innerHTML=players.map(p=>{const inc=cids.includes(p.id);const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
+    return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')"><div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div><div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}</div>`;
   }).join("");}
-  const cnt=document.getElementById("ev-conv-count");
-  if(cnt)cnt.textContent=cids.length+" convocado"+(cids.length!==1?"s":"");
+  const cnt=document.getElementById("ev-conv-count");if(cnt)cnt.textContent=cids.length+" convocado"+(cids.length!==1?"s":"");
+}
+function evtConvAll(){const e=evtById(S.teamId,S.eventId);if(!e)return;e.convocados=pl(S.teamId).map(p=>p.id);save();openEventoConvModal();}
+function evtConvNone(){const e=evtById(S.teamId,S.eventId);if(!e)return;e.convocados=[];save();openEventoConvModal();}
+
+function shareMatchResult(){
+  const t=S.teams.find(x=>x.id===S.teamId);const m=mById(S.teamId,S.matchId);if(!t||!m)return;
+  const nQ=m.quarters||4;const _pL=nQ===4?"Q":"P";const _otC=m.live?.otCount||0;
+  const _otLabelsSR=_otC===1?["OT"]:Array.from({length:_otC},(_,i)=>"OT"+(i+1));
+  const qlabels=[...[...Array(nQ).keys()].map(i=>_pL+(i+1)),..._otLabelsSR];
+  const live=m.live;let qScores=null;let ourTotal=0,theirTotal=0;let isLive=false;let liveQLabel="";let liveClock="";
+  if(live&&(live.qScores||[]).some(s=>s&&(s[0]||s[1]))){
+    // Recortar al número real de cuartos jugados (sin el slot [0,0] placeholder de OT)
+    const sliced=(live.qScores||[]).slice(0,qlabels.length).map(s=>s||[0,0]);
+    qScores=sliced;ourTotal=sliced.reduce((s,q)=>s+(q[0]||0),0);theirTotal=sliced.reduce((s,q)=>s+(q[1]||0),0);
+    isLive=!m.finished&&live.clockSec!==undefined;
+    if(isLive){const curQ=live.q||1;liveQLabel=qlabels[curQ-1]||(_pL+curQ);liveClock=_fmtClock(live.clockSec||0);}
+  } else {
+    // Ruta manual: leer nQ cuartos regulares + todas las OTs jugadas
+    const q=m.q||[];const totalPairs=nQ+_otC;
+    if(q.some(v=>v!==null&&v!==undefined&&v!=="")){qScores=[];for(let i=0;i<totalPairs;i++)qScores.push([q[i*2]??null,q[i*2+1]??null]);}
+    if(qScores){const sc=mScore(m);if(sc){ourTotal=m.location==="away"?sc.a:sc.h;theirTotal=m.location==="away"?sc.h:sc.a;}}
+  }
+  const diff=ourTotal-theirTotal;const diffStr=diff>0?"+"+diff:diff<0?String(diff):"=";const diffArrow=diff>0?"🔺":diff<0?"🔻":"🟰";
+  const r=ourTotal>theirTotal?"W":ourTotal<theirTotal?"L":ourTotal===theirTotal&&(ourTotal>0||theirTotal>0)?"D":"P";
+  const statusLine=isLive?`🔴 *EN VIVO · ${liveQLabel} · ${liveClock}*`:r!=="P"?`${r==="W"?"🏆":r==="L"?"❌":"🤝"} *${r==="W"?"VICTORIA":r==="L"?"DERROTA":"EMPATE"}*`:"⏳ *PENDIENTE*";
+  const abrev=(S.clubAbrev||S.clubName||"").toUpperCase();const lema=S.clubLema||"";
+  const lines=[];if(abrev)lines.push(`🏀 ${abrev}`);lines.push("━━━━━━━━━━━━━━━━━━━━━");lines.push(statusLine);lines.push(`${t.name} vs ${m.rival||"Rival"}`);
+  if(m.date)lines.push(`\n📅 ${cap(fd(m.date,true))}${m.time?" · 🕐 "+m.time+"h":""}`);if(m.venue)lines.push(`📍 ${m.venue}`);
+  lines.push(m.location==="home"?"🏠 Casa":m.location==="away"?"✈️ Fuera":"⚖️ Neutral");
+  if(ourTotal>0||theirTotal>0||r!=="P"){lines.push(`\n*${ourTotal}  —  ${theirTotal}*`);lines.push(`${diffArrow} ${diffStr} pts`);}
+  if(qScores&&qScores.length>0){const qLines=qScores.map((qs,i)=>{if(!qs)return null;const h=qs[0];const a=qs[1];if(h===null||h===undefined||a===null||a===undefined||h===""||a==="")return null;const our=m.location==="away"?a:h;const their=m.location==="away"?h:a;return`  ${qlabels[i]||"OT"}  ${our} – ${their}  ${our>their?"✅":our<their?"❌":"➖"}`;}).filter(Boolean);if(qLines.length>0)lines.push(`\n📊 Por cuartos:\n${qLines.join("\n")}`);}
+  if(lema)lines.push(`\n${lema}`);lines.push(`\n_${S.clubName}_`);
+  const text=lines.join("\n");
+  document.getElementById("m-share-result")?.remove();const el=document.createElement("div");el.id="m-share-result";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=ev=>{if(ev.target===el)el.remove();};
+  const resColor=r==="W"?"#22c55e":r==="L"?"#ef4444":r==="D"?"#f59e0b":isLive?"#ef4444":"var(--td)";
+  el.innerHTML=`<div class="modal"><div class="mhandle"></div><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div style="width:40px;height:40px;border-radius:10px;background:${resColor}22;border:1px solid ${resColor}44;display:flex;align-items:center;justify-content:center;font-size:20px">${isLive?"🔴":r==="W"?"🏆":r==="L"?"❌":r==="D"?"🤝":"📊"}</div><div><div class="mtitle" style="margin:0 0 2px">${isLive?"Marcador en vivo":"Compartir resultado"}</div><div style="font-size:12px;color:var(--td)">${esc(t.name)} vs ${esc(m.rival||"Rival")}${isLive?" · "+liveQLabel+" · "+liveClock:""}</div></div></div><div class="share-preview" id="sr-prev" style="max-height:220px;overflow-y:auto">${esc(text)}</div><button class="btn-wa" onclick="shareText(document.getElementById('sr-prev').innerText)">💬 Compartir por WhatsApp</button><button class="btn-copy" onclick="navigator.clipboard?.writeText(document.getElementById('sr-prev').innerText).then(()=>toast('📋 Copiado'))">📋 Copiar texto</button><button class="btn-s" onclick="document.getElementById('m-share-result').remove()">Cerrar</button></div>`;
+  document.body.appendChild(el);
 }
 
-function evtConvAll(){
-  const e=evtById(S.teamId,S.eventId);if(!e)return;
-  e.convocados=pl(S.teamId).map(p=>p.id);save();openEventoConvModal();
+function _showOTPrompt(m,curQ,otCount){
+  document.getElementById("ot-prompt")?.remove();
+  const nQ=m.quarters||4;const pLabel=nQ===4?"Q":"P";const otNum=otCount+1;const otLabel=otNum===1?"OT":"OT"+otNum;
+  const qs=(m.live.qScores||[]).map(s=>s||[0,0]);const ourT=qs.reduce((s,q)=>s+(q[0]||0),0);const rivT=qs.reduce((s,q)=>s+(q[1]||0),0);
+  const prevLabel=otCount>0?"OT"+(otCount>1?otCount:""):pLabel+curQ;
+  const el=document.createElement("div");el.id="ot-prompt";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9998;display:flex;align-items:center;justify-content:center;padding:20px;";
+  el.innerHTML=`<div style="background:var(--s);border:2px solid rgba(245,158,11,.5);border-radius:16px;padding:26px 22px;width:100%;max-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.7)"><div style="font-size:44px;margin-bottom:8px">🤝</div><div style="font-family:var(--font-d);font-weight:900;font-size:22px;color:#f59e0b;margin-bottom:4px">¡EMPATE!</div><div style="font-size:15px;font-weight:700;margin-bottom:6px">Fin del ${esc(prevLabel)}</div><div style="font-family:var(--font-d);font-size:40px;font-weight:900;color:var(--tx);margin-bottom:16px">${ourT} — ${rivT}</div><div style="font-size:13px;color:var(--td);margin-bottom:20px">¿Se juega prórroga?</div><button onclick="activateOT()" style="width:100%;padding:14px;border:none;border-radius:10px;font-weight:900;font-size:17px;cursor:pointer;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;margin-bottom:10px;font-family:var(--font-d);letter-spacing:.5px">🏀 Jugar ${esc(otLabel)}</button><button onclick="document.getElementById('ot-prompt').remove();confirmFinishMatch('${S.teamId}','${S.matchId}')" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;background:var(--s2);color:var(--td)">🏁 Finalizar partido</button></div>`;
+  document.body.appendChild(el);
 }
-function evtConvNone(){
-  const e=evtById(S.teamId,S.eventId);if(!e)return;
-  e.convocados=[];save();openEventoConvModal();
+function activateOT(){
+  document.getElementById("ot-prompt")?.remove();const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  m.live.otCount=(m.live.otCount||0)+1;const newQ=(m.quarters||4)+m.live.otCount;
+  if(!m.live.qScores)m.live.qScores=[];while(m.live.qScores.length<newQ)m.live.qScores.push([0,0]);
+  m.live.q=newQ;m.live.clockSec=5*60;m.live.clockMins=5;m.live.clockRunning=false;
+  if(!m.live.teamFouls)m.live.teamFouls=[];while(m.live.teamFouls.length<newQ)m.live.teamFouls.push(0);
+  if(!m.live.rivalFouls)m.live.rivalFouls=[];while(m.live.rivalFouls.length<newQ)m.live.rivalFouls.push(0);
+  save();render();const otLabel=m.live.otCount===1?"OT":"OT"+m.live.otCount;_clockAlert("🏀 ¡"+otLabel+" — A jugar!",2000);
+}
+function addManualOT(){
+  const m=mById(S.teamId,S.matchId);if(!m)return;
+  if(!m.live)m.live={otCount:0};
+  m.live.otCount=(m.live.otCount||0)+1;
+  save();render();
+}
+function removeLastOT(){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live||!m.live.otCount)return;
+  // Limpiar los datos de esa OT antes de quitar
+  const nQ=m.quarters||4;const otIdx=nQ+(m.live.otCount-1);
+  if(m.q){m.q[otIdx*2]=null;m.q[otIdx*2+1]=null;}
+  if(m.live.qScores)m.live.qScores[otIdx]=[0,0];
+  m.live.otCount=Math.max(0,m.live.otCount-1);
+  save();render();
 }
 
 /* ═══════════════════════════════════════
@@ -2028,7 +1998,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.2.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.3.1 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -2321,12 +2291,12 @@ async function installPWA(){if(!_deferredPrompt)return;_deferredPrompt.prompt();
 function mlist(tid){return S.matches[tid]||[];}
 function mById(tid,mid){return mlist(tid).find(m=>m.id===mid)||null;}
 function mScore(m){
-  // sum all quarters that have values
   const qs=m.q||[];
   let h=0,a=0,any=false;
   for(let i=0;i<qs.length;i+=2){
     const hv=qs[i],av=qs[i+1];
-    if(hv!=null&&hv!==""&&av!=null&&av!==""){h+=parseInt(hv)||0;a+=parseInt(av)||0;any=true;}
+    const hOk=hv!=null&&hv!=="";const aOk=av!=null&&av!=="";
+    if(hOk||aOk){h+=parseInt(hv)||0;a+=parseInt(av)||0;any=true;}
   }
   if(!any)return null;
   return{h,a};
@@ -2378,11 +2348,13 @@ function mConvText(tid,mid,internal){
     lines.push(`
 ${r==="W"?"🏆":r==="L"?"❌":"🤝"} *Resultado: ${o} — ${th}* (${mResultLabel(r)})`);
     if(internal&&m.q){
-      const ql=["Q1","Q2","Q3","Q4","OT"];
+      const nQc=m.quarters||4;const pLc=nQc===4?"Q":"P";const otCc=m.live?.otCount||0;
+      const otLc=otCc===1?["OT"]:Array.from({length:otCc},(_,i)=>"OT"+(i+1));
+      const qlc=[...[...Array(nQc).keys()].map(i=>pLc+(i+1)),...otLc];
       const qstrs=[];
-      for(let i=0;i<(m.q||[]).length;i+=2){
-        const hv=m.q[i],av=m.q[i+1];
-        if(hv!=null&&hv!==""&&av!=null&&av!=="")qstrs.push(`${ql[i/2]}: ${m.location==="away"?av:hv}-${m.location==="away"?hv:av}`);
+      for(let i=0;i<qlc.length;i++){
+        const hv=m.q[i*2],av=m.q[i*2+1];
+        if(hv!=null&&hv!==""&&av!=null&&av!=="")qstrs.push(`${qlc[i]}: ${m.location==="away"?av:hv}-${m.location==="away"?hv:av}`);
       }
       if(qstrs.length)lines.push(`📊 Por cuartos: ${qstrs.join(" | ")}`);
     }
@@ -2477,30 +2449,36 @@ function matchDetail(){
   const q=m.q||[null,null,null,null,null,null,null,null,null,null];
   const nQuarters=m.quarters||4;
   const _pLabel=nQuarters===4?"Q":"P";
-  const qlabels=[...Array(nQuarters).keys()].map(i=>_pLabel+(i+1)).concat(["OT"]);
+  const _otCountD=(m.live?.otCount||0);
+  // Etiquetas: 1 OT → "OT", 2+ OTs → "OT1", "OT2"...
+  const _otLabels=_otCountD===1?["OT"]:Array.from({length:_otCountD},(_,i)=>"OT"+(i+1));
+  const qlabels=[...[...Array(nQuarters).keys()].map(i=>_pLabel+(i+1)),..._otLabels];
 
   const scoreboardHtml=`<div class="scoreboard">
     <div class="sb-team"><div class="sb-name" style="color:${homeColor}">${homeTeam}</div><div class="sb-badge">Local</div></div>
     <div>
-      <div class="sb-score">${sc?sc.h:"—"} <span style="font-size:22px;color:var(--td)">:</span> ${sc?sc.a:"—"}</div>
+      <div id="match-sb-score" class="sb-score">${sc?sc.h:"—"} <span style="font-size:22px;color:var(--td)">:</span> ${sc?sc.a:"—"}</div>
     </div>
     <div class="sb-team"><div class="sb-name" style="color:${awayColor}">${awayTeam}</div><div class="sb-badge">Visitante</div></div>
   </div>`;
 
-  // Quarters input
-  const quartersHtml=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:14px">
+  // Quarters input — grid dinámico que se ajusta al número de columnas
+  const quartersHtml=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">
     ${qlabels.map((ql,qi)=>{
       const hi=qi*2,ai=qi*2+1;
       const hv=q[hi]!==null&&q[hi]!==undefined?q[hi]:"";
       const av=q[ai]!==null&&q[ai]!==undefined?q[ai]:"";
-      return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:6px 4px;text-align:center">
-        <div style="font-size:10px;font-weight:700;color:var(--td);margin-bottom:5px">${ql}</div>
-        <input class="q-input" type="number" min="0" max="99" placeholder="—" value="${hv}" oninput="updateQ(${hi},this.value)" style="margin-bottom:4px"/>
+      const isOT=qi>=nQuarters;
+      return`<div style="background:var(--s2);border:1px solid ${isOT?"rgba(245,158,11,.4)":"var(--border)"};border-radius:8px;padding:6px 4px;text-align:center;position:relative">
+        ${isOT&&qi===qlabels.length-1?`<button onclick="removeLastOT()" style="position:absolute;top:2px;right:2px;background:none;border:none;color:var(--tm);cursor:pointer;font-size:10px;line-height:1;padding:1px 3px" title="Quitar">✕</button>`:""}
+        <div style="font-size:10px;font-weight:700;color:${isOT?"#f59e0b":"var(--td)"};margin-bottom:5px">${ql}</div>
+        <input class="q-input" type="number" min="0" max="99" placeholder="—" value="${hv}" oninput="updateQ(${hi},this.value)" onblur="autoSaveQ()" style="margin-bottom:4px"/>
         <div style="font-size:9px;color:var(--tm);margin:2px 0">vs</div>
-        <input class="q-input" type="number" min="0" max="99" placeholder="—" value="${av}" oninput="updateQ(${ai},this.value)"/>
+        <input class="q-input" type="number" min="0" max="99" placeholder="—" value="${av}" oninput="updateQ(${ai},this.value)" onblur="autoSaveQ()"/>
       </div>`;
     }).join("")}
-  </div>`;
+  </div>
+  <button onclick="addManualOT()" style="display:flex;align-items:center;gap:6px;padding:7px 12px;border-radius:8px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.08);color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:14px">＋ Añadir ${_otCountD===0?"prórroga":_otCountD===1?"OT2":"OT"+(_otCountD+1)}</button>`;
 
   // Convocatoria
   const convIds=m.convocados||[];
@@ -2524,7 +2502,7 @@ function matchDetail(){
   const titCount=titIds.length;
 
   // Result badge
-  const resultBadge=sc?`<span class="result-pill ${r}" style="font-size:15px;padding:4px 14px">${r==="W"?"🏆 Victoria":r==="L"?"❌ Derrota":"🤝 Empate"} ${our}–${their}</span>`:`<span class="result-pill P" style="font-size:13px;padding:3px 10px">⏳ Pendiente</span>`;
+  const resultBadge=sc?`<span id="match-result-badge" class="result-pill ${r}" style="font-size:15px;padding:4px 14px">${r==="W"?"🏆 Victoria":r==="L"?"❌ Derrota":"🤝 Empate"} ${our}–${their}</span>`:`<span id="match-result-badge" class="result-pill P" style="font-size:13px;padding:3px 10px">⏳ Pendiente</span>`;
   const hasLive=!!(m.live&&(m.live.log||[]).length>0);
 
   return`<header class="header"><div class="hrow">
@@ -2544,16 +2522,18 @@ function matchDetail(){
     <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">Marcador por cuartos (Local / Visitante)</div>
     ${quartersHtml}
 
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="btn-p" style="flex:1" onclick="saveMatchScore()">💾 Guardar marcador</button>
-      <button onclick="shareMatchConv()" style="width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:20px;flex-shrink:0">📤</button>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button onclick="shareMatchResult()" style="width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:20px" title="Compartir resultado">📤</button>
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-family:var(--font-d);font-weight:900;font-size:17px">
         👥 Convocatoria <span style="font-weight:400;font-size:13px;color:var(--td)">${convCount}/${sorted.length} · ⭐${titCount}</span>
       </div>
-      <button onclick="openConvSetup()" style="background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700">✏️ Editar</button>
+      <div style="display:flex;gap:6px">
+        ${convCount>0?`<button onclick="shareMatchConv()" style="padding:6px 10px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:13px;font-weight:700;color:white">📤 Lista</button>`:""}
+        <button onclick="openConvSetup()" style="background:rgba(249,115,22,.15);color:var(--orange);border:1px solid rgba(249,115,22,.3);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700">✏️ Editar</button>
+      </div>
     </div>
     ${sorted.length===0?`<div style="text-align:center;padding:20px;color:var(--tm);font-size:14px">Sin jugadores en la plantilla.</div>`:`<div class="card" style="margin-bottom:14px">${convRows}</div>`}
 
@@ -2884,11 +2864,46 @@ function updateQ(idx,val){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
   m.q[idx]=val===""?null:parseInt(val)||0;
-  // just update in place, don't re-render (would lose focus)
-  // update scoreboard display
+  // Sincronizar en live.qScores si existe
+  if(m.live){
+    const qi=Math.floor(idx/2);const isHome=(idx%2===0);const isAway=m.location==="away";
+    if(!m.live.qScores)m.live.qScores=[];
+    while(m.live.qScores.length<=qi)m.live.qScores.push([0,0]);
+    if(!m.live.qScores[qi])m.live.qScores[qi]=[0,0];
+    const v=parseInt(val)||0;
+    if(isHome)m.live.qScores[qi][isAway?1:0]=v;
+    else m.live.qScores[qi][isAway?0:1]=v;
+  }
   const sc=mScore(m);
-  const scEl=document.querySelector(".sb-score");
-  if(scEl&&sc)scEl.innerHTML=`${sc.h} <span style="font-size:22px;color:var(--td)">:</span> ${sc.a}`;
+  // Actualizar marcador inline
+  const scEl=document.getElementById("match-sb-score");
+  if(scEl)scEl.innerHTML=sc?`${sc.h} <span style="font-size:22px;color:var(--td)">:</span> ${sc.a}`:`— <span style="font-size:22px;color:var(--td)">:</span> —`;
+  // Actualizar badge resultado inline
+  const badge=document.getElementById("match-result-badge");
+  if(badge&&sc){
+    const r=sc.h>sc.a?"W":sc.h<sc.a?"L":sc.h===sc.a&&sc.h>0?"D":"P";
+    const our=m.location==="away"?sc.a:sc.h;const their=m.location==="away"?sc.h:sc.a;
+    badge.className="result-pill "+r;
+    badge.style.cssText=r!=="P"?"font-size:15px;padding:4px 14px":"font-size:13px;padding:3px 10px";
+    badge.textContent=r==="W"?`🏆 Victoria ${our}–${their}`:r==="L"?`❌ Derrota ${our}–${their}`:r==="D"?`🤝 Empate ${our}–${their}`:"⏳ Pendiente";
+  }
+}
+function autoSaveQ(){
+  const m=mById(S.teamId,S.matchId);if(!m)return;
+  const inputs=document.querySelectorAll(".q-input");
+  if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
+  inputs.forEach((inp,i)=>{m.q[i]=inp.value===""?null:parseInt(inp.value)||0;});
+  if(m.live){
+    const nQ=m.quarters||4;const otCount=m.live.otCount||0;const isAway=m.location==="away";
+    if(!m.live.qScores)m.live.qScores=[];
+    for(let i=0;i<nQ+otCount;i++){
+      const local=parseInt(m.q[i*2])||0;const visitor=parseInt(m.q[i*2+1])||0;
+      if(!m.live.qScores[i])m.live.qScores[i]=[0,0];
+      m.live.qScores[i][0]=isAway?visitor:local;
+      m.live.qScores[i][1]=isAway?local:visitor;
+    }
+  }
+  save();
 }
 function saveMatchScore(){
   const m=mById(S.teamId,S.matchId);if(!m)return;
@@ -2896,6 +2911,19 @@ function saveMatchScore(){
   const inputs=document.querySelectorAll(".q-input");
   if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
   inputs.forEach((inp,i)=>{m.q[i]=inp.value===""?null:parseInt(inp.value)||0;});
+  // Si el partido tiene datos de live, sincronizar también live.qScores
+  // para que _syncLiveQ no sobreescriba los scores manuales de OT con [0,0]
+  if(m.live){
+    const nQ=m.quarters||4;const otCount=m.live.otCount||0;const isAway=m.location==="away";
+    if(!m.live.qScores)m.live.qScores=[];
+    for(let i=0;i<nQ+otCount;i++){
+      const local=parseInt(m.q[i*2])||0;const visitor=parseInt(m.q[i*2+1])||0;
+      if(!m.live.qScores[i])m.live.qScores[i]=[0,0];
+      // live.qScores[i][0]=nuestro, [1]=rival
+      m.live.qScores[i][0]=isAway?visitor:local;
+      m.live.qScores[i][1]=isAway?local:visitor;
+    }
+  }
   save();toast("✅ Marcador guardado");render();
 }
 function saveMatchNotes(){
@@ -2999,8 +3027,8 @@ function liveGame(){
   const selPid=live.selPid||null;
   const teamOnly=m.teamOnlyStats||false;
   const qScores=live.qScores||[[0,0],[0,0],[0,0],[0,0],[0,0]];
-  const ourTotal=qScores.reduce((s,q)=>s+(q[0]||0),0);
-  const theirTotal=qScores.reduce((s,q)=>s+(q[1]||0),0);
+  const ourTotal=qScores.reduce((s,q)=>s+(q&&q[0]||0),0);
+  const theirTotal=qScores.reduce((s,q)=>s+(q&&q[1]||0),0);
   const diff=ourTotal-theirTotal;
   const diffTxt=diff>0?"+"+diff:String(diff);
   const diffColor=diff>0?"#22c55e":diff<0?"#ef4444":"#f59e0b";
@@ -3008,7 +3036,9 @@ function liveGame(){
   const bonus=teamFouls>=4;
   const nQuarters=m.quarters||4;
   const _pLabel=nQuarters===4?"Q":"P";
-  const qlabels=[...Array(nQuarters).keys()].map(i=>_pLabel+(i+1)).concat(["OT"]);
+  const _otCount=live.otCount||0;
+  const _otLabelsLG=_otCount===1?["OT"]:Array.from({length:_otCount},(_,i)=>"OT"+(i+1));
+  const qlabels=[...[...Array(nQuarters).keys()].map(i=>_pLabel+(i+1)),..._otLabelsLG];
 
   const onCourt=live.onCourt||[];
   const benchP=convP.filter(p=>!onCourt.includes(p.id));
@@ -3341,7 +3371,7 @@ function liveGame(){
   const rivalStatsTable=(()=>{
     if(!rivalEnabled||rivalPlayers.length===0)return'<div style="text-align:center;padding:20px;color:var(--tm);font-size:13px">Sin jugadores del rival registrados</div>';
     const rs=live.rivalStats||{};
-    const rivTotal=qScores.reduce((s,q)=>s+(q[1]||0),0);
+    const rivTotal=qScores.reduce((s,q)=>s+(q&&q[1]||0),0);
     function rTot(fn){return rivalPlayers.reduce((s,p)=>s+(fn(rs[p.id]||{})||0),0);}
     let rows="";
     [...rivalPlayers].sort((a,b)=>(a.number||99)-(b.number||99)).forEach((p,i)=>{
@@ -3530,6 +3560,7 @@ function liveGame(){
     <div style="display:flex;gap:5px;align-items:center">
       ${bonus?`<span style="background:rgba(245,158,11,.25);color:#f59e0b;border:1px solid rgba(245,158,11,.4);border-radius:6px;font-size:10px;font-weight:800;padding:2px 6px">BONUS</span>`:""}
       <div style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--td)">F:${teamFouls}/4</div>
+      <button onclick="shareMatchResult()" style="width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:15px" title="Compartir marcador">📤</button>
       <button onclick="confirmFinishMatch('${S.teamId}','${S.matchId}')" style="width:32px;height:32px;border-radius:7px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:15px" title="Finalizar partido">🏁</button>
     </div>
   </div>
@@ -3599,6 +3630,11 @@ function selectLivePid(pid){
   m.live.selPid=m.live.selPid===pid?null:pid;
   render();
 }
+function _ensureQSlot(live,qi){
+  if(!live.qScores)live.qScores=[];
+  while(live.qScores.length<=qi)live.qScores.push([0,0]);
+  if(!live.qScores[qi])live.qScores[qi]=[0,0];
+}
 function liveAction(pid,action,pts){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const live=m.live;
@@ -3609,8 +3645,7 @@ function liveAction(pid,action,pts){
     if(!live.rivalStats[pid])live.rivalStats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0};
     live.rivalStats[pid][action]=(live.rivalStats[pid][action]||0)+1;
     const qi2=(live.q||1)-1;
-    if(!live.qScores)live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
-    while(live.qScores.length<=qi2)live.qScores.push([0,0]);
+    _ensureQSlot(live,qi2);
     if(pts>0)live.qScores[qi2][1]=(live.qScores[qi2][1]||0)+pts;
     if(action==="foul"||action==="ftech"){if(!live.rivalFouls)live.rivalFouls=[0,0,0,0,0,0];live.rivalFouls[qi2]=(live.rivalFouls[qi2]||0)+1;}
   } else {
@@ -3619,8 +3654,7 @@ function liveAction(pid,action,pts){
     live.stats[pid][action]=(live.stats[pid][action]||0)+1;
   }
   const qi=(live.q||1)-1;
-  if(!live.qScores)live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
-  while(live.qScores.length<=qi)live.qScores.push([0,0]);
+  _ensureQSlot(live,qi);
   if(pts>0)live.qScores[qi][0]=(live.qScores[qi][0]||0)+pts;
   if(action==="foul"||action==="ftech"){if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;}
   }
@@ -3790,8 +3824,7 @@ function saveTLResults(rpid, total, foulerPid){
   live.rivalStats[rpid].p1m=(live.rivalStats[rpid].p1m||0)+made;
 
   // Score
-  if(!live.qScores)live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
-  while(live.qScores.length<=qi)live.qScores.push([0,0]);
+  _ensureQSlot(live,qi);
   live.qScores[qi][1]=(live.qScores[qi][1]||0)+made;
 
   // Log entry
@@ -3812,8 +3845,7 @@ function liveTeamAction(action, pts){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const live=m.live;
   const qi=(live.q||1)-1;
-  if(!live.qScores)live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
-  while(live.qScores.length<=qi)live.qScores.push([0,0]);
+  _ensureQSlot(live,qi);
   if(pts>0)live.qScores[qi][0]=(live.qScores[qi][0]||0)+pts;
   if(action==="foul"||action==="ftech"){
     if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];
@@ -3890,8 +3922,7 @@ function confirmTeamTL(){
   const made=el._makes||0;const total=el._tl||0;
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const live=m.live;const qi=(live.q||1)-1;
-  if(!live.qScores)live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
-  while(live.qScores.length<=qi)live.qScores.push([0,0]);
+  _ensureQSlot(live,qi);
   live.qScores[qi][1]=(live.qScores[qi][1]||0)+made;
   const pL=m.quarters===4?"Q":"P";
   const entry={pid:"rival",action:"p1",pts:made,q:live.q,clockAt:live.clockSec,
@@ -3904,8 +3935,7 @@ function confirmTeamTL(){
 function rivalScoreLive(delta){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const qi=(m.live.q||1)-1;
-  if(!m.live.qScores)m.live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
-  while(m.live.qScores.length<=qi)m.live.qScores.push([0,0]);
+  _ensureQSlot(m.live,qi);
   const prev=m.live.qScores[qi][1]||0;
   const next=Math.max(0,prev+delta);
   if(next===prev)return;
@@ -3933,11 +3963,10 @@ function openEditQModal(){
   const nQ=m.quarters||4;
   const pL=nQ===4?"Q":"P";
   const curQ=m.live.q||1;
-  // Build periods: regular + OT options
+  const otCount=m.live.otCount||0;
   const periods=[];
   for(let i=1;i<=nQ;i++) periods.push({q:i,label:pL+i,isOT:false});
-  periods.push({q:nQ+1,label:"OT1",isOT:true});
-  periods.push({q:nQ+2,label:"OT2",isOT:true});
+  for(let i=1;i<=otCount;i++) periods.push({q:nQ+i,label:i===1?"OT":"OT"+i,isOT:true});
 
   document.getElementById("m-edit-q")?.remove();
   const el=document.createElement("div");
@@ -3961,6 +3990,7 @@ function openEditQModal(){
     <div class="mtitle">📍 Cambiar periodo</div>
     <div class="msub">Periodo actual: <b style="color:var(--orange)">${pL+curQ}</b></div>
     <div style="display:flex;gap:6px;margin-bottom:8px">${btns}</div>
+    ${(()=>{const qs=(m.live.qScores||[]).map(s=>s||[0,0]);const ourT=qs.reduce((s,q)=>s+(q[0]||0),0);const rivT=qs.reduce((s,q)=>s+(q[1]||0),0);const nextOTLabel=(otCount+1)===1?"OT":"OT"+(otCount+1);return ourT===rivT&&ourT>0?`<button onclick="document.getElementById('m-edit-q').remove();activateOT()" style="width:100%;padding:11px;border:none;border-radius:9px;font-weight:800;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;margin-bottom:8px">🏀 Activar ${nextOTLabel} (empate ${ourT}–${rivT})</button>`:""})()}
     <div style="font-size:12px;color:var(--tm);text-align:center;margin-bottom:8px">Toca un periodo para saltar directamente</div>
     <button class="btn-s" onclick="document.getElementById('m-edit-q').remove()">Cancelar</button>
   </div>`;
@@ -4159,9 +4189,13 @@ function openRivalSubModal(inId){
 }
 function _syncLiveQ(m){
   const live=m.live;if(!live||!live.qScores)return;
+  // Normalizar cualquier entrada null/undefined a [0,0]
+  live.qScores=live.qScores.map(qs=>qs||[0,0]);
   const isAway=m.location==="away";
+  const nQ=m.quarters||4;const otCount=live.otCount||0;
+  const limit=nQ+otCount; // solo sincronizar cuartos reales
   const newQ=[];
-  live.qScores.forEach(qs=>{
+  live.qScores.slice(0,limit).forEach(qs=>{
     const o=qs[0]||0,t=qs[1]||0;
     if(isAway)newQ.push(t,o);else newQ.push(o,t);
   });
@@ -4241,7 +4275,7 @@ function openLandscapeStats(){
 
   // Score summary
   const nQ=m.quarters||4;const pL=nQ===4?"Q":"P";const curQ=live.q||1;
-  const allQS=live.qScores||[[0,0]];
+  const allQS=(live.qScores||[[0,0]]).map(s=>s||[0,0]);
   const totOur=allQS.reduce((a,r)=>a+(r[0]||0),0);
   const totRiv2=allQS.reduce((a,r)=>a+(r[1]||0),0);
 
@@ -4300,7 +4334,7 @@ window.addEventListener('orientationchange',()=>{
 function confirmFinishMatch(teamId, matchId){
   const m=mById(teamId,matchId);if(!m)return;
   const live=m.live||{};
-  const qs=live.qScores||[];
+  const qs=(live.qScores||[]).map(s=>s||[0,0]);
   const our=qs.reduce((a,r)=>a+(r[0]||0),0);
   const riv=qs.reduce((a,r)=>a+(r[1]||0),0);
   document.getElementById("m-finish-match")?.remove();
