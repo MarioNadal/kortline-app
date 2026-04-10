@@ -396,7 +396,10 @@ function startClock(){
   if(_liveTimer)return;
   _liveTimer=setInterval(()=>{
     const m=mById(S.teamId,S.matchId);
-    if(!m||!m.live||S.screen!=="liveGame"){clearInterval(_liveTimer);_liveTimer=null;return;}
+    if(!m||!m.live||S.screen!=="liveGame"){
+      if(m?.live?.clockRunning){m.live.clockRunning=false;save();}
+      clearInterval(_liveTimer);_liveTimer=null;return;
+    }
     if(!m.live.clockRunning)return;
     if(m.live.clockSec>0){
       m.live.clockSec--;
@@ -425,6 +428,7 @@ function startClock(){
       const isLastPeriod=curQ>=totalPeriods;
       if(!isLastPeriod){
         m.live.q=curQ+1;
+        m.live.maxQ=Math.max(m.live.maxQ||1,curQ+1); // registrar el cuarto más alto alcanzado
         m.live.clockSec=(m.live.clockMins||m.qMins||10)*60;
         m.live.clockRunning=false;
         save();render();
@@ -937,7 +941,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.5.1",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.6",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1499,7 +1503,7 @@ function hoy(){
     const qs=(live.qScores||[]).map(s=>s||[0,0]);
     const ourTotal=qs.reduce((a,r)=>a+(r[0]||0),0);
     const rivTotal=qs.reduce((a,r)=>a+(r[1]||0),0);
-    const inProgress=live.q>1||(qs.length>0&&(ourTotal+rivTotal)>0)||live.clockRunning;
+    const inProgress=!!(live&&live.q);
     const nQ=m.quarters||4;const pL=nQ===4?"Q":"P";
     const curQ=live.q||1;
     const statusBadge=inProgress
@@ -2286,7 +2290,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.5.6 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -2799,7 +2803,7 @@ function matchDetail(){
 
   // Result badge
   const resultBadge=sc?`<span id="match-result-badge" class="result-pill ${r}" style="font-size:15px;padding:4px 14px">${r==="W"?"🏆 Victoria":r==="L"?"❌ Derrota":"🤝 Empate"} ${our}–${their}</span>`:`<span id="match-result-badge" class="result-pill P" style="font-size:13px;padding:3px 10px">⏳ Pendiente</span>`;
-  const hasLive=!!(m.live&&(m.live.log||[]).length>0);
+  const hasLive=!!(m.live&&m.live.q);
 
   return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="navBack()">←</button>
@@ -2932,6 +2936,108 @@ function setLocBtn(mid,loc){
 /* ═══════════════════════════════════════
    CONVOCATORIA SETUP WIZARD
 ═══════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   QUINTETO PICKER — antes de entrar al live
+═══════════════════════════════════════ */
+function _showQuintetoPickerModal(tid,mid){
+  document.getElementById("m-quinteto-pick")?.remove();
+  const m=mById(tid,mid);const t=S.teams.find(x=>x.id===tid);
+  if(!m||!t)return;
+  const players=pl(tid);
+  const convIds=m.convocados||[];
+  const convP=[...players].filter(p=>convIds.includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+
+  // Estado local del modal — 5 slots
+  const slots=(m.live?.onCourt||[]).filter(id=>convP.find(p=>p.id===id)).slice(0,5);
+  while(slots.length<5)slots.push(null);
+
+  function getPlayer(id){return id?convP.find(p=>p.id===id):null;}
+  function usedIds(){return slots.filter(Boolean);}
+
+  function buildHtml(){
+    const allFull=slots.every(Boolean);
+    const slotHtml=slots.map((pid,i)=>{
+      const p=getPlayer(pid);
+      return p
+        ?`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid rgba(249,115,22,.3);border-radius:10px">
+            <div style="width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,${t.color},${t.color}88);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:white;flex-shrink:0">${p.number||"?"}</div>
+            <div style="flex:1"><div style="font-weight:700;font-size:15px">${esc(p.name)}</div><div style="font-size:11px;color:var(--td)">${esc(p.position||"—")}</div></div>
+            <button onclick="_qpRemove(${i})" style="width:30px;height:30px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:16px;font-weight:700">✕</button>
+          </div>`
+        :`<button onclick="_qpPickSlot(${i})" style="width:100%;padding:12px;border-radius:10px;border:2px dashed var(--border);background:var(--s2);color:var(--td);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:700">
+            <span style="width:28px;height:28px;border-radius:7px;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);display:flex;align-items:center;justify-content:center;color:var(--orange);font-size:18px">+</span>
+            Jugador ${i+1}
+          </button>`;
+    }).join("");
+
+    return`<div class="modal" style="max-height:94vh;overflow-y:auto">
+      <div class="mhandle"></div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:4px">QUINTETO INICIAL</div>
+        <div style="font-weight:900;font-size:18px">Elige los 5 titulares</div>
+        <div style="font-size:12px;color:var(--td);margin-top:3px">${convP.length} jugadores disponibles · ${slots.filter(Boolean).length}/5 seleccionados</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">${slotHtml}</div>
+      <button onclick="_qpConfirm()" ${allFull?"":"disabled"} style="width:100%;padding:14px;border:none;border-radius:10px;font-weight:900;font-size:16px;cursor:pointer;background:${allFull?"linear-gradient(135deg,var(--orange),#c2410c)":"var(--s3)"};color:${allFull?"white":"var(--tm)"};font-family:var(--font-d);transition:all .2s">
+        ${allFull?"▶ Empezar partido":"Selecciona los 5 titulares"}
+      </button>
+      <button onclick="document.getElementById('m-quinteto-pick').remove()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--s2);color:var(--td);cursor:pointer;font-weight:700;margin-top:8px">Cancelar</button>
+    </div>`;
+  }
+
+  const el=document.createElement("div");
+  el.id="m-quinteto-pick";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.innerHTML=buildHtml();
+  document.body.appendChild(el);
+
+  // Exponer funciones al scope global temporalmente
+  window._qpRemove=function(i){
+    slots[i]=null;
+    el.querySelector(".modal").innerHTML=buildHtml().replace('<div class="modal" style="max-height:94vh;overflow-y:auto">','').replace('</div>','').trim();
+    el.innerHTML=buildHtml();
+  };
+  window._qpPickSlot=function(i){
+    // Mini picker de jugadores disponibles
+    document.getElementById("m-qp-pick")?.remove();
+    const available=convP.filter(p=>!usedIds().includes(p.id));
+    const sub=document.createElement("div");
+    sub.id="m-qp-pick";
+    sub.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:flex-end;justify-content:center;";
+    sub.onclick=e=>{if(e.target===sub)sub.remove();};
+    sub.innerHTML=`<div class="modal" style="max-height:70vh;overflow-y:auto">
+      <div class="mhandle"></div>
+      <div style="font-weight:900;font-size:16px;margin-bottom:12px">¿Quién entra de titular?</div>
+      <div class="card">
+        ${available.length===0?'<div style="padding:16px;text-align:center;color:var(--tm);font-size:13px">Todos los convocados ya están en el quinteto</div>':
+          available.map(p=>`<div class="pr" onclick="_qpSelect(${i},'${p.id}')" style="cursor:pointer">
+            <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:34px;height:34px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
+            <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>
+          </div>`).join("")}
+      </div>
+      <button onclick="document.getElementById('m-qp-pick').remove()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--s2);color:var(--td);cursor:pointer;font-weight:700;margin-top:8px">Cancelar</button>
+    </div>`;
+    document.body.appendChild(sub);
+  };
+  window._qpSelect=function(i,pid){
+    slots[i]=pid;
+    document.getElementById("m-qp-pick")?.remove();
+    el.innerHTML=buildHtml();
+  };
+  window._qpConfirm=function(){
+    if(!slots.every(Boolean))return;
+    const m2=mById(tid,mid);if(!m2)return;
+    // Solo guardar titulares — liveGame() hace el init completo
+    m2.titulares=slots.filter(Boolean);
+    // Si había live parcial sin q (corrupto), borrarlo para que se reinicialice
+    if(m2.live&&!m2.live.q)delete m2.live;
+    save();
+    document.getElementById("m-quinteto-pick")?.remove();
+    S.screen="liveGame";render();
+  };
+}
+
 function openConvSetup(){
   const m=mById(S.teamId,S.matchId);
   const t=S.teams.find(x=>x.id===S.teamId);
@@ -2954,6 +3060,8 @@ function _convSetupHtml(m,t,step){
   const rivalStatsEnabled=m.rivalStatsEnabled||false;
   const rivalEnabled=true; // Always show rival tab for TL tracking
   const rival=m.rival||"Rival";
+  const hasCap=!!m.capitan&&(convIds.includes(m.capitan));
+  const capName=hasCap?(players.find(p=>p.id===m.capitan)?.name||""):"";
 
   // Step 0: our convocatoria
   const ourStep=`
@@ -2967,8 +3075,16 @@ function _convSetupHtml(m,t,step){
         <button onclick="_convClearAll()" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;font-weight:700">Ninguno</button>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--tm);margin-bottom:10px">Toca para convocar · ⭐ titular · (C) capitán</div>
-    <div class="card" style="margin-bottom:12px;max-height:46vh;overflow-y:auto">
+    <div style="font-size:11px;color:var(--tm);margin-bottom:8px">Toca para convocar · ⭐ titular · (C) capitán</div>
+    <!-- Banner capitán -->
+    <div style="background:${hasCap?"rgba(34,197,94,.08)":"rgba(234,179,8,.08)"};border:1px solid ${hasCap?"rgba(34,197,94,.3)":"rgba(234,179,8,.35)"};border-radius:10px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">${hasCap?"✅":"⚡"}</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:800;color:${hasCap?"#22c55e":"#eab308"}">${hasCap?"Capitán: "+esc(capName.split(" ")[0]):"Sin capitán designado"}</div>
+        <div style="font-size:11px;color:var(--td);margin-top:1px">Dirige el equipo si el entrenador es expulsado (FIBA)</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px;max-height:40vh;overflow-y:auto">
       ${players.length===0
         ?'<div style="padding:20px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores en la plantilla. Añádelos desde el equipo.</div>'
         :players.map(p=>{
@@ -3125,6 +3241,54 @@ function _rivDel(id){
   el.innerHTML=_convSetupHtml(m,t,el._step||1);
 }
 function _convFinish(){
+  const m=mById(S.teamId,S.matchId);
+  if(!m)return;
+  // Aviso si no hay convocados y el partido usa stats individuales
+  if((!m.convocados||m.convocados.length===0)&&!m.teamOnlyStats){
+    _confirm(
+      "Sin convocados — las estadísticas individuales no funcionarán.\n\nPuedes añadirlos ahora o continuar sin ellos.",
+      "← Volver a añadir jugadores",
+      ()=>{_convGoStep(0);},
+      "Continuar sin convocados",
+      ()=>{save();document.getElementById("m-conv-setup")?.remove();S.screen="matchDetail";render();}
+    );
+    return;
+  }
+  // Aviso si menos de 5 convocados (mínimo FIBA para jugar)
+  if(m.convocados&&m.convocados.length>0&&m.convocados.length<5&&!m.teamOnlyStats){
+    _confirm(
+      `Solo hay ${m.convocados.length} convocado${m.convocados.length!==1?"s":""} — necesitas 5 para completar el quinteto inicial.\n\nSegún FIBA no se puede iniciar un partido con menos de 5 jugadores en pista.`,
+      "← Volver a convocar más",
+      ()=>{_convGoStep(0);},
+      "Continuar así",
+      ()=>{save();document.getElementById("m-conv-setup")?.remove();S.screen="matchDetail";render();}
+    );
+    return;
+  }
+  // Aviso si titulares < 5 (con convocados suficientes para completar)
+  const titCount=(m.titulares||[]).filter(id=>(m.convocados||[]).includes(id)).length;
+  if(titCount<5&&(m.convocados||[]).length>=5&&!m.teamOnlyStats){
+    const faltan=5-titCount;
+    _confirm(
+      `Te ${faltan===1?"falta":"faltan"} ${faltan} titular${faltan!==1?"es":""} por marcar (tienes ${titCount} de 5).\n\nEl quinteto inicial en pista necesita 5 titulares.`,
+      "← Volver a marcar titulares",
+      ()=>{_convGoStep(0);},
+      "Continuar así",
+      ()=>{save();document.getElementById("m-conv-setup")?.remove();S.screen="matchDetail";render();}
+    );
+    return;
+  }
+  // Aviso si no hay capitán designado
+  if(m.convocados&&m.convocados.length>0&&!m.capitan){
+    _confirm(
+      "⚡ No has designado capitán.\n\nSegún FIBA, el capitán dirige el equipo si el entrenador es expulsado.",
+      "← Volver a elegir capitán",
+      ()=>{_convGoStep(0);},
+      "Continuar sin capitán",
+      ()=>{save();document.getElementById("m-conv-setup")?.remove();S.screen="matchDetail";render();}
+    );
+    return;
+  }
   save();
   document.getElementById("m-conv-setup")?.remove();
   S.screen="matchDetail";render();
@@ -3323,19 +3487,30 @@ function liveGame(){
     const initScores=Array.from({length:nQ},()=>[0,0]);
     const initFouls=Array.from({length:nQ},()=>0);
     const initSec=(m.qMins||10)*60;
-    m.live={q:1,qScores:initScores,teamFouls:initFouls,stats:{},rivalStats:{},log:[],selPid:null,onCourt:[],rivalOnCourt:[],activeTeam:"our",clockSec:initSec,clockMins:m.qMins||10,clockRunning:false,timeouts:{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]},rivalFouls:[0,0,0,0,0,0]};
+    m.live={q:1,maxQ:1,qScores:initScores,teamFouls:initFouls,stats:{},rivalStats:{},log:[],selPid:null,onCourt:[],rivalOnCourt:[],activeTeam:"our",clockSec:initSec,clockMins:m.qMins||10,clockRunning:false,timeouts:{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]},rivalFouls:[0,0,0,0,0,0]};
     save();
   }
   const live=m.live;
   // Migrate old timeouts array format to object
   if(Array.isArray(live.timeouts)||!live.timeouts)
     live.timeouts={our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]};
+  // Migrate: asegurar maxQ existe (partidos guardados antes de v1.5.9)
+  if(!live.maxQ)live.maxQ=live.q||1;
   // Init onCourt from titulares or first 5 convocados
   if(!live.onCourt||live.onCourt.length===0){
-    const tits=(m.titulares||[]).filter(id=>convIds.includes(id));
-    live.onCourt=tits.length>0?tits.slice(0,5):convP.slice(0,5).map(p=>p.id);
+    const tits=(m.titulares||[]).filter(id=>convIds.includes(id)).slice(0,5);
+    live.onCourt=tits.length>0?tits:convP.slice(0,5).map(p=>p.id);
     save();
   }
+
+  // ── VALIDACIÓN: quinteto incompleto antes de empezar ────────────────
+  const _courtCount=(live.onCourt||[]).filter(id=>convP.find(p=>p.id===id)).length;
+  if(_courtCount<5&&!m.teamOnlyStats&&(!live.log||live.log.length===0)){
+    S.screen="matchDetail";save();render();
+    setTimeout(()=>_showQuintetoPickerModal(S.teamId,S.matchId),100);
+    return"";
+  }
+  // ────────────────────────────────────────────────────────────────────
   convP.forEach(p=>{if(!live.stats[p.id])live.stats[p.id]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0};});
   const rivalPlayers=m.rivalPlayers||[];
   const rivalEnabled=m.rivalStatsEnabled||false;
@@ -3367,14 +3542,15 @@ function liveGame(){
   const benchP=convP.filter(p=>!onCourt.includes(p.id));
   const courtP=onCourt.map(id=>convP.find(p=>p.id===id)).filter(Boolean);
 
-  // Quarter tabs
+  const maxReachedQ=live.maxQ||curQ;
   const qTabs=qlabels.map((ql,qi)=>{
     const active=curQ===qi+1;
+    const isFuture=qi+1>maxReachedQ;
     const qs=qScores[qi]||[0,0];
     const hasD=qs[0]||qs[1];
-    return`<button class="qtab-btn ${active?"active":""}" onclick="setLiveQ(${qi+1})">
+    return`<button class="qtab-btn ${active?"active":""}" onclick="setLiveQ(${qi+1})" ${isFuture?'disabled':''} style="${isFuture?"opacity:.3;cursor:not-allowed;":""}">
       <div>${ql}</div>
-      <div style="font-size:9px;margin-top:1px;color:${active?"var(--orange)":"var(--tm)"}">${hasD?qs[0]+"–"+qs[1]:"—"}</div>
+      <div style="font-size:9px;margin-top:1px;color:${active?"var(--orange)":"var(--tm)"}">${hasD?qs[0]+"–"+qs[1]:isFuture?"":"—"}</div>
     </button>`;
   }).join("");
 
@@ -3607,40 +3783,58 @@ function liveGame(){
   const last=log.length>0?log[log.length-1]:null;
   const undoBtn=last?`<button onclick="undoLiveAction()" style="display:flex;align-items:center;gap:6px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--s2);cursor:pointer;color:var(--td);font-size:13px;font-weight:600;margin-bottom:10px">↩️ ${esc(last.desc)}</button>`:"";
 
-  // Log panel
-  const logEntries=(live.log||[]).slice().reverse();
-  const qlabelsShort=qlabels;
-  const logPanel=logEntries.length===0?"":`
+  // Log panel — agrupado por cuartos
+  const logByQ={};
+  (live.log||[]).forEach((e,realIdx)=>{
+    const q=e.q||1;
+    if(!logByQ[q])logByQ[q]=[];
+    logByQ[q].push({e,realIdx});
+  });
+  const totalLog=(live.log||[]).length;
+  const logPanel=totalLog===0?"":`
     <div style="margin-top:14px">
-      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:0;user-select:none">
-        <span style="font-size:14px">📋</span>
-        <span style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);flex:1">Historial de acciones</span>
-        <span style="font-size:12px;background:var(--s3);color:var(--td);border-radius:6px;padding:2px 8px;font-weight:700">${logEntries.length}</span>
-        <span style="font-size:11px;color:var(--tm)">▼</span>
-      </div>
-      <div style="display:none;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;overflow:hidden">
-        ${logEntries.map((e,ri)=>{
-          const realIdx=(live.log||[]).length-1-ri;
-          const pdata=convP.find(p=>p.id===e.pid);
-          const pname=e.pid==="rival"?"Rival":e.pid==="rival-to"?"Rival":e.pid==="team"?"Equipo":(pdata?pdata.name.split(" ")[0]:"?");
-          const pnum=e.pid==="rival"?"R":e.pid==="rival-to"?"R":e.pid==="team"?"T":(pdata?.number||"?");
-          const ac=_ACTCOLOR[e.action]||"var(--td)";
-          const al=_ACTLABELS[e.action]||e.action;
-          const ql=qlabelsShort[(e.q||1)-1]||"Q1";
-          const clockStr=e.clockAt!=null?_fmtClock(e.clockAt):"";
-          return`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);background:${ri%2===0?"var(--s2)":"var(--s)"}">
-            <span style="font-size:10px;font-weight:800;color:var(--tm);min-width:36px;line-height:1.3">${ql}<br><span style="font-size:9px;color:var(--tm);letter-spacing:.5px">${clockStr}</span></span>
-            <div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,${t.color},${t.color}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${pnum}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(pname)}</div>
-              <div style="font-size:11px;font-weight:700;color:${ac};margin-top:1px">${al}</div>
-            </div>
-            <button onclick="deleteLogEntry(${realIdx})" style="width:30px;height:30px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
-          </div>`;
-        }).join("")}
-        <div style="padding:8px 12px;text-align:center">
-          <button onclick="_confirm('¿Limpiar el historial de acciones?','🗑 Limpiar',()=>{const m=mById(S.teamId,S.matchId);if(m&&m.live)m.live.log=[];save();render();})" style="font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer">🗑 Limpiar historial</button>
-        </div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">📋 Historial por cuartos</div>
+      ${qlabels.map((ql,qi)=>{
+        const qNum=qi+1;
+        const entries=logByQ[qNum]||[];
+        if(entries.length===0)return"";
+        const isActive=qNum===curQ;
+        const pts=entries.reduce((s,{e})=>s+(e.pts&&e.pid!=="rival"&&e.pid!=="rival-to"?e.pts:0),0);
+        const rivPts=entries.reduce((s,{e})=>s+(e.pts&&(e.pid==="rival"||e.pid==="rival-to")?e.pts:0),0);
+        const summary=`${entries.length} acción${entries.length!==1?"es":""}${pts>0?" · +"+pts+" pts":""}${rivPts>0?" · rival +"+rivPts:""}`;
+        const sectionId="log-q-"+qNum;
+        return`<div style="margin-bottom:6px;border:1px solid ${isActive?"rgba(249,115,22,.45)":"var(--border)"};border-radius:10px;overflow:hidden">
+          <div onclick="var b=document.getElementById('${sectionId}');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.log-chevron').textContent=b.style.display==='none'?'▶':'▼'" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:${isActive?"rgba(249,115,22,.08)":"var(--s2)"};cursor:pointer;user-select:none">
+            <span style="font-size:11px;font-weight:900;color:${isActive?"var(--orange)":"var(--td)"};min-width:28px">${ql}</span>
+            ${isActive?`<span style="font-size:9px;font-weight:800;background:var(--orange);color:white;border-radius:4px;padding:1px 6px;letter-spacing:.5px">EN CURSO</span>`:""}
+            <span style="font-size:11px;color:var(--tm);flex:1">${summary}</span>
+            <span class="log-chevron" style="font-size:10px;color:var(--tm)">${isActive?"▼":"▶"}</span>
+          </div>
+          <div id="${sectionId}" style="display:${isActive?"block":"none"}">
+            ${[...entries].reverse().map(({e,realIdx})=>{
+              const pdata=convP.find(p=>p.id===e.pid);
+              const isRivalEntry=e.pid==="rival"||e.pid==="rival-to";
+              const pname=isRivalEntry?(m.rival||"Rival"):e.pid==="team"?"Equipo":(pdata?pdata.name.split(" ")[0]:"?");
+              const pnum=isRivalEntry?"R":e.pid==="team"?"T":(pdata?.number||"?");
+              const ac=isRivalEntry?"#ef4444":(_ACTCOLOR[e.action]||"var(--td)");
+              const al=_ACTLABELS[e.action]||e.action;
+              const ptsLabel=e.pts>0?`<span style="font-size:11px;font-weight:800;color:${isRivalEntry?"#ef4444":"#22c55e"};margin-left:4px">${isRivalEntry?"-":"+"}${e.pts}</span>`:"";
+              const clockStr=e.clockAt!=null?` · ${_fmtClock(e.clockAt)}`:"";
+              const dotColor=isRivalEntry?"#ef4444":t.color;
+              return`<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)">
+                <div style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,${dotColor},${dotColor}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${pnum}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:600;color:var(--tx)">${esc(pname)}${ptsLabel}</div>
+                  <div style="font-size:11px;font-weight:700;color:${ac};margin-top:1px">${al}<span style="font-weight:400;color:var(--tm)">${clockStr}</span></div>
+                </div>
+                <button onclick="deleteLogEntry(${realIdx})" style="width:28px;height:28px;border-radius:7px;border:1px solid rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:#ef4444;cursor:pointer;font-size:13px;font-weight:700;flex-shrink:0;display:flex;align-items:center;justify-content:center">✕</button>
+              </div>`;
+            }).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+      <div style="text-align:center;padding:4px 0">
+        <button onclick="_confirm('¿Limpiar el historial de acciones?','🗑 Limpiar',()=>{const m=mById(S.teamId,S.matchId);if(m&&m.live)m.live.log=[];save();render();})" style="font-size:12px;color:var(--tm);background:none;border:none;cursor:pointer">🗑 Limpiar historial</button>
       </div>
     </div>`;
 
@@ -3924,7 +4118,7 @@ function liveGame(){
     <!-- Stats -->
     ${rivalEnabled?`
     <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px">
-      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">Nuestro equipo</button>
+      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">${esc(t.name.length>14?t.name.slice(0,13)+"…":t.name)}</button>
       <button onclick="setStatsView('rival')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${live.statsView==='rival'?'#ef4444':'transparent'};color:${live.statsView==='rival'?'white':'var(--td)'}">${esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+'…':m.rival||'Rival')}</button>
     </div>`:""}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -3996,6 +4190,7 @@ function liveAction(pid,action,pts){
   const entry={pid,action,pts,q:live.q,clockAt:live.clockSec,desc:`${pname} — ${_ACTLABELS[action]||action}`};
   live.log=[...(live.log||[]),entry];
   if(live.log.length>80)live.log=live.log.slice(-80);
+  live.selPid=null; // deseleccionar jugador tras registrar acción
   const f=(live.stats?.[pid]?.foul)||0;
   if(f>=5)toast("⛔ "+pname+" — 5 faltas, DESCALIFICADO");
   else if(f===4)toast("⚠️ "+pname+" — 4ª falta");
@@ -4322,6 +4517,9 @@ function openEditQModal(){
 
 function setLiveQ(q){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  // Bloquear salto a cuartos futuros no jugados aún
+  const maxReached=m.live.maxQ||m.live.q||1;
+  if(q>maxReached){toast("⚠️ Ese cuarto todavía no ha comenzado");return;}
   m.live.q=q;
   if(!m.live.qScores)m.live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
   while(m.live.qScores.length<q)m.live.qScores.push([0,0]);
@@ -4362,6 +4560,8 @@ function deleteLogEntry(idx){
     const to=m.live.timeouts||{our:[],rival:[]};
     if(e.pid==="rival-to"){if(to.rival[qi]>0)to.rival[qi]--;}
     else{if(to.our[qi]>0)to.our[qi]--;}
+  } else if(e.action==="sub"){
+    // Sustitución durante TM — solo eliminar del log, la reversión del quinteto es manual
   } else {
     const st=m.live.stats[e.pid];
     if(st&&st[e.action]!==undefined&&st[e.action]>0)st[e.action]--;
@@ -4575,7 +4775,31 @@ function openLandscapeStats(){
       </tr>`;
     }).join("");
 
-    const totPts=totSt?.(s=>(s.p1m||0)+(s.p2m||0)*2+(s.p3m||0)*3)||0;
+    const totPts=plist.reduce((s,p)=>{const st=statsObj[p.id]||{};return s+(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;},0);
+    const totT2m=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).p2m||0),0);
+    const totT2a=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).p2m||0)+((statsObj[p.id]||{}).p2a||0),0);
+    const totT3m=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).p3m||0),0);
+    const totT3a=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).p3m||0)+((statsObj[p.id]||{}).p3a||0),0);
+    const totT1m=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).p1m||0),0);
+    const totT1a=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).p1m||0)+((statsObj[p.id]||{}).p1a||0),0);
+    const totRo=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).ro||0),0);
+    const totRd=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).rd||0),0);
+    const totAst=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).ast||0),0);
+    const totF=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).foul||0),0);
+    const totStl=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).stl||0),0);
+    const totBlk=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).blk||0),0);
+    const totTo=plist.reduce((s,p)=>s+((statsObj[p.id]||{}).to||0),0);
+    const totRow=`<tr class="totrow" style="font-weight:900;font-size:11px">
+      <td style="position:sticky;left:0;background:var(--s2)">—</td>
+      <td style="position:sticky;left:28px;background:var(--s2);color:var(--td)">Totales</td>
+      <td style="color:${accentColor}">${totPts}</td>
+      <td>${totT2m}/${totT2a}</td><td>${totT3m}/${totT3a}</td><td>${totT1m}/${totT1a}</td>
+      <td style="color:#a855f7">${totRo}</td><td style="color:#9ca3af">${totRd}</td>
+      <td style="color:#06b6d4">${totAst}</td>
+      <td style="color:${totF>=10?"#ef4444":"var(--td)"}">${totF}</td>
+      <td style="color:#3b82f6">${totStl}</td><td style="color:#8b5cf6">${totBlk}</td>
+      <td style="color:#ef4444">${totTo}</td>
+    </tr>`;
     return `<div style="overflow-x:auto;border-radius:10px;border:1px solid ${isRival?"rgba(239,68,68,.3)":"var(--border)"}">
       <table class="stats-table" style="font-size:10px">
         <thead><tr style="background:var(--s2)">
@@ -4584,7 +4808,7 @@ function openLandscapeStats(){
           <th style="color:${accentColor}">PTS</th>
           <th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>
         </tr></thead>
-        <tbody>${rows}</tbody>
+        <tbody>${rows}${totRow}</tbody>
       </table>
     </div>`;
   }
@@ -4598,23 +4822,46 @@ function openLandscapeStats(){
 
   // Score summary
   const nQ=m.quarters||4;const pL=nQ===4?"Q":"P";const curQ=live.q||1;
-  const allQS=(live.qScores||[[0,0]]).map(s=>s||[0,0]);
+  const otCount=live.otCount||0;
+  const _otLabelsLS=otCount===1?["OT"]:Array.from({length:otCount},(_,i)=>"OT"+(i+1));
+  const qlabelsLS=[...[...Array(nQ).keys()].map(i=>pL+(i+1)),..._otLabelsLS];
+  const allQS=(live.qScores||[]).map(s=>s||[0,0]);
   const totOur=allQS.reduce((a,r)=>a+(r[0]||0),0);
   const totRiv2=allQS.reduce((a,r)=>a+(r[1]||0),0);
+  const diff=totOur-totRiv2;
+  const diffColor=diff>0?"#22c55e":diff<0?"#ef4444":"#f59e0b";
+  const diffStr=diff>0?"+"+diff:diff<0?String(diff):"=";
+
+  // Pills parciales por cuarto
+  const pillsHtml=qlabelsLS.map((ql,qi)=>{
+    const qs=allQS[qi]||[0,0];
+    if(qs[0]===0&&qs[1]===0&&qi>=curQ)return""; // cuartos futuros vacíos
+    const won=qs[0]>qs[1];const lost=qs[0]<qs[1];const draw=qs[0]===qs[1];
+    const active=qi+1===curQ;
+    const bg=active?"rgba(249,115,22,.2)":won?"rgba(34,197,94,.12)":lost?"rgba(239,68,68,.1)":"rgba(245,158,11,.1)";
+    const bc=active?"rgba(249,115,22,.5)":won?"rgba(34,197,94,.35)":lost?"rgba(239,68,68,.25)":"rgba(245,158,11,.3)";
+    const tc=active?"var(--orange)":won?"#22c55e":lost?"#ef4444":"#f59e0b";
+    const icon=active?"🔴":won?"✅":lost?"❌":"🤝";
+    return`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:${bg};border:1px solid ${bc};color:${tc};white-space:nowrap">${ql} ${qs[0]}–${qs[1]} ${icon}</span>`;
+  }).filter(Boolean).join(" ");
 
   el.innerHTML=`
-  <div style="background:var(--s);border-bottom:1px solid var(--border);padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0">
-    <button onclick="closeLandscapeStats()" style="width:36px;height:36px;border-radius:8px;background:var(--s2);border:1px solid var(--border);color:var(--tx);cursor:pointer;font-size:18px;flex-shrink:0">←</button>
-    <div style="flex:1">
-      <div style="font-family:var(--font-d);font-weight:900;font-size:16px">${esc(t?.name||"")} <span style="color:var(--td);font-weight:400">vs</span> ${esc(m.rival||"Rival")}</div>
-      <div style="font-size:11px;color:var(--td)">${pL}${curQ} · ${totOur} – ${totRiv2}</div>
+  <div style="background:var(--s);border-bottom:1px solid var(--border);padding:8px 14px 6px;padding-left:calc(14px + env(safe-area-inset-left));padding-right:calc(14px + env(safe-area-inset-right));flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <button onclick="closeLandscapeStats()" style="width:36px;height:36px;border-radius:8px;background:var(--s2);border:1px solid var(--border);color:var(--tx);cursor:pointer;font-size:18px;flex-shrink:0">←</button>
+      <div style="flex:1;display:flex;align-items:center;gap:10px">
+        <div style="font-family:var(--font-d);font-weight:900;font-size:28px;color:var(--tx);line-height:1">${totOur} <span style="font-size:18px;color:var(--td)">–</span> ${totRiv2}</div>
+        <div style="background:${diffColor}22;border:1px solid ${diffColor}44;border-radius:6px;padding:2px 8px;font-family:var(--font-d);font-weight:900;font-size:14px;color:${diffColor}">${diffStr}</div>
+        <div style="flex:1;font-size:11px;color:var(--td)">${esc(t?.name||"")} vs ${esc(m.rival||"Rival")}</div>
+      </div>
+      ${rivalEnabled?`<div style="display:flex;gap:4px">
+        <button id="ls-tab-our" onclick="lsTab('our')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${(live.statsView||'our')==='our'?(t?.color||'var(--orange)'):'var(--s2)'};color:${(live.statsView||'our')==='our'?'white':'var(--td)'}">${(t?.name||"Nuestro").split(" ")[0]}</button>
+        <button id="ls-tab-riv" onclick="lsTab('rival')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${live.statsView==='rival'?'#ef4444':'var(--s2)'};color:${live.statsView==='rival'?'white':'var(--td)'}">${(m.rival||"Rival").length>10?(m.rival||"Rival").slice(0,8)+"…":m.rival||"Rival"}</button>
+      </div>`:""}
     </div>
-    ${rivalEnabled?`<div style="display:flex;gap:4px">
-      <button id="ls-tab-our" onclick="lsTab('our')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${(live.statsView||'our')==='our'?(t?.color||'var(--orange)'):'var(--s2)'};color:${(live.statsView||'our')==='our'?'white':'var(--td)'}">${(t?.name||"Nuestro").split(" ")[0]}</button>
-      <button id="ls-tab-riv" onclick="lsTab('rival')" style="padding:4px 10px;border-radius:6px;border:none;font-weight:800;font-size:12px;cursor:pointer;background:${live.statsView==='rival'?'#ef4444':'var(--s2)'};color:${live.statsView==='rival'?'white':'var(--td)'}">${(m.rival||"Rival").length>10?m.rival.slice(0,8)+"…":m.rival||"Rival"}</button>
-    </div>`:""}
+    ${pillsHtml?`<div style="display:flex;gap:4px;flex-wrap:wrap;padding-bottom:4px">${pillsHtml}</div>`:""}
   </div>
-  <div id="ls-table-wrap" style="flex:1;overflow:auto;padding:10px 8px">
+  <div id="ls-table-wrap" style="flex:1;overflow:auto;padding:10px 8px;padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right));padding-bottom:calc(10px + env(safe-area-inset-bottom))">
     <div id="ls-our">${ourTable}</div>
     ${rivalEnabled?`<div id="ls-riv" style="display:none">${rivTable}</div>`:""}
   </div>`;
@@ -4735,23 +4982,25 @@ function _confirmTyped(msg, requiredText, confirmLabel, onConfirm){
   setTimeout(()=>document.getElementById("confirm-typed-input")?.focus(),100);
 }
 
-function _confirm(msg, confirmLabel, onConfirm){
+function _confirm(msg, confirmLabel, onConfirm, cancelLabel, onCancel){
   document.getElementById("m-confirm")?.remove();
   const el=document.createElement("div");
   el.id="m-confirm";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  const isSoft=!!cancelLabel; // si hay cancelLabel es aviso suave (naranja), si no es destructivo (rojo)
+  const confirmBg=isSoft?"linear-gradient(135deg,var(--orange),#c2410c)":"linear-gradient(135deg,#ef4444,#b91c1c)";
   el.innerHTML=`<div style="background:var(--s);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:340px;box-shadow:0 8px 40px rgba(0,0,0,.6)">
-    <div style="font-size:24px;margin-bottom:12px;text-align:center">⚠️</div>
-    <div style="font-size:15px;line-height:1.5;text-align:center;margin-bottom:20px">${msg}</div>
-    <button onclick="document.getElementById('m-confirm').remove();(arguments[0].target._cb)()" style="width:100%;padding:12px;border:none;border-radius:9px;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#ef4444,#b91c1c);color:white;margin-bottom:8px">${confirmLabel||"Confirmar"}</button>
-    <button onclick="document.getElementById('m-confirm').remove()" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:9px;font-weight:700;font-size:15px;cursor:pointer;background:var(--s2);color:var(--td)">Cancelar</button>
+    <div style="font-size:15px;line-height:1.6;margin-bottom:20px;white-space:pre-line">${msg}</div>
+    <button id="mc-ok" style="width:100%;padding:12px;border:none;border-radius:9px;font-weight:800;font-size:15px;cursor:pointer;background:${confirmBg};color:white;margin-bottom:8px">${confirmLabel||"Confirmar"}</button>
+    <button id="mc-cancel" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:9px;font-weight:700;font-size:15px;cursor:pointer;background:var(--s2);color:var(--td)">${cancelLabel||"Cancelar"}</button>
   </div>`;
-  // store callback
-  el.querySelector("button")._cb=onConfirm;
+  el.querySelector("#mc-ok").onclick=()=>{el.remove();onConfirm&&onConfirm();};
+  el.querySelector("#mc-cancel").onclick=()=>{el.remove();onCancel&&onCancel();};
   document.body.appendChild(el);
 }
 
 load();render();checkBackupReminder();
+
 
 
 var _isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(/Macintosh/.test(navigator.userAgent)&&"ontouchend" in document);var _isSA=window.matchMedia("(display-mode:standalone)").matches||window.navigator.standalone===true;var _isAndroid=/Android/.test(navigator.userAgent);if(_isIOS&&!_isSA&&!localStorage.getItem("cbj-ios-never")&&!sessionStorage.getItem("cbj-ios-dismiss")){setTimeout(function(){var el=document.createElement("div");el.id="ios-ig";el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:flex-end;justify-content:center;";el.onclick=function(e){if(e.target===el){el.remove();sessionStorage.setItem("cbj-ios-dismiss","1");}};el.innerHTML='<div style="background:#0d1a2e;border-radius:20px 20px 0 0;border-top:1px solid #1e3a5f;width:100%;max-width:430px;padding:24px 20px calc(24px + env(safe-area-inset-bottom));animation:slideUp .3s ease-out"><div style="width:34px;height:4px;background:#1a3050;border-radius:2px;margin:0 auto 20px"></div><div style="text-align:center;margin-bottom:20px"><img src="'+_FULL_SVG_URL+'" style="height:48px;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto"/><div style="font-size:14px;color:#7a9cc8;line-height:1.5">A\u00f1ade la app a tu pantalla de inicio</div></div><div style="background:#122236;border:1px solid #1e3a5f;border-radius:14px;padding:18px;margin-bottom:16px"><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1e3a5f"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">1</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Pulsa Compartir</div><div style="font-size:13px;color:#7a9cc8">El icono &#x2B06;&#xFE0F; en la barra inferior de Safari</div></div></div><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #1e3a5f"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">2</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Desliza hacia abajo</div><div style="font-size:13px;color:#7a9cc8">Baja en el men\u00fa y busca <b style=\"color:#f0f4ff\">A\u00f1adir a pantalla de inicio</b></div></div></div><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:10px;background:rgba(249,115,22,.15);display:flex;align-items:center;justify-content:center;font-weight:900;color:#f97316">3</div><div><div style="font-weight:700;font-size:15px;color:#f0f4ff">Pulsa A\u00f1adir</div><div style="font-size:13px;color:#7a9cc8">\u00a1Listo! Aparecer\u00e1 como una app m\u00e1s</div></div></div></div><button onclick="document.getElementById(\'ios-ig\').remove();sessionStorage.setItem(\'cbj-ios-dismiss\',\'1\')" style="width:100%;padding:14px;border-radius:10px;border:none;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#f97316,#c2410c);color:white">\u{1F44D} Entendido</button><div style="text-align:center;margin-top:12px"><button onclick="document.getElementById(\'ios-ig\').remove();localStorage.setItem(\'cbj-ios-never\',\'1\')" style="background:none;border:none;color:#3a5a80;font-size:13px;cursor:pointer">No volver a mostrar</button></div></div>';document.body.appendChild(el);},2000);}
