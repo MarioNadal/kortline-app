@@ -6,78 +6,99 @@ Desarrollada por **Mario Nadal Ara** · Stack: HTML + CSS + Vanilla JS · Datos 
 
 ## Historial de versiones
 
-### v1.5.0 — Reloj y descansos FEB *(actual)*
+### v1.6.0 — Setup del partido y UX general *(actual)*
 
-**Nuevas funciones**
+**Convocatoria y quinteto**
 
-- **Aviso de 10 segundos** — alerta visual "🔴 ¡10 segundos!" al llegar a 0:10 en el reloj de partido, complementando los avisos existentes de 2 min, 1 min y 30 s.
-- **Overlay de fin de cuarto con acciones pendientes** — cuando el reloj llega a 0:00, ya no arranca el descanso de forma inmediata. Aparece un modal con el marcador del momento y botones de acción rápida del último segundo: +2, +3, +1 TL, Falta, +2 Rival, +3 Rival. El entrenador registra lo que haya pasado en la bocina y pulsa "Iniciar descanso" cuando esté listo.
-- **Tiempos de descanso reglamentarios FEB** — los tiempos ya son correctos por reglamento:
-  - Q1 → Q2: **1 minuto** (reglamento FBM amateur)
-  - Q2 → Q3 (medio tiempo): **10 minutos**
-  - Q3 → Q4: **1 minuto** (reglamento FBM amateur)
-  - *Nota: el reglamento FIBA internacional establece 2 min entre cuartos, pero las competiciones regionales FBM usan 1 min*
-  - La pantalla de descanso etiqueta el medio tiempo como "⏸ Medio tiempo" de forma diferenciada.
-- **Overlay de descanso rediseñado** — sustituyó la pildorita inferior (que en iOS con safe area quedaba tapada por el navbar) por un modal centrado de pantalla completa con la cuenta atrás en formato `mm:ss` y botón "▶ Iniciar Qx".
+- **Picker de quinteto bloqueante** — si intentas entrar al seguimiento en vivo con menos de 5 jugadores en pista, aparece un picker de 5 slots directamente en pantalla. Cada slot vacío tiene un botón `+` que abre el listado de convocados disponibles. El botón "▶ Empezar partido" solo se activa con los 5 rellenos. Sin 5 titulares no se puede entrar.
+- **Validaciones en cadena en "Listo"** — al pulsar el botón final del wizard de convocatoria se verifican en orden: sin convocados → menos de 5 convocados → menos de 5 titulares → sin capitán. Cada aviso tiene botón primario naranja para volver a corregir y botón gris para continuar si el entrenador lo decide conscientemente.
+- **Banner del capitán prominente** — el wizard muestra siempre el estado del capitán con nota FIBA: "Dirige el equipo si el entrenador es expulsado". Verde si está designado, amarillo si no.
+- **"Volver a elegir"** dirige al step 0 (nuestro equipo) automáticamente.
+
+**Live game**
+
+- **Bloqueo de cuartos futuros** — los tabs Q2/Q3/Q4 aparecen en gris y desactivados hasta que el reloj avanza a ese cuarto. Se puede volver a cuartos pasados para revisar o añadir acciones. Campo `live.maxQ` trackea el cuarto más alto alcanzado.
+- **"Continuar partido"** aparece desde que se entra al seguimiento en vivo por primera vez, sin esperar a que haya acciones ni marcador.
+- **Deselección automática** — al registrar cualquier acción, el jugador se deselecciona automáticamente. Ya no se queda marcado en naranja.
 
 **Bugs resueltos**
 
 | ID | Descripción | Versión |
 |----|-------------|---------|
-| B-06 | Overlay de descanso oculto tras navbar en iOS (z-index + bottom insuficientes) | v1.5.0 |
-| B-07 | Descanso entre cuartos siempre de 60 s (1 min), correcto para FBM amateur pero sin distinguir medio tiempo | v1.5.0 |
+| B-10 | Se podía entrar al live game con 3 jugadores en pista en 5vs5 | v1.6.0 |
+| B-11 | Saltar a Q4 sin haber jugado Q1 era posible | v1.6.0 |
+| B-12 | "Empezar partido" en vez de "Continuar" aunque el partido estuviera iniciado | v1.6.0 |
+| B-13 | Jugador seleccionado no se deseleccionaba al registrar acción | v1.6.0 |
+| B-14 | `deleteLogEntry` no manejaba acción 'sub' (sustitución TM) | v1.6.0 |
+
+---
+
+### v1.5.x — Reloj, descansos, TM, navegación y Android
+
+**v1.5.8 — Features recuperadas de v1.4.0**
+- Historial de acciones agrupado por cuartos (secciones colapsables, badge EN CURSO, resumen de parciales)
+- Landscape stats: header con marcador grande + diferencia en color, pills de parciales por cuarto (Q1 8–6 ✅), safe-area insets iOS, fila de totales en ambas tablas (nuestro equipo y rival)
+- Fix B-02: nombre del equipo en el tab de stats del live game (ya no dice "Nuestro equipo")
+
+**v1.5.6 — Compatibilidad Android**
+- `touch-action: manipulation` global en todos los botones — elimina el retraso de 300ms
+- Área táctil extendida a ~44px en botones de 22px (pseudo-elemento `::after`)
+- `appearance: none` sin prefijo en todos los inputs y selects
+- Select con flecha SVG custom — se ve igual en iOS y Android
+- `min-height: 100dvh` con fallback `100vh`
+
+**v1.5.5 — Steppers de marcador**
+- Inputs de cuartos sustituidos por botones +/− táctiles
+- Toca el número para escribir directamente (inline edit con flag anti-doble-commit)
+- Editor del reloj: mismos steppers +/− con inputs editables
+- Todos los `type="number"` restantes → `type="text" inputmode="numeric"`
+
+**v1.5.4 — Navegación por pila**
+- Sistema `navTo/navBack/navRoot` — el botón ← siempre vuelve exactamente al sitio de donde vienes
+- `hist → share → ←` va a `hist`, no a `att`
+- Navbar limpia la pila (navegación raíz)
+
+**v1.5.1 — Tiempo muerto rediseñado**
+- Overlay pantalla completa con cuenta atrás 1:00
+- Dots de TMs restantes por equipo y mitad (2 primera mitad, 3 segunda)
+- Quinteto en pista con sustituciones durante el TM
+- Reglamento FBM amateur: 1 min TM, 2+3 por mitad
+
+**v1.5.0 — Reloj y descansos FEB**
+- Aviso de 10 segundos
+- Overlay de fin de cuarto con acciones del último segundo antes del descanso
+- Tiempos FEB amateur: Q1↔Q2 y Q3↔Q4 = 1 min, medio tiempo = 10 min
+- Break overlay: modal centrado pantalla completa (fix visibilidad iOS)
+- Fix `clockRunning` al salir de liveGame — botón muestra ▶ no ⏸ al volver
+
+**Bugs resueltos v1.5.x**
+
+| ID | Descripción | Versión |
+|----|-------------|---------|
+| B-01 | T.M. no paraba reloj ni mostraba countdown | v1.3.1 |
+| B-02 | "Nuestro equipo" hardcodeado en toggle stats | v1.5.8 |
+| B-03 | Overlay T.M. tapado por landscape stats | v1.3.1 |
+| B-04 | Sin fila de totales en pantalla completa | v1.5.8 |
+| B-05 | Totales rival usaban reductor del equipo local | v1.4.0 |
+| B-06 | Overlay de descanso oculto tras navbar en iOS | v1.5.0 |
+| B-07 | Descanso entre cuartos no respetaba tiempos FBM | v1.5.0 |
 | B-08 | Sin aviso visual a 10 segundos | v1.5.0 |
-| B-09 | Descanso arrancaba automáticamente sin permitir registrar acciones del último segundo | v1.5.0 |
+| B-09 | Descanso arrancaba sin permitir acciones del último segundo | v1.5.0 |
 
 ---
 
 ### v1.4.0
 
-**Nuevas funciones**
+- Tiempo muerto con cuenta atrás
+- Historial de acciones agrupado por cuartos
+- Pantalla completa landscape stats rediseñada
 
-- Tiempo muerto con cuenta atrás (overlay 60 s, botón Reanudar)
-- Historial de acciones agrupado por cuartos (desplegables, badge "EN CURSO", resumen de parciales)
-- Pantalla completa de stats en landscape rediseñada: fila de totales en ambas tablas, header con marcador grande y diferencia, pills de parciales por cuarto, safe-area insets iOS
+### v1.0.0 – v1.3.x
 
-**Bugs resueltos**
-
-| ID | Descripción | Versión |
-|----|-------------|---------|
-| B-01 | T.M. no paraba reloj ni mostraba countdown | v1.3.1 |
-| B-02 | "Nuestro equipo" hardcodeado en toggle de stats | v1.3.1 |
-| B-03 | Overlay T.M. tapado por landscape stats (z-index igual) | v1.3.1 |
-| B-04 | Sin fila de totales en pantalla completa de stats | v1.4.0 |
-| B-05 | Totales rival usaban reductor del equipo local | v1.4.0 |
-
----
-
-### v1.3.1
-
-- Fix tiempo muerto: para reloj y muestra cuenta atrás
-- Fix nombre equipo en toggle de stats del live game
-- Fix z-index overlay TM vs landscape stats
-
-### v1.3.0
-
-- Convocatoria wizard (nuestro equipo + rival, titulares, capitán)
-- Stats del rival por jugador (activable por partido)
-- Sustituciones del rival
-- Pantalla completa landscape de stats
-
-### v1.2.0
-
-- Marcador en vivo: reloj, cuartos, QScores
-- Acciones individuales por jugador (puntos, rebotes, asistencias, faltas…)
-- Undo de última acción
-- Descalificación automática a 5 faltas
-
-### v1.0.0 — v1.1.0
-
-- Pase de lista diario
-- Gestión de equipos y jugadores
-- Calendario de partidos con marcador manual
-- Compartir resultado y convocatoria por WhatsApp
-- Estadísticas de asistencia con umbral de riesgo FEB
+- Pase de lista, gestión de equipos y jugadores
+- Partidos con marcador manual y seguimiento en vivo
+- Stats individuales, convocatoria, titulares
+- Compartir por WhatsApp
 - Exportar/importar backup JSON
 
 ---
@@ -85,12 +106,17 @@ Desarrollada por **Mario Nadal Ara** · Stack: HTML + CSS + Vanilla JS · Datos 
 ## Archivos
 
 ```
-index.html          App completa (single-file)
-manifest.json       PWA manifest
-sw.js               Service worker (offline)
+index.html                    App completa (single-file)
+manifest.json                 PWA manifest
+sw.js                         Service worker (offline)
 assets/logos/
-  logo-icon.svg     Icono 512×512
-  logo-full.svg     Logo horizontal 880×240
-README.md           Este archivo
-MANUAL_USUARIO_KORTLINE.md  Manual de usuario
+  logo-icon.svg               Icono 512×512
+  logo-full.svg               Logo horizontal 880×240
+README.md                     Este archivo
+MANUAL_USUARIO_KORTLINE.md    Manual de usuario
 ```
+
+## Pendiente v1.1
+
+- Touch drag-to-dismiss en modales (el mhandle es decorativo, no funciona en iOS/Android PWA)
+- Sistema de modos básico/estándar/experto por equipo
