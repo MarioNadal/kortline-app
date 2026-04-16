@@ -133,11 +133,12 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--tx);min-height:1
 .fab:hover{transform:scale(1.06);box-shadow:0 6px 30px rgba(240,99,24,.55);}
 
 /* ── Modals ── */
-.modal{background:var(--s);border-radius:20px 20px 0 0;border-top:1px solid var(--border);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;padding:20px;max-height:92vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--navy2) var(--s);box-sizing:border-box;z-index:10000;}
+.modal{background:var(--s);border-radius:20px 20px 0 0;border-top:1px solid var(--border);position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;padding:20px;max-height:92vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--navy2) var(--s);box-sizing:border-box;z-index:10000;animation:modalSlideUp .3s ease;}
+@keyframes modalSlideUp{from{transform:translateX(-50%) translateY(100%);}to{transform:translateX(-50%) translateY(0);}}
 .modal::-webkit-scrollbar{width:4px;}
 .modal::-webkit-scrollbar-track{background:var(--s);}
 .modal::-webkit-scrollbar-thumb{background:var(--navy2);border-radius:2px;}
-.mhandle{width:34px;height:4px;background:var(--s3);border-radius:2px;margin:0 auto 16px;}
+.mhandle{width:34px;height:4px;background:var(--s3);border-radius:2px;margin:0 auto 16px;cursor:grab;touch-action:none;}
 .mtitle{font-family:var(--font-d);font-weight:900;font-size:22px;margin-bottom:4px;letter-spacing:.5px;}
 .msub{font-size:13px;color:var(--td);margin-bottom:14px;line-height:1.5;}
 
@@ -956,11 +957,86 @@ function load(){
   S.clubLogo=lsGet("cbj:logo")||null;S.clubName=lsGet("cbj:name")||"Kortline";S.clubAbrev=lsGet("cbj:cabrev")||"";S.clubLema=lsGet("cbj:clema")||"";
   const sc=lsGet("cbj:cfg");
   S.cfg=sc?{...DEFAULT_CFG,...sc,features:{...DEFAULT_CFG.features,...(sc.features||{})}}:{...DEFAULT_CFG};
+  // Asegurar que riskThreshold sea numérico (fix: a veces se guardaba como string)
+  S.cfg.riskThreshold=parseInt(S.cfg.riskThreshold)||75;
 }
 function save(){lsSet("cbj:t",S.teams);lsSet("cbj:p",S.players);lsSet("cbj:s",S.sessions);lsSet("cbj:m",S.matches);lsSet("cbj:ev",S.events);lsSet("cbj:logo",S.clubLogo);lsSet("cbj:name",S.clubName);lsSet("cbj:cabrev",S.clubAbrev);lsSet("cbj:clema",S.clubLema);lsSet("cbj:cfg",S.cfg);autoBackup();}
 function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{toast("⚠️ Almacenamiento lleno");return false;}}
 let _tt=null;
+
+/* ═══════════════════════════════════════
+   DRAG-TO-DISMISS (bottom sheets)
+═══════════════════════════════════════ */
+function _initDragDismiss(){
+  document.addEventListener("pointerdown",function(e){
+    const handle=e.target.closest(".mhandle");
+    if(!handle)return;
+    const modal=handle.closest(".modal");
+    if(!modal)return;
+    const overlay=modal.parentElement;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const startY=e.clientY;
+    let dy=0;
+    modal.style.transition="none";
+    function onMove(ev){
+      dy=Math.max(0,ev.clientY-startY);
+      modal.style.transform="translateX(-50%) translateY("+dy+"px)";
+      if(overlay)overlay.style.background="rgba(0,0,0,"+Math.max(0,.88-dy/500)+")";
+    }
+    function onUp(){
+      handle.removeEventListener("pointermove",onMove);
+      handle.removeEventListener("pointerup",onUp);
+      handle.removeEventListener("pointercancel",onUp);
+      modal.style.transition="transform .25s ease";
+      if(dy>120){
+        modal.style.transform="translateX(-50%) translateY(100%)";
+        setTimeout(()=>{overlay?.remove();},250);
+      }else{
+        modal.style.transform="translateX(-50%) translateY(0)";
+        if(overlay)overlay.style.background="rgba(0,0,0,.88)";
+      }
+    }
+    handle.addEventListener("pointermove",onMove);
+    handle.addEventListener("pointerup",onUp);
+    handle.addEventListener("pointercancel",onUp);
+  });
+}
+_initDragDismiss();
+
+/* ═══════════════════════════════════════
+   INFO MODAL — RIESGO FEB
+═══════════════════════════════════════ */
+function showFebRiskInfo(){
+  const thr=S.cfg.riskThreshold;
+  document.getElementById("m-feb-info")?.remove();
+  const el=document.createElement("div");el.id="m-feb-info";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.innerHTML=`<div class="modal" style="padding:20px">
+    <div class="mhandle"></div>
+    <div style="text-align:center;margin-bottom:14px"><span style="font-size:40px">⚠️</span></div>
+    <div class="mtitle" style="text-align:center">Riesgo FEB</div>
+    <div style="font-size:13px;color:var(--td);line-height:1.7;margin:12px 0 16px">
+      <p style="margin-bottom:10px">Según la <b style="color:var(--tx)">Federación Española de Baloncesto (FEB)</b>, los jugadores necesitan una asistencia mínima a los entrenamientos para poder ser convocados en partidos oficiales.</p>
+      <p style="margin-bottom:10px">El umbral estándar es del <b style="color:var(--orange)">75%</b>, aunque cada club puede ajustarlo. Tu umbral actual está configurado en <b style="color:var(--orange)">${thr}%</b>.</p>
+      <p style="margin-bottom:10px">Los jugadores que estén <b style="color:#ef4444">por debajo del ${thr}%</b> de asistencia aparecen marcados en rojo como "en riesgo", lo que significa que podrían no cumplir el mínimo exigido para competir.</p>
+      <p>Los jugadores <b style="color:#7a9cc8">lesionados</b> que ya estaban en riesgo al lesionarse también se cuentan, para que el entrenador no los pierda de vista.</p>
+    </div>
+    <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Leyenda de colores</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#22c55e;flex-shrink:0"></span><span style="color:var(--td)">≥ 90% — Excelente</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;flex-shrink:0"></span><span style="color:var(--td)">${thr}%–89% — Aceptable</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#ef4444;flex-shrink:0"></span><span style="color:var(--td)">&lt; ${thr}% — En riesgo FEB</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:3px;background:#7a9cc8;flex-shrink:0"></span><span style="color:var(--td)">Lesionado (asistencia congelada)</span></div>
+      </div>
+    </div>
+    <button class="btn-s" onclick="document.getElementById('m-feb-info').remove()">Entendido</button>
+  </div>`;
+  document.body.appendChild(el);
+}
 
 /* ═══════════════════════════════════════
    BACKUP & RESTORE
@@ -2095,9 +2171,9 @@ function stats(){
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;color:var(--orange)">${total}</div>
         <div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase;letter-spacing:1px">Sesiones</div>
       </div>
-      <div style="flex:1;background:${riskCnt>0?"rgba(239,68,68,.1)":"var(--s2)"};border:1px solid ${riskCnt>0?"rgba(239,68,68,.3)":"var(--border)"};border-radius:10px;padding:12px;text-align:center">
+      <div onclick="showFebRiskInfo()" style="flex:1;background:${riskCnt>0?"rgba(239,68,68,.1)":"var(--s2)"};border:1px solid ${riskCnt>0?"rgba(239,68,68,.3)":"var(--border)"};border-radius:10px;padding:12px;text-align:center;cursor:pointer">
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;color:${riskCnt>0?"#ef4444":"#22c55e"}">${riskCnt>0?"⚠️ "+riskCnt:"✓"}</div>
-        <div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase;letter-spacing:1px">Riesgo FEB</div>
+        <div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase;letter-spacing:1px">Riesgo FEB <span style="font-size:9px;opacity:.7">ⓘ</span></div>
       </div>
     </div>
 
@@ -2642,7 +2718,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.7 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.8 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
