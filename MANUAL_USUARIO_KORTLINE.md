@@ -1,51 +1,94 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.4.0**  
-*Kortline — De la Pista al Dato*
+**Versión 1.6.1**
+_Kortline — De la Pista al Dato_
 
 ---
 
 ## Primeros pasos
 
 ### Instalación como app
+
 Kortline funciona desde el navegador, pero puedes instalarla como app nativa:
 - **iOS (Safari):** Compartir → Añadir a pantalla de inicio
 - **Android (Chrome):** Menú ⋮ → Añadir a pantalla de inicio
 
 ### Configuración inicial del club
-Antes de empezar, pulsa el **logo** en la esquina superior izquierda:
 
+Antes de empezar, pulsa el **logo** en la esquina superior izquierda para entrar en ⚙️ Configuración:
+
+- **Logo** — imagen personalizada del club
 - **Nombre del club** — aparece en mensajes y encabezados
 - **Abreviatura** — versión corta para los mensajes WhatsApp (ej. `CB JACA`)
 - **Lema / cierre** — texto opcional al final de todas las convocatorias (ej. `¡Vamos FamiliaCBJaca! 🏀`). Si se deja vacío no aparece nada.
-- **Logo** — imagen personalizada del club
+
+### Seguimiento avanzado (opcional)
+
+Dentro de ⚙️ Configuración encontrarás la sección **🎯 Seguimiento avanzado del entrenamiento** con 4 interruptores. Actívalos solo si los vas a usar — cuantas menos opciones, más rápido el pase de lista:
+
+- 📋 **Ejercicios de la sesión** — campo libre para anotar qué has trabajado
+- 📷 **Foto del entrenamiento** — guarda una foto por sesión
+- ⭐ **Valoración colectiva** — puntúa del 1 al 10 el entrenamiento global
+- 👤 **Valoración individual** — puntúa a cada jugador presente con 1-10 ★
 
 ---
 
 ## Gestión de equipos
 
 ### Crear un equipo
+
 Pantalla **Equipos** → **＋**. Configura nombre, categoría, entrenador/es, días y horarios, y color identificativo.
 
+> 💡 **Horarios rápidos:** escribe directamente la hora y la casilla del día se marca sola. No hace falta pulsar antes el check.
+
 ### Añadir jugadores
-Dentro del equipo → sección **Plantilla** → **＋ Añadir**. Cada jugador tiene nombre, dorsal, posición y notas opcionales.
+
+Dentro del equipo → sección **Plantilla** → **＋ Añadir jugador**.
+
+Cada jugador tiene:
+- **Foto / avatar** (opcional) — se muestra junto al dorsal en la plantilla y en el pase de lista
+- **Nombre**
+- **Dorsal** — con botones `−/+` para ajustar con el pulgar y sugerencia automática del próximo libre
+- **Posición**
+- **🚑 Lesionado** — marca esta casilla y aparecerá un punto rojo sobre el dorsal + badge 🚑 en toda la app (sincronizado con la palabra "lesionado" en notas, así los datos antiguos se respetan)
+- **Notas** opcionales
+
+Los jugadores se ordenan automáticamente por dorsal ascendente (los que no tienen número van al final).
 
 ---
 
 ## Pase de lista
 
 ### Pasar lista hoy
+
 Desde **Hoy** → **📋 Pasar lista** en el equipo correspondiente.
 
 ### Estados de asistencia
+
 Toca el botón derecho de cada jugador para ciclar entre:
 - ✓ **Presente** · ✗ **Ausente** · ⏱ **Tarde** · ◎ **Justificado**
 
 Para justificados, pulsa `+ Motivo` para añadir la razón (enfermedad, lesión, examen, etc.).
 
-### Funciones opcionales (activar en ⚙️ Ajustes)
+### Contadores clicables (filtro rápido)
+
+Las 4 cajas **PRES / AUSE / TARD / JUST** de la parte superior son clicables:
+
+- Pulsa una caja para **filtrar** la lista y ver solo jugadores en ese estado
+- La caja activa se resalta con un ✓ y borde naranja
+- Aparece un banner con el nombre del filtro y botón **✕ Todos** para quitarlo
+- El filtro es efímero — se limpia al cambiar de fecha o salir de la pantalla
+- Las cajas con valor 0 no son clicables
+
+### Reset rápido
+
+Si has modificado asistencias y quieres volver a empezar, aparece un enlace discreto **↺ Resetear a presentes** arriba a la derecha de la lista (solo si hay cambios). Pide confirmación antes de aplicar para evitar resets accidentales.
+
+### Funciones opcionales (activadas en ⚙️ Configuración)
+
+Si has activado alguna función en **🎯 Seguimiento avanzado**, aparecerán bajo la lista:
 - ⭐ Valoración colectiva del entrenamiento (1–10)
-- 👤 Valoración individual por jugador
+- 👤 Valoración individual — toca las estrellas junto a cada jugador presente o con retraso
 - 📋 Campo de ejercicios del día
 - 📷 Foto de la sesión
 
@@ -54,14 +97,16 @@ Para justificados, pulsa `+ Motivo` para añadir la razón (enfermedad, lesión,
 ## Estadísticas
 
 ### Vista tabla
+
 Muestra el % de asistencia de cada jugador con semáforo:
 - 🟢 ≥90% · 🟡 ≥umbral FEB · 🔴 <umbral (riesgo)
 
-El umbral FEB es configurable en ⚙️ Ajustes (por defecto 75%).
+El umbral FEB es configurable en ⚙️ Configuración (por defecto 75%).
 
 También detecta **rachas de ausencias consecutivas** y **valoración media** si está activada.
 
 ### Vista gráfica
+
 Accede desde el botón 📊 del equipo. Incluye tendencia de asistencia, barras por jugador, distribución y evolución mensual.
 
 ---
@@ -69,11 +114,13 @@ Accede desde el botón 📊 del equipo. Incluye tendencia de asistencia, barras 
 ## Compartir por WhatsApp
 
 ### Asistencia del día
+
 Desde el pase de lista → botón **📤** (esquina superior derecha). Genera dos versiones:
 - **Para padres/grupo** — solo nombres y asistencia
 - **Uso interno** — con motivos de justificación, notas y valoraciones
 
 ### Resumen semanal
+
 Disponible en la misma pantalla, con los últimos 7 entrenamientos.
 
 ---
@@ -81,15 +128,20 @@ Disponible en la misma pantalla, con los últimos 7 entrenamientos.
 ## Partidos
 
 ### Crear un partido
+
 Equipo → **🏟️ PARTIDOS** → **＋**. Configura rival, fecha, hora, lugar, formato de cuartos y opciones de estadísticas.
 
 ### Introducir marcador
+
 En el detalle del partido aparece la cuadrícula de cuartos. Al escribir cualquier puntuación:
 - El **marcador total** se actualiza instantáneamente
 - El **badge de resultado** (🏆 Victoria / ❌ Derrota / 🤝 Empate) se actualiza al momento
 - El guardado se produce **automáticamente** al saltar al siguiente campo — no hay botón de guardar
 
+Los cuartos usan botones `+/−` (steppers) para ajustes rápidos con el pulgar. Toca el número para escribir directamente.
+
 ### Prórroga manual
+
 Si el partido termina en empate y no usaste el seguimiento en vivo, pulsa **＋ Añadir prórroga** debajo de la cuadrícula. Se añade la columna OT. Si necesitas OT2 o OT3, vuelve a pulsarlo. Para quitar una OT añadida por error, pulsa la **✕** que aparece en la esquina de la última OT.
 
 **Etiquetas:**
@@ -97,12 +149,29 @@ Si el partido termina en empate y no usaste el seguimiento en vivo, pulsa **＋ 
 - 2 prórrogas → `OT1`, `OT2`
 - 3 prórrogas → `OT1`, `OT2`, `OT3`
 
-### Convocatoria
-En el detalle del partido → sección **👥 Convocatoria** → **✏️ Editar** para seleccionar convocados, titulares y capitán. Máximo 12 convocados (FIBA).
+### Convocatoria y capitán (FIBA)
+
+En el detalle del partido → sección **👥 Convocatoria** → **✏️ Editar**.
+
+El wizard sigue este orden:
+1. **Convocados** — selecciona hasta 12 (límite FIBA)
+2. **Titulares** — marca los 5 del quinteto inicial
+3. **Capitán** — designa uno (dirige el equipo si el entrenador es expulsado)
+
+El banner del capitán siempre está visible: verde si está designado, amarillo si no.
+
+Al pulsar **Listo** la app valida en cadena:
+- Sin convocados → aviso
+- Menos de 5 convocados → aviso
+- Menos de 5 titulares → aviso
+- Sin capitán → aviso
+
+Cada aviso te permite corregir o continuar si lo decides conscientemente.
 
 **Compartir convocatoria:** botón **📤 Lista** junto a la sección de convocatoria.
 
 ### Compartir resultado
+
 Botón **📤** junto al marcador. Genera un mensaje con resultado, marcador, diferencia (+/− pts) y desglose por cuartos.
 
 ---
@@ -110,36 +179,61 @@ Botón **📤** junto al marcador. Genera un mensaje con resultado, marcador, di
 ## Marcador en vivo
 
 ### Iniciar seguimiento
-Equipo → Partidos → partido → **▶ Empezar partido** (o **🔴 Continuar partido** si ya había empezado).
+
+Equipo → Partidos → partido → **▶ Empezar partido** (o **🔴 Continuar partido** si ya había empezado). El botón "Continuar" aparece desde la primera vez que entras, sin esperar a que haya acciones registradas.
+
+### Picker de quinteto bloqueante
+
+Si intentas empezar con menos de 5 jugadores en pista, aparece un picker de 5 slots. Cada slot vacío tiene un botón **＋** para elegir entre los convocados. El botón **▶ Empezar partido** se activa solo cuando los 5 están rellenos. Sin 5 titulares **no se puede entrar**.
 
 ### Registrar acciones
+
 1. **Toca un jugador** en la cuadrícula "En Pista"
 2. Pulsa la acción: +2, +3, +1 TL, fallos, rebotes, asistencias, robos, tapones, faltas...
+3. Al registrar, el jugador **se deselecciona automáticamente**
+
+### Bloqueo de cuartos futuros
+
+Los tabs Q2 / Q3 / Q4 aparecen en gris y desactivados hasta que el reloj avanza. Puedes volver a cuartos pasados para revisar o añadir acciones, pero no saltar a uno que aún no ha empezado.
 
 ### Marcador del rival
-Si no tienes estadísticas del rival activadas, usa los botones **+** y **−** bajo el marcador rival.
+
+Si no tienes estadísticas del rival activadas, usa los botones **＋** y **−** bajo el marcador rival.
 
 ### Reloj
-El reloj cuenta hacia atrás (tiempo que queda). Toca el tiempo para editarlo manualmente. Botón **▶/⏸** para iniciar/pausar, **↺** para resetear.
+
+El reloj cuenta hacia atrás (tiempo que queda). Toca el tiempo para editarlo manualmente con botones `+/−`. Botón **▶/⏸** para iniciar/pausar, **↺** para resetear.
+
+**Aviso de 10 segundos:** cuando queden menos de 10s, se activa un aviso visual.
 
 ### Tiempo muerto
-Pulsa el botón **T.M** (esquina superior derecha del reloj) y selecciona qué equipo lo pide. Al confirmar:
-- El **reloj se detiene automáticamente**
-- Aparece un **contador de 60 segundos** en la parte inferior con el nombre del equipo
-- Pulsa **▶ Reanudar** para terminar el tiempo muerto antes de que acabe el minuto
-- Al llegar a 0 se cierra solo con un aviso "¡Fin del T.M.! Reanudamos"
-- El overlay es visible incluso desde la pantalla completa de estadísticas
 
-Los puntos del contador en el marcador muestran cuántos T.M. ha usado cada equipo en esa mitad (máximo 2 en la primera, 3 en la segunda).
+Pulsa el botón **T.M** (esquina superior derecha del reloj) y selecciona qué equipo lo pide:
+
+- Aparece un **overlay a pantalla completa** con cuenta atrás de 1:00
+- El **reloj se detiene automáticamente**
+- Dots por equipo y mitad (2 en la primera mitad, 3 en la segunda, regla FBM amateur)
+- Durante el TM puedes hacer sustituciones del quinteto en pista
+- Pulsa **▶ Reanudar** para terminar antes de tiempo
+- Al llegar a 0 se cierra solo con un aviso "¡Fin del T.M.! Reanudamos"
+
+### Descansos entre cuartos
+
+Al terminar cada cuarto aparece un overlay centrado a pantalla completa con las acciones del último segundo antes del descanso:
+- Q1↔Q2 y Q3↔Q4 → **1 minuto**
+- Medio tiempo (Q2↔Q3) → **10 minutos**
+
+Basado en el reglamento FBM amateur.
 
 ### Prórroga automática
+
 Al llegar a 0 el reloj del último cuarto **en empate**, aparece automáticamente:
 
 ```
 🤝 ¡EMPATE!
-Fin del Q4  ·  47 — 47
+Fin del Q4 · 47 — 47
 ¿Se juega prórroga?
-[ 🏀 Jugar OT ]  [ 🏁 Finalizar partido ]
+[ 🏀 Jugar OT ] [ 🏁 Finalizar partido ]
 ```
 
 Pulsa **Jugar OT** para activar 5 minutos de prórroga. Las pestañas Q1–Q4 no se tocan, se añade una nueva pestaña OT. Si esa OT también termina en empate, se ofrece OT2, y así sucesivamente.
@@ -147,6 +241,7 @@ Pulsa **Jugar OT** para activar 5 minutos de prórroga. Las pestañas Q1–Q4 no
 Si necesitas activar la prórroga manualmente (sin que el reloj haya llegado a 0), pulsa **✏️** junto al periodo activo y aparecerá un botón de activación si hay empate.
 
 ### Historial de acciones por cuarto
+
 El historial del partido se encuentra al final de la pantalla, agrupado por cuartos:
 - El **cuarto en curso** aparece abierto y con borde naranja y etiqueta **EN CURSO**
 - Los **cuartos anteriores** aparecen cerrados, mostrando en el encabezado el resumen de puntos (`+8 pts 🟢 / -5 🔴`) y el número de acciones
@@ -156,9 +251,11 @@ El historial del partido se encuentra al final de la pantalla, agrupado por cuar
 - El botón **↩️** (encima de los botones de acción) deshace la última acción registrada
 
 ### Compartir marcador en vivo
+
 Botón **📤** (verde) en el header. Genera el mensaje con cuarto actual y tiempo restante: `🔴 EN VIVO · Q3 · 04:23`.
 
 ### Estadísticas en pantalla completa
+
 Gira el móvil o pulsa **📊 Pantalla completa** para ver la tabla de estadísticas en landscape. La vista incluye:
 - **Marcador grande** con diferencia de puntos en color (verde/rojo)
 - **Parciales por cuarto** (`Q1 8–6 ✅ · Q2 7–9 ❌ · ...`)
@@ -166,6 +263,7 @@ Gira el móvil o pulsa **📊 Pantalla completa** para ver la tabla de estadíst
 - Soporte de muesca (safe-area) en iPhones en horizontal
 
 ### Finalizar partido
+
 Botón **🏁** en el header → confirma el resultado. El partido pasa a "finalizado".
 
 ---
@@ -173,6 +271,7 @@ Botón **🏁** en el header → confirma el resultado. El partido pasa a "final
 ## Eventos y Convocatorias
 
 ### Crear un evento
+
 Equipo → **📅 EVENTOS Y CONVOCATORIAS** → **＋**. Tipos:
 - 🏟️ **Partido** — con campo para el rival
 - 🔧 **Tecnificación** — con nombre/descripción
@@ -181,14 +280,17 @@ Equipo → **📅 EVENTOS Y CONVOCATORIAS** → **＋**. Tipos:
 Rellena fecha, hora, hora de concentración, lugar y mensaje opcional del entrenador.
 
 ### Convocatoria automática
+
 Al crear un evento, la app **pre-selecciona todos los jugadores ordenados por % de asistencia** (los que más vienen aparecen primero). Puedes ajustar manualmente.
 
 ### Gestionar convocados
+
 - Toca un jugador para incluirlo/excluirlo
 - El badge de % (🟢/🟡/🔴) ayuda a decidir
 - Botones **Todos** / **Ninguno** para selección rápida
 
 ### Compartir convocatoria de evento
+
 Botón **📤** en la card del evento. El mensaje incluye tipo, fecha, hora, concentración, lugar, lista numerada de convocados con dorsal, mensaje del entrenador y lema del club.
 
 ---
@@ -196,13 +298,18 @@ Botón **📤** en la card del evento. El mensaje incluye tipo, fecha, hora, con
 ## Copia de seguridad
 
 ### Exportar datos
-⚙️ Ajustes → **Exportar** → descarga un archivo `.json` con todos los datos.
+
+⚙️ Configuración → **⬇️ Exportar** → descarga un archivo `.json` con todos los datos (incluye club, equipos, plantilla, sesiones, partidos y eventos).
 
 ### Importar datos
-⚙️ Ajustes → **Importar** → selecciona el archivo. **Sobreescribe todos los datos actuales.**
+
+⚙️ Configuración → **⬆️ Importar** → selecciona el archivo. **Sobreescribe todos los datos actuales.**
 
 ### Autobackup
-La app guarda automáticamente en cada cambio. Restaurable desde ⚙️ Ajustes → **Restaurar último autobackup**.
+
+La app guarda automáticamente en cada cambio. Restaurable desde ⚙️ Configuración → **🔄 Restaurar último autobackup**.
+
+La sección de copia de seguridad muestra siempre la fecha del último export y del último autobackup.
 
 > 💡 Exporta un backup antes de cambiar de dispositivo o limpiar el navegador.
 
@@ -220,11 +327,17 @@ Los datos son locales. Para sincronizar, exporta el backup en un dispositivo e i
 Los datos se guardan automáticamente en cada cambio. No se pierde nada.
 
 **¿Cómo cambio el umbral de riesgo FEB?**
-⚙️ Ajustes → **Estadísticas y exportación** → selecciona el umbral (60–85%). El estándar FEB es 75%.
+⚙️ Configuración → **📊 Estadísticas y exportación** → selecciona el umbral (60–85%). El estándar FEB es 75%.
 
 **¿Puedo tener varios equipos?**
 Sí, sin límite. Cada equipo tiene su plantilla, historial y configuración independientes.
 
+**¿Cómo marco a un jugador como lesionado?**
+Abre la ficha del jugador y marca la casilla **🚑 Lesionado**. Aparecerá un punto rojo sobre el dorsal y un badge 🚑 junto al nombre en toda la app. También puedes escribir "lesionado" en las notas — ambas formas están sincronizadas.
+
+**¿Puedo añadir foto a los jugadores?**
+Sí, al editar un jugador pulsa el círculo de foto en la parte superior. La foto se muestra como avatar junto al dorsal en la plantilla y en el pase de lista.
+
 ---
 
-*Kortline v1.4.0 · Mario Nadal Ara · github.com/MarioNadal*
+_Kortline v1.6.1 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_

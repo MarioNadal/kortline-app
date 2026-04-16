@@ -1,12 +1,53 @@
-# Driveline — CB Jaca
-PWA single-file de gestión de asistencia y estadísticas de partido.  
+# Kortline — CB Jaca
+
+PWA single-file de gestión de asistencia y estadísticas de partido.
 Desarrollada por **Mario Nadal Ara** · Stack: HTML + CSS + Vanilla JS · Datos en `localStorage`
+
+Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)
 
 ---
 
 ## Historial de versiones
 
-### v1.6.0 — Setup del partido y UX general *(actual)*
+### v1.6.1 — Plantilla con fotos, lesiones y filtro de asistencia _(actual)_
+
+**Plantilla (EQUIPOS)**
+
+- **Foto/avatar del jugador (opcional)** — círculo arriba del modal de jugador. Se muestra también junto al dorsal en la plantilla y en el pase de lista. Botón ✕ para quitarla.
+- **Indicador visual de lesión** — check dedicado "🚑 Lesionado" en el modal. En la plantilla aparece una chincheta roja animada sobre el dorsal y un badge 🚑 junto al nombre. Se sincroniza bidireccionalmente con la palabra "lesionado" en notas para no romper datos existentes.
+- **Dorsal rediseñado** — input numérico con prefijo `#` visible, botones `−/+` para ajustar con el pulgar, y sugerencia automática del próximo dorsal libre (placeholder dinámico al crear jugador).
+- **Orden por dorsal ascendente** — jugadores sin número van al final, el `0` se respeta correctamente.
+
+**Asistencia (pase de lista)**
+
+- **Contadores clicables como filtro** — las 4 cajas PRES/AUSE/TARD/JUST filtran la lista al pulsar. La caja activa se resalta con glow, borde grueso y un ✓ en la esquina. Contadores con valor 0 no son clicables.
+- **Banner de filtro** con recordatorio del estado activo y botón "✕ Todos" para desfiltrar.
+- **Botones "Todos presentes/ausentes" eliminados** — sustituidos por un enlace discreto "↺ Resetear a presentes" que solo aparece si hay cambios respecto al default, con confirmación previa para evitar resets accidentales.
+- **Filtro efímero** — se limpia al cambiar de fecha, al salir de la pantalla o al aplicar un reset. No se persiste en localStorage.
+- Indicador visual de lesión también en el pase de lista (junto al dorsal + badge en nombre).
+
+**Modal de equipo**
+
+- **Checkbox de día se activa solo al escribir la hora** — antes había que marcar el día primero para habilitar el input de hora. Ahora el input está siempre activo y al rellenarlo se marca automáticamente el día.
+- Input de hora ya no se deshabilita.
+
+**UX / diseño**
+
+- **Modales centrados con ancho máximo 430px en desktop** — antes se estiraban a todo el viewport rompiendo el look mobile-first.
+- **Color picker del equipo usa la paleta oficial Kortline** (`#F06318`).
+- Reemplazo global del naranja antiguo (`#ff6b1a`) por el oficial (`#F06318`) en todo el código: CSS, inline styles, Chart.js, PDFs y SVG.
+
+**Bugs resueltos y mejoras v1.6.1**
+
+| ID | Descripción | Versión |
+|----|-------------|---------|
+| B-15 | Modales se estiraban más allá del frame 430px en desktop | v1.6.1 |
+| B-16 | Horarios del equipo no se guardaban si rellenabas la hora sin marcar el día antes | v1.6.1 |
+| B-17 | Color picker del equipo usaba el naranja antiguo (`#ff6b1a`) | v1.6.1 |
+
+---
+
+### v1.6.0 — Setup del partido y UX general
 
 **Convocatoria y quinteto**
 
@@ -116,7 +157,9 @@ README.md                     Este archivo
 MANUAL_USUARIO_KORTLINE.md    Manual de usuario
 ```
 
-## Pendiente v1.1
+## Pendiente próximas versiones
 
-- Touch drag-to-dismiss en modales (el mhandle es decorativo, no funciona en iOS/Android PWA)
-- Sistema de modos básico/estándar/experto por equipo
+- Touch drag-to-dismiss en modales (el `mhandle` es decorativo, no funciona en iOS/Android PWA)
+- Visualización de sesiones pasadas/completadas en HOY
+- Botón `+` en HOY para entrenamientos/partidos sorpresa fuera de horario
+- Reetiquetar título de HOY con nombre del club (o marca de agua del logo)
