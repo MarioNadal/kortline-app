@@ -1433,7 +1433,7 @@ function equiposScreen(){
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
             <div style="flex:1">
               <div style="font-weight:800;font-size:17px">${esc(t.name)}</div>
-              ${coaches.length?`<div style="font-size:12px;color:var(--td);margin-top:2px">👟 ${esc(coaches[0])}</div>`:""}
+              ${coaches.length?`<div style="font-size:12px;color:var(--td);margin-top:2px">👟 ${coaches.map(esc).join(" · ")}</div>`:""}
             </div>
             <div class="team-badge">${esc(t.category||"—")}</div>
           </div>
@@ -2390,7 +2390,7 @@ function openTeamModal(init){
     <div class="fg"><label class="fl">👟 Entrenador/a</label><input class="fi" id="${id}-coach1" value="${esc(coaches[0]||"")}" placeholder="Nombre"/></div>
     <div class="fg"><label class="fl">👟 Ayudante (opcional)</label><input class="fi" id="${id}-coach2" value="${esc(coaches[1]||"")}" placeholder="Ayudante"/></div>
     <div class="fg"><label class="fl">📅 Días y horarios</label><div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:4px 12px;">${dayScheduleRows(id,init?.schedule)}</div></div>
-    <div class="fg"><label class="fl">Color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="${id}-cols">${COLORS.map(c=>`<div class="cdot ${sc===c?"s":""}" style="background:${c}" onclick="togCol(this,'${id}-cols')"></div>`).join("")}</div></div>
+    <div class="fg"><label class="fl">Color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="${id}-cols">${COLORS.map(c=>`<div class="cdot ${sc===c?"s":""}" data-col="${c}" style="background:${c}" onclick="togCol(this,'${id}-cols')"></div>`).join("")}</div></div>
     <button class="btn-p" onclick="saveTeam('${id}','${init?.id||""}')">${init?"Guardar":"Crear Equipo"}</button>
     <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
   </div>`;
@@ -2405,7 +2405,7 @@ function openPlayerModal(init){
   const sugg=init?.number||nextFreeDorsal(S.teamId,init?.id);
   const dorsalVal=init&&init.number!=null?String(init.number):"";
   const photoVal=init?.photo||"";
-  const isInjured=init&&/lesion/i.test(init?.notes||"");
+  const isInjured=init&&(!!init.injured||/lesion/i.test(init?.notes||""));
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div><div class="mtitle">${init?"Editar Jugador":"Nuevo Jugador"}</div>
     <div style="margin-bottom:14px">
@@ -2422,7 +2422,7 @@ function openPlayerModal(init){
         <button type="button" class="dorsal-btn" onclick="adjDorsal('${id}-d',-1)">−</button>
         <div class="dorsal-input-wrap">
           <span class="dorsal-hash">#</span>
-          <input class="fi dorsal-input" type="number" min="0" max="99" inputmode="numeric" id="${id}-d" value="${esc(dorsalVal)}" placeholder="${sugg}"/>
+          <input class="fi dorsal-input" type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" id="${id}-d" value="${esc(dorsalVal)}" placeholder="${sugg}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,2)"/>
         </div>
         <button type="button" class="dorsal-btn" onclick="adjDorsal('${id}-d',1)">+</button>
       </div>
@@ -2440,11 +2440,11 @@ function openPlayerModal(init){
 }
 
 function nextFreeDorsal(teamId,excludeId){
-  if(!teamId)return 1;
+  if(!teamId)return "0";
   const ps=pl(teamId)||[];
-  const used=new Set(ps.filter(p=>p.id!==excludeId&&p.number!=null).map(p=>p.number));
-  let n=1;while(used.has(n)&&n<100)n++;
-  return n;
+  const used=new Set(ps.filter(p=>p.id!==excludeId&&p.number!=null).map(p=>String(p.number)));
+  let n=0;while(used.has(String(n))&&n<100)n++;
+  return String(n);
 }
 function adjDorsal(inputId,delta){
   const i=document.getElementById(inputId);if(!i)return;
@@ -2550,14 +2550,14 @@ function saveTeam(mid,eid){
   const c1=document.getElementById(mid+"-coach1")?.value.trim()||"";const c2=document.getElementById(mid+"-coach2")?.value.trim()||"";
   const coaches=[c1,c2].filter(Boolean);
   const schedule={};for(let i=0;i<7;i++){const cb=document.getElementById(mid+"-day-"+i),ti=document.getElementById(mid+"-time-"+i);if(cb?.checked||ti?.value)schedule[i]=ti?ti.value:"";}
-  const colorEl=document.querySelector("#"+mid+"-cols .cdot.s");const color=colorEl?colorEl.style.background:COLORS[0];
+  const colorEl=document.querySelector("#"+mid+"-cols .cdot.s");const color=colorEl?(colorEl.dataset.col||colorEl.style.background):COLORS[0];
   if(eid){S.teams=S.teams.map(t=>t.id===eid?{...t,name,category:cat,schedule,color,coaches}:t);toast("✅ Actualizado");}
   else{S.teams.push({id:uid(),name,category:cat,schedule,color,coaches});toast("✅ Equipo creado");}
   document.getElementById(mid)?.remove();save();render();
 }
 function savePlayer(mid,eid){
   const name=document.getElementById(mid+"-n").value.trim();if(!name)return;
-  const numV=document.getElementById(mid+"-d").value;
+  const numV=document.getElementById(mid+"-d").value.replace(/[^0-9]/g,"").slice(0,2);
   const pos=document.getElementById(mid+"-p").value;
   let notes=document.getElementById(mid+"-o").value.trim();
   const img=document.getElementById(mid+"-photo-img");
@@ -2568,7 +2568,7 @@ function savePlayer(mid,eid){
   const hasInjTxt=/lesion/i.test(notes);
   if(inj&&!hasInjTxt){notes=notes?"Lesionado · "+notes:"Lesionado";}
   if(!inj&&hasInjTxt){notes=notes.replace(/\b[lL]esionad[oa]\b[\s·,:;-]*/,"").replace(/^[\s·,:;-]+|[\s·,:;-]+$/g,"").trim();}
-  const p={name,number:numV!==""?parseInt(numV):null,position:pos,notes,photo,injured:inj};
+  const p={name,number:numV!==""?numV:null,position:pos,notes,photo,injured:inj};
   if(eid){S.players[S.teamId]=pl(S.teamId).map(x=>x.id===eid?{...x,...p}:x);toast("✅ Actualizado");}
   else{if(!S.players[S.teamId])S.players[S.teamId]=[];S.players[S.teamId].push({id:uid(),...p});toast("✅ Añadido");}
   document.getElementById(mid)?.remove();save();render();
@@ -3176,7 +3176,7 @@ function _convSetupHtml(m,t,step){
         </div>`).join("")}
     </div>
     <div class="riv-add-row">
-      <input type="text" inputmode="numeric" pattern="[0-9]*" id="riv-num" class="fi" placeholder="#" style="width:64px;text-align:center;flex-shrink:0;font-size:16px;font-weight:700" min="0" max="99"/>
+      <input type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" id="riv-num" class="fi" placeholder="#" style="width:64px;text-align:center;flex-shrink:0;font-size:16px;font-weight:700" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,2)"/>
       <input type="text" id="riv-name" class="fi" placeholder="Nombre del jugador" style="flex:1"/>
       <button onclick="_rivAdd()" style="padding:10px 14px;border-radius:8px;border:none;background:rgba(239,68,68,.2);color:#ef4444;font-weight:800;font-size:15px;cursor:pointer;flex-shrink:0">＋</button>
     </div>`;
@@ -3270,12 +3270,12 @@ function _convClearAll(){
   el.innerHTML=_convSetupHtml(m,t,el._step||0);
 }
 function _rivAdd(){
-  const num=document.getElementById("riv-num")?.value;
+  const num=(document.getElementById("riv-num")?.value||"").replace(/[^0-9]/g,"").slice(0,2);
   const name=document.getElementById("riv-name")?.value.trim();
   if(!name&&!num)return;
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.rivalPlayers)m.rivalPlayers=[];
-  m.rivalPlayers.push({id:uid(),name:name||"#"+(num||"?"),number:num?parseInt(num):null});
+  m.rivalPlayers.push({id:uid(),name:name||"#"+(num||"?"),number:num!==""?num:null});
   save();
   const t=S.teams.find(x=>x.id===S.teamId);
   const el=document.getElementById("m-conv-setup");if(!el)return;
@@ -4580,7 +4580,7 @@ function openRivalPlayerModal(init){
     <div class="mtitle">Jugador Rival</div>
     <div class="frow">
       <div class="fg" style="flex:2"><label class="fl">Nombre</label><input class="fi" id="${mid}-n" value="${esc(init?.name||"")}" placeholder="Nombre Apellido"/></div>
-      <div class="fg" style="flex:1"><label class="fl">Dorsal</label><input class="fi" type="text" inputmode="numeric" pattern="[0-9]*" id="${mid}-d" value="${esc(String(init?.number||""))}" placeholder="5" style="text-align:center"/></div>
+      <div class="fg" style="flex:1"><label class="fl">Dorsal</label><input class="fi" type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" id="${mid}-d" value="${esc(init?.number!=null?String(init.number):"")}" placeholder="5" style="text-align:center" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,2)"/></div>
     </div>
     <button class="btn-p" onclick="saveRivalPlayer('${mid}','${init?.id||""}')">Añadir</button>
     <button class="btn-s" onclick="document.getElementById('${mid}').remove()">Cancelar</button>
@@ -4589,10 +4589,10 @@ function openRivalPlayerModal(init){
 }
 function saveRivalPlayer(mid,eid){
   const name=document.getElementById(mid+"-n")?.value.trim();
-  const num=document.getElementById(mid+"-d")?.value;
+  const num=(document.getElementById(mid+"-d")?.value||"").replace(/[^0-9]/g,"").slice(0,2);
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.rivalPlayers)m.rivalPlayers=[];
-  const p={id:eid||uid(),name:name||"#"+(num||"?"),number:num?parseInt(num):null};
+  const p={id:eid||uid(),name:name||"#"+(num||"?"),number:num!==""?num:null};
   if(eid){m.rivalPlayers=m.rivalPlayers.map(x=>x.id===eid?p:x);}
   else{m.rivalPlayers.push(p);}
   document.getElementById(mid)?.remove();save();render();toast("✅ Jugador rival añadido");

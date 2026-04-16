@@ -103,7 +103,7 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 - Overlay pantalla completa con cuenta atrás 1:00
 - Dots de TMs restantes por equipo y mitad (2 primera mitad, 3 segunda)
 - Quinteto en pista con sustituciones durante el TM
-- Reglamento FBM amateur: 1 min TM, 2+3 por mitad
+- Reglamento FEB amateur: 1 min TM, 2+3 por mitad
 
 **v1.5.0 — Reloj y descansos FEB**
 - Aviso de 10 segundos
@@ -122,7 +122,7 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 | B-04 | Sin fila de totales en pantalla completa | v1.5.8 |
 | B-05 | Totales rival usaban reductor del equipo local | v1.4.0 |
 | B-06 | Overlay de descanso oculto tras navbar en iOS | v1.5.0 |
-| B-07 | Descanso entre cuartos no respetaba tiempos FBM | v1.5.0 |
+| B-07 | Descanso entre cuartos no respetaba tiempos FEB | v1.5.0 |
 | B-08 | Sin aviso visual a 10 segundos | v1.5.0 |
 | B-09 | Descanso arrancaba sin permitir acciones del último segundo | v1.5.0 |
 

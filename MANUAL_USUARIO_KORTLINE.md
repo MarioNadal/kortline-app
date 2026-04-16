@@ -212,7 +212,7 @@ Pulsa el botón **T.M** (esquina superior derecha del reloj) y selecciona qué e
 
 - Aparece un **overlay a pantalla completa** con cuenta atrás de 1:00
 - El **reloj se detiene automáticamente**
-- Dots por equipo y mitad (2 en la primera mitad, 3 en la segunda, regla FBM amateur)
+- Dots por equipo y mitad (2 en la primera mitad, 3 en la segunda, regla FEB amateur)
 - Durante el TM puedes hacer sustituciones del quinteto en pista
 - Pulsa **▶ Reanudar** para terminar antes de tiempo
 - Al llegar a 0 se cierra solo con un aviso "¡Fin del T.M.! Reanudamos"
@@ -223,7 +223,7 @@ Al terminar cada cuarto aparece un overlay centrado a pantalla completa con las 
 - Q1↔Q2 y Q3↔Q4 → **1 minuto**
 - Medio tiempo (Q2↔Q3) → **10 minutos**
 
-Basado en el reglamento FBM amateur.
+Basado en el reglamento FEB amateur.
 
 ### Prórroga automática
 
