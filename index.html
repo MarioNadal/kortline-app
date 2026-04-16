@@ -282,6 +282,15 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--tx);min-height:1
 .pnum-wrap{position:relative;flex-shrink:0;}
 .injury-dot{position:absolute;top:-4px;right:-4px;background:#ef4444;border:2px solid var(--s);border-radius:50%;width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-size:9px;color:white;font-weight:900;z-index:2;box-shadow:0 0 0 0 rgba(239,68,68,.6);animation:pulseInj 1.8s infinite;}
 @keyframes pulseInj{0%{box-shadow:0 0 0 0 rgba(239,68,68,.6);}70%{box-shadow:0 0 0 6px rgba(239,68,68,0);}100%{box-shadow:0 0 0 0 rgba(239,68,68,0);}}
+/* Long-press unlock for team score */
+.lp-ring{position:relative;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--s2);border:2px solid var(--border);transition:border-color .2s;touch-action:none;-webkit-user-select:none;user-select:none;}
+.lp-ring svg.lp-arc{position:absolute;top:-2px;left:-2px;width:40px;height:40px;transform:rotate(-90deg);pointer-events:none;}
+.lp-ring svg.lp-arc circle{fill:none;stroke:var(--orange);stroke-width:3;stroke-dasharray:113;stroke-dashoffset:113;stroke-linecap:round;}
+.lp-ring.pressing svg.lp-arc circle{transition:stroke-dashoffset .8s linear;stroke-dashoffset:0;}
+.lp-ring.unlocked{border-color:var(--orange);background:rgba(240,99,24,.15);}
+.ts-auto-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.ts-auto-badge.auto{background:rgba(34,197,94,.12);color:#22c55e;border:1px solid rgba(34,197,94,.25);}
+.ts-auto-badge.manual{background:rgba(240,99,24,.12);color:var(--orange);border:1px solid rgba(240,99,24,.25);}
 .injury-badge{display:inline-flex;align-items:center;gap:3px;background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;margin-left:4px;}
 
 /* ── Misc ── */
@@ -2017,7 +2026,42 @@ function att(){
   const ts=sess._teamScore||0;
   const photoHtml=f.photos?`<div class="fg"><label class="fl">📷 Foto del entrenamiento</label><div class="photo-box" onclick="document.getElementById('att-photo-input').click()">${sess._photo?`<img src="${sess._photo}"/><div style="font-size:11px;color:var(--td);margin-top:6px">Toca para cambiar</div>`:`<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px;color:var(--tm)">Añadir foto</div>`}</div><input type="file" id="att-photo-input" accept="image/*" style="display:none" onchange="handlePhoto(this)"/>${sess._photo?`<button onclick="removePhoto()" style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer;margin-top:6px;display:block">✕ Quitar foto</button>`:""}</div>`:"";
   const exercisesHtml=f.exercises?`<div class="fg"><label class="fl">📋 Ejercicios del entrenamiento</label><textarea class="fi" id="att-exercises" rows="3" style="resize:none">${esc(sess._exercises||"")}</textarea></div>`:"";
-  const teamScoreHtml=f.teamScore?`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">⭐ Valoración colectiva</div><div class="stars">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span onclick="setTeamScore(${i})" style="font-size:22px;cursor:pointer;color:${i<=ts?"#f59e0b":"#2a4060"}">★</span>`).join("")}</div>${ts>0?`<div style="font-size:12px;color:var(--td);margin-top:6px">${["","Muy mal","Mal","Regular","Regular","Normal","Normal","Bien","Bien","Muy bien","Excelente"][ts]} (${ts}/10)</div>`:""}</div>`:"";
+  const tsLabels=["","Muy mal","Mal","Regular","Regular","Normal","Normal","Bien","Bien","Muy bien","Excelente"];
+  const isAutoMode=f.playerScore&&!sess._teamScoreManual;
+  const hasIndivScores=f.playerScore&&players.some(p=>sess[p.id+"_score"]>0);
+  const teamScoreHtml=f.teamScore?(()=>{
+    if(isAutoMode&&hasIndivScores){
+      // ── AUTO: media de valoraciones individuales ──
+      const indivScores=players.map(p=>sess[p.id+"_score"]||0).filter(v=>v>0);
+      const autoVal=indivScores.length?Math.round(indivScores.reduce((a,b)=>a+b,0)/indivScores.length):0;
+      return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">⭐ Valoración colectiva</div>
+          <span class="ts-auto-badge auto">🔗 Auto</span>
+        </div>
+        <div class="stars">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span style="font-size:22px;color:${i<=autoVal?"#f59e0b":"#2a4060"}">★</span>`).join("")}</div>
+        ${autoVal>0?`<div style="font-size:12px;color:var(--td);margin-top:6px">${tsLabels[autoVal]} (${autoVal}/10) · media de ${indivScores.length} valoraciones</div>`:""}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+          <div class="lp-ring" onpointerdown="_tsLongPressStart(this)" onpointerup="_tsLongPressEnd(this)" onpointerleave="_tsLongPressEnd(this)" onpointercancel="_tsLongPressEnd(this)">
+            <svg class="lp-arc" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18"/></svg>
+            <span style="font-size:14px;pointer-events:none">✏️</span>
+          </div>
+          <div style="font-size:11px;color:var(--tm);line-height:1.4">Mantén pulsado para<br/>editar manualmente</div>
+        </div>
+      </div>`;
+    } else {
+      // ── MANUAL o sin valoraciones individuales ──
+      return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">⭐ Valoración colectiva</div>
+          ${sess._teamScoreManual&&hasIndivScores?`<span class="ts-auto-badge manual">✏️ Manual</span>`:""}
+        </div>
+        <div class="stars">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span onclick="setTeamScore(${i})" style="font-size:22px;cursor:pointer;color:${i<=ts?"#f59e0b":"#2a4060"}">★</span>`).join("")}</div>
+        ${ts>0?`<div style="font-size:12px;color:var(--td);margin-top:6px">${tsLabels[ts]} (${ts}/10)</div>`:""}
+        ${sess._teamScoreManual&&hasIndivScores?`<button onclick="revertTeamScoreAuto()" style="display:flex;align-items:center;gap:5px;margin-top:8px;padding:6px 10px;border-radius:7px;border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.08);color:#22c55e;cursor:pointer;font-size:12px;font-weight:700">🔗 Volver a modo automático</button>`:""}
+      </div>`;
+    }
+  })():"";
   return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">Pase de Lista</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}</div></div>
@@ -3194,14 +3238,52 @@ function setTeamScore(v){
   const k=sk(S.teamId,S.date);
   const sess={...S.sessions[k]||{}};
   sess._teamScore=(sess._teamScore===v?0:v);
+  sess._teamScoreManual=true;
   S.sessions[k]=sess;save();render();
+}
+function revertTeamScoreAuto(){
+  const k=sk(S.teamId,S.date);
+  const sess={...S.sessions[k]||{}};
+  delete sess._teamScoreManual;
+  // Recalcular auto
+  const players=pl(S.teamId);
+  const scores=players.map(p=>sess[p.id+"_score"]||0).filter(v=>v>0);
+  sess._teamScore=scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
+  S.sessions[k]=sess;save();render();
+}
+function _autoTeamScore(k,sess){
+  if(sess._teamScoreManual)return; // respeta override manual
+  if(!S.cfg.features.teamScore||!S.cfg.features.playerScore)return;
+  const players=pl(S.teamId);
+  const scores=players.map(p=>sess[p.id+"_score"]||0).filter(v=>v>0);
+  sess._teamScore=scores.length>0?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length):0;
 }
 
 function setPlayerScore(pid,v){
   const k=sk(S.teamId,S.date);
   const sess={...S.sessions[k]||{}};
   sess[pid+"_score"]=(sess[pid+"_score"]===v?0:v);
+  _autoTeamScore(k,sess);
   S.sessions[k]=sess;save();render();
+}
+
+/* Long-press para desbloquear edición manual del teamScore */
+let _lpTimer=null,_lpStarted=false;
+function _tsLongPressStart(el){
+  _lpStarted=true;el.classList.add("pressing");
+  _lpTimer=setTimeout(()=>{
+    el.classList.remove("pressing");el.classList.add("unlocked");
+    _lpStarted=false;
+    // Marcar la sesión como manual y mostrar estrellas
+    const k=sk(S.teamId,S.date);
+    const sess={...S.sessions[k]||{}};
+    sess._teamScoreManual=true;
+    S.sessions[k]=sess;save();render();
+  },800);
+}
+function _tsLongPressEnd(el){
+  if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;}
+  if(_lpStarted){el.classList.remove("pressing");_lpStarted=false;}
 }
 
 function _flushSess(){
