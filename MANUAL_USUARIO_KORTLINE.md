@@ -1,6 +1,6 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.6.7**
+**Versión 1.6.8**
 _Kortline — De la Pista al Dato_
 
 ---
@@ -153,6 +153,16 @@ Si has activado alguna función en **🎯 Seguimiento avanzado**, aparecerán ba
 - 📋 Campo de ejercicios del día
 - 📷 Foto de la sesión
 
+### Valoración colectiva inteligente
+
+Cuando **ambas valoraciones** están activas (⭐ colectiva + 👤 individual), la colectiva se calcula **automáticamente** como la media de las individuales. Verás un badge verde `🔗 Auto` y las estrellas reflejan la nota media.
+
+Si quieres poner una nota manualmente (por ejemplo, el equipo ha trabajado mejor de lo que sugieren las notas individuales), **mantén pulsado** el botón ✏️ durante ~1 segundo. Un anillo naranja se va llenando mientras pulsas — al completarse, las estrellas se desbloquean y puedes tocarlas. Aparece un badge naranja `✏️ Manual`.
+
+Para volver al modo automático, pulsa el botón verde `🔗 Volver a modo automático` que aparece debajo.
+
+> 💡 Si solo tienes activada la colectiva (sin individual), las estrellas son siempre libres — no hace falta desbloquear nada.
+
 ---
 
 ## Estadísticas
@@ -165,6 +175,14 @@ Muestra el % de asistencia de cada jugador con semáforo:
 El umbral FEB es configurable en ⚙️ Configuración (por defecto 75%).
 
 También detecta **rachas de ausencias consecutivas** y **valoración media** si está activada.
+
+### Indicador Riesgo FEB
+
+En la parte superior de las estadísticas hay tres cajas: **Media**, **Sesiones** y **Riesgo FEB**. La caja de riesgo es **clickable** (tiene un icono ⓘ) — al pulsarla se abre un panel explicativo con la definición según la FEB, tu umbral actual, y la leyenda completa de colores.
+
+### Cerrar paneles arrastrando
+
+Todos los paneles inferiores (configuración, modales, etc.) se pueden cerrar **arrastrando la barrita gris** de la parte superior hacia abajo. Si arrastras lo suficiente (unos 120px), el panel se cierra con una animación suave.
 
 ### Vista gráfica
 
@@ -407,4 +425,15 @@ Sí, al editar un jugador pulsa el círculo de foto en la parte superior. La fot
 
 ---
 
-_Kortline v1.6.7 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_
+**¿La valoración colectiva se calcula sola?**
+Sí, si tienes activadas la colectiva y la individual al mismo tiempo. La nota del equipo será la media de las valoraciones individuales (modo Auto). Puedes editarla manualmente con una pulsación larga en el botón ✏️.
+
+**¿Qué es el indicador "Riesgo FEB" de las estadísticas?**
+Es el número de jugadores cuya asistencia está por debajo del umbral configurado. Pulsa la caja para ver una explicación detallada con la leyenda de colores.
+
+**¿Cómo cierro los paneles/modales?**
+Puedes pulsar fuera del panel, pulsar "Cancelar", o arrastrar la barrita gris de la parte superior hacia abajo.
+
+---
+
+_Kortline v1.6.8 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_

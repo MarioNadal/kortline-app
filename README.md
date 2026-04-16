@@ -9,7 +9,39 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.7 — Lesiones: botón dedicado, backfill, alta rápida y fixes _(actual)_
+### v1.6.8 — Valoración colectiva inteligente, info FEB y bottom sheets _(actual)_
+
+**Valoración colectiva auto-calculada**
+
+- Cuando ambas features están activas (⭐ colectiva + 👤 individual), la valoración del equipo se calcula automáticamente como la **media de las valoraciones individuales**. Badge verde `🔗 Auto` indica el modo.
+- Para editar manualmente: **pulsación larga** (0.8s) en el botón ✏️ con anillo de progreso SVG. Las estrellas pasan a modo clickable con badge naranja `✏️ Manual`.
+- Botón `🔗 Volver a modo automático` para revertir. Si solo la colectiva está activa (sin individual), funciona igual que antes (estrellas libres).
+- Se persiste `_teamScoreManual: true` en la sesión para respetar overrides manuales.
+
+**Indicador Riesgo FEB interactivo**
+
+- La caja de "Riesgo FEB" en estadísticas ahora es **clickable** (icono ⓘ). Al pulsarla se abre un modal explicativo con la definición según la FEB, el umbral configurado, y la leyenda de colores.
+
+**Drag-to-dismiss en bottom sheets**
+
+- Todos los modales con `.mhandle` (barrita de arrastre) ahora soportan **arrastre hacia abajo** para cerrarlos. Umbral de 120px con transición suave y fade del overlay.
+- Animación de entrada `modalSlideUp` al abrir cualquier bottom sheet.
+- `.mhandle` con `cursor:grab` y `touch-action:none` para feedback visual.
+
+**Fix: umbral FEB como string**
+
+- `parseInt()` defensivo al cargar `riskThreshold` desde localStorage para evitar comparaciones string vs número.
+
+**Bugs resueltos v1.6.8**
+
+| ID | Descripción |
+|----|-------------|
+| B-31 | Umbral FEB podía guardarse como string en localStorage y compararse incorrectamente con valores numéricos |
+| B-32 | Las barritas de arrastre (mhandle) de los bottom sheets eran puramente decorativas — no se podían cerrar arrastrando |
+
+---
+
+### v1.6.7 — Lesiones: botón dedicado, backfill, alta rápida y fixes
 
 Iteración grande sobre la gestión de lesiones que unifica lo trabajado en las
 ramas internas v1.6.4 → v1.6.7 (todo entra en un único release público sobre
