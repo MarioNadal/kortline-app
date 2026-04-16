@@ -1,6 +1,6 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.6.1**
+**Versión 1.6.7**
 _Kortline — De la Pista al Dato_
 
 ---
@@ -50,10 +50,71 @@ Cada jugador tiene:
 - **Nombre**
 - **Dorsal** — con botones `−/+` para ajustar con el pulgar y sugerencia automática del próximo libre
 - **Posición**
-- **🚑 Lesionado** — marca esta casilla y aparecerá un punto rojo sobre el dorsal + badge 🚑 en toda la app (sincronizado con la palabra "lesionado" en notas, así los datos antiguos se respetan)
 - **Notas** opcionales
 
 Los jugadores se ordenan automáticamente por dorsal ascendente (los que no tienen número van al final).
+
+> 💡 Las **lesiones** ya no se marcan desde esta ficha. Cada jugador tiene un botón **🚑** propio en la fila de la plantilla (ver apartado **🚑 Gestión de lesiones**).
+
+---
+
+## 🚑 Gestión de lesiones
+
+Kortline tiene un flujo dedicado para gestionar lesiones. El objetivo es que el % de asistencia no castigue a un jugador lesionado y que el historial del club quede completo.
+
+### Dar de baja (marcar como lesionado)
+
+En la plantilla, junto al botón ✏️ (editar) y 🗑 (eliminar) de cada jugador, hay un botón **🚑**:
+- **Gris** → el jugador no tiene lesión activa
+- **Rojo** → el jugador está lesionado (y aparece un punto rojo sobre el dorsal)
+
+Al pulsar **🚑** en un jugador sano se abre el modal **Nueva lesión**:
+
+1. **Fecha de inicio** — por defecto hoy; se puede retroceder
+2. **Origen** — cuatro chips rápidos:
+   - 🏀 **Entreno**
+   - 🏆 **Partido**
+   - 🌐 **Fuera** (fuera del baloncesto)
+   - ❔ **Desconocido**
+3. **Detalle del origen** — desplegable opcional (selector de partido concreto, etc.)
+4. **Explicación** — texto libre (tipo de lesión, parte del cuerpo, estimación del tiempo de recuperación, parte médico…)
+
+Al guardar, Kortline hace **tres cosas automáticamente**:
+
+1. **Backfill de asistencia** — todas las sesiones entre la fecha de inicio y hoy pasan a **◎ Justificado · Lesionado/a**, con la explicación como nota
+2. **Snapshot FEB** — se guarda el % de asistencia del jugador en ese momento. Si ya estaba en riesgo, seguirá apareciendo en el panel ⚠️ **Riesgo FEB** mientras dure la lesión (no desaparece solo porque el porcentaje "mejore" durante la baja)
+3. **Badge visible** — se muestra 🚑 sobre el dorsal en plantilla, pase de lista, convocatorias y partidos, pero solo en las fechas **iguales o posteriores** a la fecha de inicio
+
+### Fila del jugador lesionado
+
+En la plantilla aparece una línea corta bajo el nombre:
+
+```
+🚑 10/04 (6d)
+```
+
+Es decir: **lesionado desde el 10 de abril, lleva 6 días**. El contador se actualiza solo cada día.
+
+### Dar de alta (recuperación)
+
+Al pulsar **🚑** en un jugador que ya está lesionado, se abre el modal **Recuperación**:
+
+- Muestra un resumen rápido: fecha de inicio, días acumulados, origen y explicación
+- **✅ Dar de alta médica** — un solo toque. Hoy queda como fecha de alta, el jugador vuelve a estar sano y la lesión pasa al historial
+- **✏️🚑 Editar datos de la lesión** — abre el modal completo para corregir fecha, origen o explicación (no es el editor del jugador)
+- **Cerrar** — salir sin cambios
+
+Si necesitas fijar la fecha de alta en un día pasado (porque te has acordado tarde), usa primero **✏️🚑 Editar** para retroceder la fecha de alta; el backfill se ajusta solo.
+
+### Historial de lesiones
+
+Cada alta se guarda con fecha de inicio, fecha de alta, días totales, origen y explicación. Queda disponible en la ficha del jugador como historial médico del club.
+
+### Detalles útiles
+
+- La **palabra "lesionado" escrita en las notas** del jugador sigue reconociéndose como lesión activa (compatibilidad con datos antiguos). Si quieres migrar, da de baja al jugador desde el botón 🚑 y elimina la palabra de las notas.
+- Si cambias la fecha de inicio hacia atrás, las sesiones entre la nueva fecha y la anterior también se rellenan automáticamente. Si la adelantas, las sesiones que queden fuera del rango se limpian.
+- El % de asistencia se recalcula al instante: las sesiones en rango dejan de contar como ausencia.
 
 ---
 
@@ -333,11 +394,17 @@ Los datos se guardan automáticamente en cada cambio. No se pierde nada.
 Sí, sin límite. Cada equipo tiene su plantilla, historial y configuración independientes.
 
 **¿Cómo marco a un jugador como lesionado?**
-Abre la ficha del jugador y marca la casilla **🚑 Lesionado**. Aparecerá un punto rojo sobre el dorsal y un badge 🚑 junto al nombre en toda la app. También puedes escribir "lesionado" en las notas — ambas formas están sincronizadas.
+En la plantilla del equipo, pulsa el botón **🚑** de la fila del jugador (junto al lápiz y la papelera). Se abre el modal **Nueva lesión** donde indicas fecha, origen y explicación. Kortline rellena automáticamente las sesiones pasadas como justificadas por lesión para que el % de asistencia no se vea castigado. Ver el apartado **🚑 Gestión de lesiones** para el flujo completo.
+
+**¿Cómo doy de alta a un jugador recuperado?**
+Pulsa otra vez el botón **🚑** (que ahora estará en rojo). Se abre el modal de recuperación con el botón **✅ Dar de alta médica**. Un solo toque y el jugador vuelve a estar sano.
+
+**¿El % de asistencia baja cuando un jugador está lesionado?**
+No. Al marcar la lesión, las sesiones del periodo pasan a ◎ Justificado · Lesionado/a y dejan de contar como ausencias. Además, si el jugador ya estaba en ⚠️ Riesgo FEB al lesionarse, seguirá apareciendo ahí durante la baja (el estado queda congelado).
 
 **¿Puedo añadir foto a los jugadores?**
 Sí, al editar un jugador pulsa el círculo de foto en la parte superior. La foto se muestra como avatar junto al dorsal en la plantilla y en el pase de lista.
 
 ---
 
-_Kortline v1.6.1 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_
+_Kortline v1.6.7 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_

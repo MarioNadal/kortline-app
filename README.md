@@ -9,7 +9,157 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.1 — Plantilla con fotos, lesiones y filtro de asistencia _(actual)_
+### v1.6.7 — Lesiones: botón dedicado, backfill, alta rápida y fixes _(actual)_
+
+Iteración grande sobre la gestión de lesiones que unifica lo trabajado en las
+ramas internas v1.6.4 → v1.6.7 (todo entra en un único release público sobre
+v1.6.3).
+
+**Botón 🚑 independiente en la plantilla**
+
+- La marca de lesión sale del modal de editar jugador. Aparece un botón 🚑 dedicado entre ✏️ y 🗑 en cada fila. Gris si está sano, rojo si está lesionado.
+- El modal de ✏️ Editar vuelve a ser solo foto, nombre, dorsal, posición, notas.
+- El botón 🚑 cambia de comportamiento según el estado del jugador:
+  - **Sano** → modal "Marcar lesión" (fecha + origen + explicación).
+  - **Lesionado** → mini-modal con resumen (días lesionado, desde, origen, nota) y tres acciones: ✅ Dar de alta médica, ✏️🚑 Editar datos de la lesión, Cerrar. El alta se da en un solo click.
+
+**Backfill automático de asistencia**
+
+- Nueva función `applyInjuryToSessions()`. Al guardar una lesión, todas las sesiones del equipo entre `startDate` y hoy se marcan como `excused` con motivo 🤕 Lesión. La explicación del modal se propaga como nota `_jn` en cada sesión — así se ve al consultar justificaciones en el pase de lista.
+- Al dar el alta médica se vuelve a pasar el backfill hasta la fecha del alta (inclusive), se archiva en `p.injuryHistory[]` con `endDate` y `days`, y se limpia `p.injury`.
+- Si el entrenador cambia `startDate` a posteriori, las marcas `_jr="injury"` que queden fuera del nuevo rango se limpian automáticamente (y se borra también `excused` si solo estaba por la lesión).
+- Fin del bug de "asistencia que baja tras recuperarse": durante la baja no se penaliza, y tras el alta el histórico refleja la realidad.
+
+**Badge 🚑 consciente de la fecha**
+
+- Nuevo helper `isInjuredOn(p, date)`. En el pase de lista, el 🚑 junto al nombre y el `!` rojo en el número solo aparecen si la fecha actual es ≥ `injury.startDate`.
+- Al pasar lista en sesiones previas a la lesión, el jugador ya no aparece marcado como lesionado (antes sí, y confundía).
+
+**Formato compacto en la fila de la plantilla**
+
+- Antes: "🚑 Lesionado desde jueves, 10 de abril de 2026 · 🏀 Entreno" — se cortaba en móvil.
+- Ahora: "🚑 10/04 (6d)". El tooltip del badge sigue dando la fecha completa.
+
+**Snapshot FEB**
+
+- Al activar la lesión se congela el % de asistencia previo en `snapshotPct` + `snapshotWasAtRisk`. Si ya estaba en riesgo antes de lesionarse, sigue apareciendo en ⚠️ Riesgo FEB con su % congelado. Si estaba por encima, queda excluido del riesgo mientras dure la baja.
+
+**Modelo de datos**
+
+```js
+p.injury = {
+  active: true,
+  startDate: "2026-04-10",
+  origin: "training"|"match"|"out"|"unknown",
+  originId: "2026-04-08",
+  originLabel: "08 abr · Jaca B",
+  notes: "Esguince tobillo derecho",
+  snapshotPct: 78,
+  snapshotWasAtRisk: false
+}
+
+p.injuryHistory = [                // archivo post-alta
+  { startDate, endDate, days, origin, originId, originLabel, notes, snapshotPct, snapshotWasAtRisk }
+]
+```
+
+**Bugs resueltos v1.6.7**
+
+| ID | Descripción |
+|----|-------------|
+| B-23 | Jugadores lesionados veían su % bajar tras el alta porque las sesiones pasadas no quedaban auto-justificadas |
+| B-24 | La explicación de la lesión no aparecía como motivo en el pase de lista diario |
+| B-25 | No había forma de saber cuántos días había estado lesionado un jugador tras darle de alta |
+| B-26 | Cambiar la fecha de inicio de una lesión dejaba marcas huérfanas fuera del nuevo rango |
+| B-27 | El badge 🚑 aparecía en días anteriores a la fecha de lesión al pasar lista |
+| B-28 | El texto "Lesionado desde [fecha larga]" se cortaba en filas estrechas |
+| B-29 | El botón "Editar detalles" del mini-modal se confundía con editar al jugador (ahora "✏️🚑 Editar datos de la lesión") |
+| B-30 | Faltaba una ruta rápida para dar el alta sin pasar por el modal completo |
+
+---
+
+### v1.6.3 — Gestión de lesiones ampliada
+
+**Panel de lesión en el modal del jugador**
+
+- **Fecha de inicio** — input de fecha dedicado. Se usa para saber desde cuándo el jugador no participa y congelar su snapshot de %.
+- **Origen segmentado** — cuatro botones: 🏀 Entreno · 🏆 Partido · 🌐 Fuera · ❔ Desconocido. Al elegir entreno o partido aparece un dropdown con los 24 más recientes para identificar exactamente la sesión donde ocurrió.
+- **Notas de lesión** — textarea dedicada para el detalle (tipo, zona, semanas estimadas de baja). Independiente del campo "Notas" general.
+- El check 🚑 sigue mandando: marcarlo despliega el panel y lo recoge todo al guardar.
+
+**Snapshot FEB al lesionarse**
+
+- Al activar la lesión, Kortline calcula el % de asistencia del jugador hasta esa fecha y lo congela en `p.injury.snapshotPct` + `snapshotWasAtRisk`.
+- **Si ya estaba por debajo del umbral al lesionarse**, el jugador sigue apareciendo en ⚠️ Riesgo FEB con un segundo badge "ya en riesgo al lesionarse" y el % congelado. El entrenador sabe que tendrá que recuperar cuando vuelva.
+- **Si estaba por encima del umbral**, queda excluido del riesgo mientras dure la lesión (coherente con FEB: una lesión de larga duración no debería contar contra la media).
+- Cuando el entrenador edita solo las notas de la lesión sin cambiar la fecha, el snapshot se preserva (no se re-dispara el cálculo).
+
+**Auto-justificación en el pase de lista**
+
+- Los días posteriores a la fecha de lesión, el jugador aparece como ✏️ Justificado con motivo 🤕 Lesionado/a pre-rellenado.
+- Etiqueta **AUTO** gris indica que la justificación es automática (no manual). El entrenador puede tocar el motivo para editarlo o cyclear el estado si el jugador recupera y vuelve a entrenar.
+- Al guardar la sesión, la auto-justificación se persiste como `sess[pid]="excused"` y `sess[pid+"_jr"]="injury"` para que aparezca en exports y contador de justificaciones.
+
+**Tarjetas y exports con info de lesión**
+
+- Tarjetas de estadísticas muestran "🚑 Lesionado · desde FECHA · ORIGEN" y las notas si las hay.
+- Nueva marca en PDF: 🚑⚠ para lesionados que ya estaban en riesgo.
+- Excel amplía columnas: "Lesión desde", "Origen lesión", "Notas lesión".
+- Listado de alerta FEB del PDF marca "🚑 lesionado desde FECHA (congelado)" junto al %.
+
+**Modelo de datos**
+
+```js
+p.injury = {
+  active: true,                    // sustituye a p.injured (se mantiene por retrocompat)
+  startDate: "2026-04-10",         // ISO YYYY-MM-DD
+  origin: "training"|"match"|"out"|"unknown",
+  originId: "2026-04-08",          // fecha de sesión o id de partido
+  originLabel: "08 abr · Jaca B",  // texto legible capturado
+  notes: "Esguince tobillo...",
+  snapshotPct: 78,                 // % en el momento de activar la lesión
+  snapshotWasAtRisk: false         // true si snapshotPct < umbral FEB
+}
+```
+
+**Retrocompatibilidad**
+
+- Jugadores legacy con solo `p.injured=true` o "lesionado" en notas siguen marcándose como lesionados (gracias a `isInjured()` centralizado).
+- La primera vez que se abra el modal y se guarde, se genera el `p.injury` completo con snapshot.
+
+---
+
+### v1.6.2 — Estadísticas: cálculo FEB corregido
+
+**Bugs resueltos en Estadísticas**
+
+- **Jugadores añadidos a mitad de temporada ya no inflan su %.** Cada jugador guarda la fecha de alta (`addedAt`) y el cálculo excluye las sesiones previas. Para datos legacy sin `addedAt`, se infiere la primera sesión en la que aparece registrado explícitamente. Afecta a tarjetas, gráficas, PDF y Excel.
+- **Jugadores lesionados ya no computan para el Riesgo FEB.** 🚑 aparece en tarjeta, PDF y Excel; la media y el contador "En riesgo FEB" los excluye. Se preserva su % individual a título informativo.
+- **Umbral FEB unificado.** Historial usaba `75%` hardcodeado ignorando la configuración. Ahora respeta `S.cfg.riskThreshold` como el resto.
+- **Export PDF/Excel respeta el filtro activo.** Si tienes "⚠️ Riesgo" puesto, el archivo exportado solo lleva esos jugadores, con sufijo `_riesgo` o `_racha` en el nombre y título del documento adaptado.
+- **Leyenda de colores sin rangos solapados.** Antes `≥90%`, `≥thr`, `<thr` eran confusos. Ahora `≥90%`, `${thr}%–89%`, `<${thr}%`.
+
+**Otros ajustes v1.6.2**
+
+- Etiquetas del gráfico de tendencia incluyen año corto cuando las 24 sesiones cruzan años diferentes (ej: `15 abr 25`, `12 may 26`).
+- Ordenación secundaria por dorsal en tarjetas de stats cuando hay empate en %.
+- Empty state de Estadísticas con botón directo a "Pasar lista ahora".
+- Hoja Mensual del Excel ahora usa media ponderada por jugador-sesión activo (antes multiplicaba por plantilla total, infladas en meses con altas nuevas).
+- Hoja Sesiones marca `N/A` en celdas de jugadores que aún no estaban de alta.
+
+**Bugs resueltos v1.6.2**
+
+| ID | Descripción | Versión |
+|----|-------------|---------|
+| B-18 | Jugadores nuevos aparecían con ~100% al ser contados como "presentes" en sesiones previas a su alta | v1.6.2 |
+| B-19 | Lesionados de larga duración aparecían en Riesgo FEB igual que un ausente injustificado | v1.6.2 |
+| B-20 | Historial usaba umbral FEB hardcodeado a 75 en vez de `S.cfg.riskThreshold` | v1.6.2 |
+| B-21 | Exportar PDF/Excel ignoraba el filtro activo (Todos / Riesgo / Racha) | v1.6.2 |
+| B-22 | Leyenda de colores con rangos solapados (`≥90%` y `≥thr%` abarcan el mismo tramo) | v1.6.2 |
+
+---
+
+### v1.6.1 — Plantilla con fotos, lesiones y filtro de asistencia
 
 **Plantilla (EQUIPOS)**
 

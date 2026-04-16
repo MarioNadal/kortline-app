@@ -974,7 +974,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.6.1",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.6.7",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1055,6 +1055,144 @@ function checkBackupReminder(){
 function toast(m){document.querySelectorAll(".toast").forEach(e=>e.remove());const el=document.createElement("div");el.className="toast";el.textContent=m;document.body.appendChild(el);if(_tt)clearTimeout(_tt);_tt=setTimeout(()=>el.remove(),2600);}
 
 /* ═══════════════════════════════════════
+   ATTENDANCE HELPERS (stats / exports)
+═══════════════════════════════════════ */
+// Fecha de alta efectiva del jugador. Preferimos p.addedAt (nuevos jugadores);
+// si no existe (datos legacy), inferimos la primera sesión en la que aparece
+// con un estado registrado explícito. Si nunca aparece, devuelve null → se
+// considera "existe desde siempre" (comportamiento previo, retrocompatible).
+function _playerStartDate(p,sessList){
+  if(p.addedAt)return p.addedAt;
+  let first=null;
+  for(const s of sessList){
+    if(s.data&&s.data[p.id]!==undefined){
+      if(!first||s.date<first)first=s.date;
+    }
+  }
+  return first;
+}
+// Filtra la lista de sesiones a las que un jugador ya estaba en plantilla.
+function _sessForPlayer(p,sessList){
+  const start=_playerStartDate(p,sessList);
+  if(!start)return sessList;
+  return sessList.filter(s=>s.date>=start);
+}
+// Cuenta estados de asistencia aplicando el filtro de alta del jugador.
+function _countAtt(p,sessList){
+  const rel=_sessForPlayer(p,sessList);
+  let pr=0,ab=0,la=0,ex=0;
+  rel.forEach(s=>{
+    const v=s.data?s.data[p.id]:undefined;
+    if(v==="present"||v===undefined)pr++;
+    else if(v==="absent")ab++;
+    else if(v==="late")la++;
+    else if(v==="excused")ex++;
+    else pr++;
+  });
+  return{pr,ab,la,ex,tot:rel.length};
+}
+
+/* ═══════════════════════════════════════
+   INJURY HELPERS
+═══════════════════════════════════════ */
+// Determina si un jugador está actualmente lesionado. Orden de prioridad:
+// 1) p.injury.active (modelo nuevo v1.6.3) · 2) p.injured booleano legacy ·
+// 3) patrón "lesion" en notas (retrocompat con datos muy antiguos).
+function isInjured(p){
+  if(!p)return false;
+  if(p.injury&&typeof p.injury==="object")return !!p.injury.active;
+  if(p.injured===true)return true;
+  return /lesion/i.test(p.notes||"");
+}
+// Fecha ISO de inicio de la lesión actual, o null si no hay startDate registrada.
+function injuryStart(p){
+  return p&&p.injury&&p.injury.active&&p.injury.startDate?p.injury.startDate:null;
+}
+// ¿El jugador estaba ya en riesgo FEB antes de lesionarse? (snapshot congelado
+// al activar la lesión para que lesiones de larga duración no oculten a un
+// jugador que ya venía mal y tendrá que recuperar cuando vuelva).
+function injuryWasAtRisk(p){
+  return !!(p&&p.injury&&p.injury.active&&p.injury.snapshotWasAtRisk);
+}
+// Calcula el % de asistencia del jugador usando solo las sesiones previas a
+// startDate (exclusivo) y respetando su fecha de alta. Se usa para generar el
+// snapshot que queda congelado mientras dure la lesión.
+function computeInjurySnapshot(p,startDate,sessList){
+  const start=p&&p.addedAt?p.addedAt:_playerStartDate(p||{},sessList);
+  const rel=sessList.filter(s=>(!start||s.date>=start)&&(!startDate||s.date<startDate));
+  if(!rel.length)return{pct:100,tot:0};
+  let pr=0;
+  rel.forEach(s=>{
+    const v=s.data?s.data[p.id]:undefined;
+    if(v==="present"||v==="late"||v===undefined)pr++;
+  });
+  return{pct:pc(pr,rel.length),tot:rel.length};
+}
+// Etiqueta legible del origen de la lesión para tarjetas y exports.
+function injuryOriginLabel(p){
+  if(!p||!p.injury||!p.injury.active)return"";
+  const inj=p.injury;
+  const map={training:"🏀 Entreno",match:"🏆 Partido",out:"🌐 Fuera",unknown:"❔ Desconocido"};
+  const base=map[inj.origin]||"";
+  if(inj.originLabel)return base?base+" · "+inj.originLabel:inj.originLabel;
+  return base;
+}
+// Días transcurridos entre dos fechas ISO YYYY-MM-DD. Si no hay endDate usa hoy.
+// Devuelve 0 si no hay startDate. Redondeado al entero más cercano.
+function injuryDays(startDate,endDate){
+  if(!startDate)return 0;
+  const s=new Date(startDate+"T12:00:00");
+  const e=endDate?new Date(endDate+"T12:00:00"):new Date();
+  return Math.max(0,Math.round((e-s)/(1000*60*60*24)));
+}
+// ¿Estaba lesionado el jugador en la fecha indicada? Clave para pase de lista de
+// días anteriores: aunque hoy esté lesionado, en sesiones previas a startDate
+// NO debe marcarse como lesionado (ni badge visual ni auto-justificación).
+function isInjuredOn(p,date){
+  if(!p||!isInjured(p))return false;
+  const st=injuryStart(p);
+  if(!st)return true; // legacy sin startDate → comportamiento antiguo
+  return date>=st;
+}
+// Fecha compacta DD/MM (sin año ni día de la semana) para filas estrechas.
+function fdCompact(d){
+  try{const dt=new Date(d+"T12:00:00");return dt.toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit"});}
+  catch{return d;}
+}
+// Backfill de sesiones del equipo: marca al jugador como 'excused' + _jr='injury'
+// en todas las sesiones dentro del rango [startDate..endDate]. Si noteText está,
+// lo escribe en _jn (útil para pase de lista y justificaciones). También limpia
+// marcas _jr='injury' previas que queden fuera del rango (evita residuos cuando
+// el entrenador edita la fecha de inicio o da el alta). Llamar siempre tras
+// modificar p.injury para mantener coherente la asistencia histórica.
+function applyInjuryToSessions(tid,pid,startDate,endDate,noteText){
+  const end=endDate||td();
+  const keys=Object.keys(S.sessions).filter(k=>k.startsWith(tid+"_"));
+  keys.forEach(k=>{
+    const sess={...(S.sessions[k]||{})};
+    let changed=false;
+    const d=k.slice(tid.length+1);
+    const inRange=startDate&&d>=startDate&&d<=end;
+    // 1) Limpia marcas de lesión que ya no aplican (fuera del nuevo rango)
+    if(sess[pid+"_jr"]==="injury"&&!inRange){
+      delete sess[pid+"_jr"];
+      delete sess[pid+"_jn"];
+      if(sess[pid]==="excused")delete sess[pid];
+      changed=true;
+    }
+    // 2) Aplica backfill dentro del rango
+    if(inRange){
+      if(sess[pid]!=="excused"){sess[pid]="excused";changed=true;}
+      if(sess[pid+"_jr"]!=="injury"){sess[pid+"_jr"]="injury";changed=true;}
+      if(noteText){
+        if(sess[pid+"_jn"]!==noteText){sess[pid+"_jn"]=noteText;changed=true;}
+      }
+    }
+    if(changed)S.sessions[k]=sess;
+  });
+}
+
+/* ═══════════════════════════════════════
    CHART MANAGEMENT
 ═══════════════════════════════════════ */
 let _charts={};
@@ -1086,12 +1224,24 @@ function _buildStatsCharts(){
   // Shared layout to prevent overflow
   const layoutCfg={padding:{left:0,right:0,top:4,bottom:4}};
 
+  // Helper: jugadores activos en una sesión concreta (según su alta)
+  const activeIn=(s)=>players.filter(p=>{
+    const start=_playerStartDate(p,allSess);
+    return !start||s.date>=start;
+  });
+
   // 1 — Attendance trend line
   const trendEl=document.getElementById("ch-trend");
   if(trendEl){
     const recent=allSess.slice(-24);
-    const labels=recent.map(s=>{const d=new Date(s.date+"T12:00:00");return d.toLocaleDateString("es-ES",{day:"numeric",month:"short"});});
-    const data=recent.map(s=>{const pr=players.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length;return pc(pr,players.length);});
+    const multiYear=recent.length>1&&recent[0].date.slice(0,4)!==recent[recent.length-1].date.slice(0,4);
+    const labels=recent.map(s=>{const d=new Date(s.date+"T12:00:00");return d.toLocaleDateString("es-ES",multiYear?{day:"numeric",month:"short",year:"2-digit"}:{day:"numeric",month:"short"});});
+    const data=recent.map(s=>{
+      const act=activeIn(s);
+      if(!act.length)return 0;
+      const pr=act.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length;
+      return pc(pr,act.length);
+    });
     _charts.trend=new Chart(trendEl,{
       type:"line",
       data:{labels,datasets:[{data,borderColor:t?.color||"#F06318",backgroundColor:(t?.color||"#F06318")+"18",fill:true,tension:0.4,pointRadius:3,pointHoverRadius:5,pointBackgroundColor:t?.color||"#F06318",borderWidth:2.5}]},
@@ -1103,14 +1253,13 @@ function _buildStatsCharts(){
   const playersEl=document.getElementById("ch-players");
   if(playersEl&&players.length){
     const pStats=players.map(p=>{
-      let pr=0,la=0;
-      allSess.forEach(s=>{const v=s.data[p.id]||"present";if(v==="present")pr++;else if(v==="late")la++;});
-      return{name:p.name.split(" ")[0],num:p.number,pct:pc(pr+la,allSess.length)};
+      const c=_countAtt(p,allSess);
+      return{name:p.name.split(" ")[0],num:p.number,pct:c.tot>0?pc(c.pr+c.la,c.tot):0,tot:c.tot};
     }).sort((a,b)=>b.pct-a.pct);
     _charts.players=new Chart(playersEl,{
       type:"bar",
-      data:{labels:pStats.map(p=>`#${p.num||"?"} ${p.name}`),datasets:[{data:pStats.map(p=>p.pct),backgroundColor:pStats.map(p=>p.pct>=90?"rgba(34,197,94,0.8)":p.pct>=thr?"rgba(245,158,11,0.8)":"rgba(239,68,68,0.8)"),borderRadius:5,borderSkipped:false}]},
-      options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,layout:layoutCfg,plugins:{legend:{display:false},tooltip:{...tooltipCfg,callbacks:{label:ctx=>` ${ctx.raw}%`}}},scales:{x:{min:0,max:100,ticks:{color:"#7a9cc8",callback:v=>v+"%",maxTicksLimit:6},grid:{color:"rgba(29,54,84,0.4)"}},y:{ticks:{color:"#eef2ff",font:{size:11,weight:"bold",family:"'Barlow Condensed',sans-serif"}},grid:{display:false}}}}
+      data:{labels:pStats.map(p=>`#${p.num||"?"} ${p.name}`),datasets:[{data:pStats.map(p=>p.pct),backgroundColor:pStats.map(p=>p.tot===0?"rgba(107,114,128,0.5)":p.pct>=90?"rgba(34,197,94,0.8)":p.pct>=thr?"rgba(245,158,11,0.8)":"rgba(239,68,68,0.8)"),borderRadius:5,borderSkipped:false}]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,layout:layoutCfg,plugins:{legend:{display:false},tooltip:{...tooltipCfg,callbacks:{label:ctx=>pStats[ctx.dataIndex].tot===0?" sin sesiones":` ${ctx.raw}%`}}},scales:{x:{min:0,max:100,ticks:{color:"#7a9cc8",callback:v=>v+"%",maxTicksLimit:6},grid:{color:"rgba(29,54,84,0.4)"}},y:{ticks:{color:"#eef2ff",font:{size:11,weight:"bold",family:"'Barlow Condensed',sans-serif"}},grid:{display:false}}}}
     });
   }
 
@@ -1118,7 +1267,12 @@ function _buildStatsCharts(){
   const distEl=document.getElementById("ch-dist");
   if(distEl){
     let tot={present:0,absent:0,late:0,excused:0};
-    allSess.forEach(s=>{players.forEach(p=>{const v=s.data[p.id]||"present";if(tot[v]!==undefined)tot[v]++;});});
+    allSess.forEach(s=>{
+      activeIn(s).forEach(p=>{
+        const v=s.data[p.id]||"present";
+        if(tot[v]!==undefined)tot[v]++;
+      });
+    });
     _charts.dist=new Chart(distEl,{
       type:"doughnut",
       data:{labels:["Presente","Ausente","Tarde","Justif."],datasets:[{data:[tot.present,tot.absent,tot.late,tot.excused],backgroundColor:["rgba(34,197,94,.85)","rgba(239,68,68,.85)","rgba(245,158,11,.85)","rgba(107,114,128,.85)"],borderWidth:0,hoverOffset:4}]},
@@ -1130,9 +1284,18 @@ function _buildStatsCharts(){
   const monthEl=document.getElementById("ch-months");
   if(monthEl){
     const byM={};
-    allSess.forEach(s=>{const m=s.date.slice(0,7);if(!byM[m])byM[m]={n:0,sum:0};byM[m].n++;const pr=players.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length;byM[m].sum+=pc(pr,players.length);});
-    const mks=Object.keys(byM).sort();
-    const mLabels=mks.map(m=>{const[y,mo]=m.split("-");return new Date(y,parseInt(mo)-1,1).toLocaleDateString("es-ES",{month:"short"});});
+    allSess.forEach(s=>{
+      const m=s.date.slice(0,7);
+      if(!byM[m])byM[m]={n:0,sum:0};
+      const act=activeIn(s);
+      if(!act.length)return;
+      byM[m].n++;
+      const pr=act.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length;
+      byM[m].sum+=pc(pr,act.length);
+    });
+    const mks=Object.keys(byM).filter(k=>byM[k].n>0).sort();
+    const multiYearM=mks.length>1&&mks[0].slice(0,4)!==mks[mks.length-1].slice(0,4);
+    const mLabels=mks.map(m=>{const[y,mo]=m.split("-");return new Date(y,parseInt(mo)-1,1).toLocaleDateString("es-ES",multiYearM?{month:"short",year:"2-digit"}:{month:"short"});});
     const mData=mks.map(m=>Math.round(byM[m].sum/byM[m].n));
     _charts.months=new Chart(monthEl,{
       type:"bar",
@@ -1162,6 +1325,27 @@ function exportPDF(){
   const players=pl(S.teamId);
   const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([k,v])=>({date:k.replace(S.teamId+"_",""),data:v})).sort((a,b)=>a.date.localeCompare(b.date));
   const thr=S.cfg.riskThreshold;
+  const sf=S.sf||"all";
+
+  // Pre-calcula stats por jugador respetando fecha de alta
+  const pStats=players.map(p=>{
+    const c=_countAtt(p,allSess);
+    let streak=0;
+    for(const s of [...allSess].reverse()){const v=s.data[p.id]||"present";if(v==="absent")streak++;else break;}
+    let scoreSum=0,scoreCnt=0;
+    allSess.forEach(s=>{const sc=s.data[p.id+"_score"];if(sc){scoreSum+=sc;scoreCnt++;}});
+    const isInj=isInjured(p);
+    const wasAtRisk=injuryWasAtRisk(p);
+    const pct=c.tot>0?pc(c.pr+c.la,c.tot):0;
+    return{...p,pr:c.pr,ab:c.ab,la:c.la,ex:c.ex,tot:c.tot,streak,pct,isInj,wasAtRisk,avgScore:scoreCnt>0?(scoreSum/scoreCnt).toFixed(1):"—"};
+  });
+
+  // Filtro activo (riesgo / racha) — respeta lo seleccionado en pantalla.
+  // Riesgo incluye lesionados que ya estaban por debajo del umbral al lesionarse.
+  const filtered=sf==="risk"?pStats.filter(p=>(!p.isInj&&p.pct<thr&&p.tot>0)||(p.isInj&&p.wasAtRisk))
+    :sf==="str"?pStats.filter(p=>!p.isInj&&p.streak>=2)
+    :pStats;
+  const filterLabel=sf==="risk"?" · Filtro: Riesgo FEB":sf==="str"?" · Filtro: Racha de ausencias":"";
 
   const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
 
@@ -1177,14 +1361,15 @@ function exportPDF(){
   doc.text(t?.name||"",14,27);
   doc.setFontSize(9);doc.setTextColor(122,156,200);
   const period=allSess.length?`${fd(allSess[0].date,true)} — ${fd(allSess[allSess.length-1].date,true)}`:"Sin sesiones";
-  doc.text(`${t?.category||""} · ${allSess.length} sesiones · ${period}`,14,35);
+  doc.text(`${t?.category||""} · ${allSess.length} sesiones · ${period}${filterLabel}`,14,35);
   doc.setFontSize(8);doc.setTextColor(122,156,200);
   doc.text(`Generado: ${new Date().toLocaleDateString("es-ES",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}`,170,10,{align:"right"});
 
-  // ── Summary boxes
-  const totalPr=allSess.reduce((a,s)=>a+players.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length,0);
-  const avgPct=allSess.length&&players.length?pc(totalPr,allSess.length*players.length):0;
-  const atRisk=players.filter(p=>{let pr=0,la=0;allSess.forEach(s=>{const v=s.data[p.id]||"present";if(v==="present")pr++;else if(v==="late")la++;});return pc(pr+la,allSess.length)<thr;}).length;
+  // ── Summary boxes — media ponderada por jugador-sesiones activas, excluyendo lesionados del riesgo
+  const sumPr=pStats.reduce((a,p)=>a+p.pr+p.la,0);
+  const sumPs=pStats.reduce((a,p)=>a+p.tot,0);
+  const avgPct=pc(sumPr,sumPs);
+  const atRisk=pStats.filter(p=>(!p.isInj&&p.pct<thr&&p.tot>0)||(p.isInj&&p.wasAtRisk)).length;
   const boxes=[["Sesiones",allSess.length],[`Jugadores`,players.length],[`Asistencia media`,avgPct+"%"],[`En riesgo FEB`,atRisk]];
   boxes.forEach(([l,v],i)=>{
     const x=14+i*48;
@@ -1197,16 +1382,14 @@ function exportPDF(){
 
   // ── Player table
   doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(240,99,24);
-  doc.text("ESTADÍSTICAS DE TEMPORADA — POR JUGADOR",14,76);
+  const tableTitle=sf==="risk"?"ESTADÍSTICAS — JUGADORES EN RIESGO FEB":sf==="str"?"ESTADÍSTICAS — JUGADORES CON RACHA DE AUSENCIAS":"ESTADÍSTICAS DE TEMPORADA — POR JUGADOR";
+  doc.text(tableTitle,14,76);
 
-  const rows=players.map(p=>{
-    let pr=0,ab=0,la=0,ex=0;
-    allSess.forEach(s=>{const v=s.data[p.id]||"present";if(v==="present")pr++;else if(v==="absent")ab++;else if(v==="late")la++;else if(v==="excused")ex++;});
-    const pct=pc(pr+la,allSess.length);
-    let scoreSum=0,scoreCnt=0;
-    allSess.forEach(s=>{const sc=s.data[p.id+"_score"];if(sc){scoreSum+=sc;scoreCnt++;}});
-    return[p.number||"—",p.name,p.position||"—",pr,ab,la,ex,pct+"%",pct>=thr?"✓":"⚠",scoreCnt>0?(scoreSum/scoreCnt).toFixed(1):"—"];
-  }).sort((a,b)=>parseFloat(b[7])-parseFloat(a[7]));
+  const rows=[...filtered].sort((a,b)=>b.pct-a.pct).map(p=>{
+    // Marca FEB: 🚑⚠ = lesionado pero ya estaba en riesgo al lesionarse.
+    const febMark=p.isInj?(p.wasAtRisk?"🚑⚠":"🚑"):p.tot===0?"—":p.pct>=thr?"✓":"⚠";
+    return[p.number!=null?p.number:"—",p.name,p.position||"—",p.pr,p.ab,p.la,p.ex,p.tot===0?"—":p.pct+"%",febMark,p.avgScore];
+  });
 
   doc.autoTable({
     head:[["#","Jugador","Pos","Pres","Aus","Tard","Just","%","FEB","★"]],
@@ -1218,29 +1401,37 @@ function exportPDF(){
     columnStyles:{0:{halign:"center",cellWidth:10},2:{cellWidth:18},3:{halign:"center"},4:{halign:"center"},5:{halign:"center"},6:{halign:"center"},7:{halign:"center",fontStyle:"bold"},8:{halign:"center"},9:{halign:"center"}},
     didParseCell(data){
       if(data.column.index===7&&data.section==="body"){
-        const v=parseFloat(data.cell.text[0]);
-        if(v>=90)data.cell.styles.textColor=[34,197,94];
-        else if(v<thr)data.cell.styles.textColor=[239,68,68];
-        else data.cell.styles.textColor=[245,158,11];
+        const txt=data.cell.text[0];
+        if(txt==="—")data.cell.styles.textColor=[122,156,200];
+        else{
+          const v=parseFloat(txt);
+          if(v>=90)data.cell.styles.textColor=[34,197,94];
+          else if(v<thr)data.cell.styles.textColor=[239,68,68];
+          else data.cell.styles.textColor=[245,158,11];
+        }
       }
       if(data.column.index===8&&data.section==="body"){
-        if(data.cell.text[0]==="⚠")data.cell.styles.textColor=[239,68,68];
+        const txt=data.cell.text[0];
+        if(txt==="⚠")data.cell.styles.textColor=[239,68,68];
+        else if(txt==="🚑")data.cell.styles.textColor=[122,156,200];
+        else if(txt==="—")data.cell.styles.textColor=[122,156,200];
         else data.cell.styles.textColor=[34,197,94];
       }
     }
   });
 
-  // ── Risk alert section
-  const riskPlayers=players.filter(p=>{let pr=0,la=0;allSess.forEach(s=>{const v=s.data[p.id]||"present";if(v==="present")pr++;else if(v==="late")la++;});return pc(pr+la,allSess.length)<thr;});
+  // ── Risk alert section (siempre sobre pStats, no filtered). Incluye lesionados
+  // que ya estaban en riesgo al lesionarse (snapshotWasAtRisk).
+  const riskPlayers=pStats.filter(p=>(!p.isInj&&p.pct<thr&&p.tot>0)||(p.isInj&&p.wasAtRisk));
   if(riskPlayers.length){
     const y=doc.lastAutoTable.finalY+10;
     doc.setFillColor(60,20,20);doc.roundedRect(14,y,182,riskPlayers.length*6+16,3,3,"F");
     doc.setFontSize(9);doc.setFont("helvetica","bold");doc.setTextColor(239,68,68);
     doc.text(`⚠ ALERTA FEB — ${riskPlayers.length} jugador${riskPlayers.length>1?"es":""} con asistencia < ${thr}%`,20,y+8);
     riskPlayers.forEach((p,i)=>{
-      let pr=0,la=0;allSess.forEach(s=>{const v=s.data[p.id]||"present";if(v==="present")pr++;else if(v==="late")la++;});
       doc.setFontSize(8);doc.setFont("helvetica","normal");doc.setTextColor(245,158,11);
-      doc.text(`• #${p.number||"?"} ${p.name}  →  ${pc(pr+la,allSess.length)}%`,20,y+16+i*6);
+      const suf=p.isInj?` · 🚑 lesionado desde ${injuryStart(p)||"?"} (congelado)`:"";
+      doc.text(`• #${p.number!=null?p.number:"?"} ${p.name}  →  ${p.pct}%${suf}`,20,y+16+i*6);
     });
   }
 
@@ -1251,12 +1442,13 @@ function exportPDF(){
     doc.setFillColor(13,34,68);doc.rect(0,287,210,10,"F");
     doc.setFontSize(7);doc.setTextColor(122,156,200);
     doc.text(`${S.clubName} · Kortline App`,14,293);
-    doc.text(`Umbral FEB: ${thr}% · Leyenda: Pres=Presente, Aus=Ausente, Tard=Tarde, Just=Justificado`,105,293,{align:"center"});
+    doc.text(`Umbral FEB: ${thr}% · 🚑 lesionado · 🚑⚠ ya en riesgo al lesionarse · — sin sesiones desde alta`,105,293,{align:"center"});
     doc.text(`Pág. ${i}/${pagesCount}`,196,293,{align:"right"});
   }
 
   const fn=(t?.name||"equipo").replace(/[^a-z0-9]/gi,"_").toLowerCase();
-  doc.save(`${fn}_estadisticas.pdf`);
+  const suf=sf==="risk"?"_riesgo":sf==="str"?"_racha":"";
+  doc.save(`${fn}_estadisticas${suf}.pdf`);
   toast("📄 PDF generado correctamente");
 }
 
@@ -1269,82 +1461,111 @@ function exportExcel(){
   const players=pl(S.teamId);
   const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([k,v])=>({date:k.replace(S.teamId+"_",""),data:v})).sort((a,b)=>a.date.localeCompare(b.date));
   const thr=S.cfg.riskThreshold;
+  const sf=S.sf||"all";
   const wb=XLSX.utils.book_new();
 
-  // ── Sheet 1: Player stats
-  const pRows=[["Dorsal","Jugador","Posición","Presentes","Ausentes","Tardes","Justificados","% Asistencia","FEB","Val. media (1-10)"]];
-  players.forEach(p=>{
-    let pr=0,ab=0,la=0,ex=0,scoreSum=0,scoreCnt=0;
-    allSess.forEach(s=>{
-      const v=s.data[p.id]||"present";
-      if(v==="present")pr++;else if(v==="absent")ab++;else if(v==="late")la++;else if(v==="excused")ex++;
-      const sc=s.data[p.id+"_score"];if(sc){scoreSum+=sc;scoreCnt++;}
-    });
-    const pct=pc(pr+la,allSess.length)/100;
-    pRows.push([p.number||"",p.name,p.position||"",pr,ab,la,ex,pct,pct*100>=thr?"OK":"RIESGO",scoreCnt>0?parseFloat((scoreSum/scoreCnt).toFixed(1)):""]);
+  // Pre-calcula stats por jugador respetando fecha de alta y lesión
+  const pStats=players.map(p=>{
+    const c=_countAtt(p,allSess);
+    let streak=0;
+    for(const s of [...allSess].reverse()){const v=s.data[p.id]||"present";if(v==="absent")streak++;else break;}
+    let scoreSum=0,scoreCnt=0;
+    allSess.forEach(s=>{const sc=s.data[p.id+"_score"];if(sc){scoreSum+=sc;scoreCnt++;}});
+    const isInj=isInjured(p);
+    const wasAtRisk=injuryWasAtRisk(p);
+    const pct=c.tot>0?pc(c.pr+c.la,c.tot)/100:0;
+    return{p,pr:c.pr,ab:c.ab,la:c.la,ex:c.ex,tot:c.tot,streak,pct,isInj,wasAtRisk,avgScore:scoreCnt>0?parseFloat((scoreSum/scoreCnt).toFixed(1)):""};
+  });
+  const filtered=sf==="risk"?pStats.filter(x=>(!x.isInj&&x.pct*100<thr&&x.tot>0)||(x.isInj&&x.wasAtRisk))
+    :sf==="str"?pStats.filter(x=>!x.isInj&&x.streak>=2)
+    :pStats;
+
+  // ── Sheet 1: Player stats (respeta filtro)
+  const pRows=[["Dorsal","Jugador","Posición","Presentes","Ausentes","Tardes","Justificados","Sesiones","% Asistencia","FEB","Lesión desde","Origen lesión","Notas lesión","Val. media (1-10)"]];
+  filtered.forEach(x=>{
+    const p=x.p;
+    const feb=x.isInj?(x.wasAtRisk?"LESIONADO · EN RIESGO":"LESIONADO"):x.tot===0?"—":x.pct*100>=thr?"OK":"RIESGO";
+    const iS=injuryStart(p)||"";
+    const iO=x.isInj?injuryOriginLabel(p):"";
+    const iN=x.isInj&&p.injury?p.injury.notes||"":"";
+    pRows.push([p.number!=null?p.number:"",p.name,p.position||"",x.pr,x.ab,x.la,x.ex,x.tot,x.pct,feb,iS,iO,iN,x.avgScore]);
   });
   const ws1=XLSX.utils.aoa_to_sheet(pRows);
-  ws1["!cols"]=[{wch:8},{wch:26},{wch:13},{wch:11},{wch:11},{wch:8},{wch:13},{wch:16},{wch:10},{wch:16}];
-  // Format % column
+  ws1["!cols"]=[{wch:8},{wch:26},{wch:13},{wch:11},{wch:11},{wch:8},{wch:13},{wch:10},{wch:16},{wch:18},{wch:14},{wch:22},{wch:28},{wch:16}];
+  // Format % column (columna 8: "% Asistencia")
   const range=XLSX.utils.decode_range(ws1["!ref"]||"A1");
-  for(let r=1;r<=range.e.r;r++){const cell=ws1[XLSX.utils.encode_cell({r,c:7})];if(cell)cell.z="0%";}
-  XLSX.utils.book_append_sheet(wb,ws1,"Jugadores");
+  for(let r=1;r<=range.e.r;r++){const cell=ws1[XLSX.utils.encode_cell({r,c:8})];if(cell)cell.z="0%";}
+  XLSX.utils.book_append_sheet(wb,ws1,sf==="risk"?"Riesgo":sf==="str"?"Racha":"Jugadores");
 
-  // ── Sheet 2: Session attendance
-  const sortedP=[...players].sort((a,b)=>(a.number||99)-(b.number||99));
-  const sHeader=["Fecha","Día",...sortedP.map(p=>`#${p.number||"?"} ${p.name}`),"% Asistencia","Notas","Ejercicios"];
+  // ── Sheet 2: Session attendance — N/A si el jugador no estaba de alta
+  const sortedP=[...players].sort((a,b)=>((a.number==null?999:a.number)-(b.number==null?999:b.number)));
+  const startByP={};
+  sortedP.forEach(p=>{startByP[p.id]=_playerStartDate(p,allSess);});
+  const sHeader=["Fecha","Día",...sortedP.map(p=>`#${p.number!=null?p.number:"?"} ${p.name}`),"% Asistencia","Notas","Ejercicios"];
   const sRows=[sHeader];
   allSess.forEach(s=>{
     const d=new Date(s.date+"T12:00:00");
     const dayName=d.toLocaleDateString("es-ES",{weekday:"long"});
-    const row=[s.date,dayName,...sortedP.map(p=>{const v=s.data[p.id]||"present";return{present:"P",absent:"A",late:"T",excused:"J"}[v]||"P";})]
-    const pr=sortedP.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length;
-    row.push(pc(pr,sortedP.length)/100,s.data._notes||"",s.data._exercises||"");
-    sRows.push(row);
+    const cells=sortedP.map(p=>{
+      const st=startByP[p.id];
+      if(st&&s.date<st)return "N/A";
+      const v=s.data[p.id]||"present";
+      return{present:"P",absent:"A",late:"T",excused:"J"}[v]||"P";
+    });
+    const activeP=sortedP.filter(p=>!startByP[p.id]||s.date>=startByP[p.id]);
+    const pr=activeP.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length;
+    const pct=activeP.length?pc(pr,activeP.length)/100:0;
+    sRows.push([s.date,dayName,...cells,pct,s.data._notes||"",s.data._exercises||""]);
   });
   const ws2=XLSX.utils.aoa_to_sheet(sRows);
   ws2["!cols"]=[{wch:12},{wch:12},...sortedP.map(()=>({wch:14})),{wch:14},{wch:30},{wch:40}];
   const sr=XLSX.utils.decode_range(ws2["!ref"]||"A1");
-  const pctCol=2+sortedP.length;
-  for(let r=1;r<=sr.e.r;r++){const cell=ws2[XLSX.utils.encode_cell({r,c:pctCol})];if(cell)cell.z="0%";}
+  const pctColIdx=2+sortedP.length;
+  for(let r=1;r<=sr.e.r;r++){const cell=ws2[XLSX.utils.encode_cell({r,c:pctColIdx})];if(cell)cell.z="0%";}
   XLSX.utils.book_append_sheet(wb,ws2,"Sesiones");
 
-  // ── Sheet 3: Monthly summary
+  // ── Sheet 3: Monthly summary — media ponderada por jugador-sesión activo
   const byM={};
   allSess.forEach(s=>{
     const m=s.date.slice(0,7);
-    if(!byM[m])byM[m]={sesiones:0,totalPr:0,totalPlayers:0};
+    if(!byM[m])byM[m]={sesiones:0,sumPr:0,sumPs:0};
     byM[m].sesiones++;
-    const pr=sortedP.filter(p=>{const v=s.data[p.id]||"present";return v==="present"||v==="late";}).length;
-    byM[m].totalPr+=pr;byM[m].totalPlayers+=sortedP.length;
+    sortedP.forEach(p=>{
+      const st=startByP[p.id];
+      if(st&&s.date<st)return;
+      byM[m].sumPs++;
+      const v=s.data[p.id]||"present";
+      if(v==="present"||v==="late")byM[m].sumPr++;
+    });
   });
-  const mRows=[["Mes","Sesiones","Jugadores","% Media"]];
+  const mRows=[["Mes","Sesiones","% Media"]];
   Object.entries(byM).sort(([a],[b])=>a.localeCompare(b)).forEach(([m,d])=>{
     const[y,mo]=m.split("-");const label=new Date(y,parseInt(mo)-1,1).toLocaleDateString("es-ES",{month:"long",year:"numeric"});
-    mRows.push([label,d.sesiones,players.length,pc(d.totalPr,d.totalPlayers)/100]);
+    mRows.push([label,d.sesiones,d.sumPs?pc(d.sumPr,d.sumPs)/100:0]);
   });
   const ws3=XLSX.utils.aoa_to_sheet(mRows);
-  ws3["!cols"]=[{wch:22},{wch:11},{wch:12},{wch:12}];
+  ws3["!cols"]=[{wch:22},{wch:11},{wch:12}];
   const mr=XLSX.utils.decode_range(ws3["!ref"]||"A1");
-  for(let r=1;r<=mr.e.r;r++){const cell=ws3[XLSX.utils.encode_cell({r,c:3})];if(cell)cell.z="0.0%";}
+  for(let r=1;r<=mr.e.r;r++){const cell=ws3[XLSX.utils.encode_cell({r,c:2})];if(cell)cell.z="0.0%";}
   XLSX.utils.book_append_sheet(wb,ws3,"Mensual");
 
-  // ── Sheet 4: Risk alert
-  const riskRows=[["#","Jugador","Posición","% Asistencia","Sesiones totales","Estado"]];
-  players.forEach(p=>{
-    let pr=0,la=0;
-    allSess.forEach(s=>{const v=s.data[p.id]||"present";if(v==="present")pr++;else if(v==="late")la++;});
-    const pct=pc(pr+la,allSess.length);
-    if(pct<thr)riskRows.push([p.number||"",p.name,p.position||"",pct/100,allSess.length,`RIESGO (<${thr}%)`]);
+  // ── Sheet 4: Risk alert — excluye lesionados y sin sesiones activas
+  const riskRows=[["#","Jugador","Posición","% Asistencia","Sesiones activas","Estado"]];
+  pStats.forEach(x=>{
+    if(x.isInj||x.tot===0)return;
+    if(x.pct*100<thr)riskRows.push([x.p.number!=null?x.p.number:"",x.p.name,x.p.position||"",x.pct,x.tot,`RIESGO (<${thr}%)`]);
   });
   if(riskRows.length>1){
     const ws4=XLSX.utils.aoa_to_sheet(riskRows);
     ws4["!cols"]=[{wch:6},{wch:26},{wch:13},{wch:14},{wch:16},{wch:20}];
+    const rr=XLSX.utils.decode_range(ws4["!ref"]||"A1");
+    for(let r=1;r<=rr.e.r;r++){const cell=ws4[XLSX.utils.encode_cell({r,c:3})];if(cell)cell.z="0%";}
     XLSX.utils.book_append_sheet(wb,ws4,"Riesgo FEB");
   }
 
   const fn=(t?.name||"equipo").replace(/[^a-z0-9]/gi,"_").toLowerCase();
-  XLSX.writeFile(wb,`${fn}_temporada.xlsx`);
+  const suf=sf==="risk"?"_riesgo":sf==="str"?"_racha":"";
+  XLSX.writeFile(wb,`${fn}_temporada${suf}.xlsx`);
   toast("📊 Excel generado correctamente");
 }
 
@@ -1650,8 +1871,20 @@ function att(){
   const players=pl(S.teamId);
   const sess=so(S.teamId,S.date);
   const f=S.cfg.features;
+  // Auto-justifica lesionados en la fecha en curso: si no hay estado explícito
+  // para el jugador y la lesión ya estaba activa ese día, lo tratamos como
+  // justificado con motivo "Lesionado/a". El entrenador puede seguir cycleando.
+  // Devuelve el estado efectivo y si es auto (para UI).
+  const effectiveState=p=>{
+    if(sess[p.id])return{st:sess[p.id],auto:false};
+    if(isInjured(p)){
+      const st2=injuryStart(p);
+      if(!st2||st2<=S.date)return{st:"excused",auto:true};
+    }
+    return{st:"present",auto:false};
+  };
   const counts={present:0,absent:0,late:0,excused:0};
-  players.forEach(p=>{const v=sess[p.id]||"present";if(counts[v]!==undefined)counts[v]++;});
+  players.forEach(p=>{const{st}=effectiveState(p);if(counts[st]!==undefined)counts[st]++;});
   const attFilter=S.attFilter||"";
   // Si el filtro activo tiene 0 jugadores (p.ej. se editó fuera), lo limpiamos
   const activeFilterValid=attFilter&&(counts[attFilter]||0)>0;
@@ -1666,7 +1899,7 @@ function att(){
     const glow=on?`box-shadow:0 0 0 3px ${v.c}22,0 4px 14px ${v.c}44;transform:translateY(-1px);`:"";
     return `<div class="abox" ${onClick} style="background:${v.bg};border:${ringWidth} solid ${ringColor};${cursor}${glow}position:relative;transition:all .15s;user-select:none;-webkit-user-select:none">${on?`<div style="position:absolute;top:3px;right:5px;font-size:10px;color:${v.c};font-weight:900">✓</div>`:""}<div style="font-family:var(--font-d);color:${v.c};font-weight:900;font-size:24px">${cnt}</div><div style="color:${v.c};font-size:10px;font-weight:700">${v.l.slice(0,4).toUpperCase()}</div></div>`;
   }).join("");
-  const filteredPlayers=activeFilterValid?players.filter(p=>(sess[p.id]||"present")===attFilter):players;
+  const filteredPlayers=activeFilterValid?players.filter(p=>effectiveState(p).st===attFilter):players;
   const filterBanner=activeFilterValid?`<div style="display:flex;align-items:center;justify-content:space-between;background:${AV[attFilter].bg};border:1px solid ${AV[attFilter].c}66;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:13px"><div style="display:flex;align-items:center;gap:8px;color:${AV[attFilter].c};font-weight:700"><span style="font-size:16px">${AV[attFilter].i}</span><span>Viendo solo ${AV[attFilter].l.toLowerCase()} · ${counts[attFilter]||0} de ${players.length}</span></div><button onclick="toggleAttFilter('')" style="background:${AV[attFilter].c}22;border:1px solid ${AV[attFilter].c}55;color:${AV[attFilter].c};cursor:pointer;font-weight:700;font-size:12px;border-radius:6px;padding:4px 10px">✕ Todos</button></div>`:"";
   // ¿Hay algún estado distinto del default ("present") en esta sesión?
   // Solo mostramos "Resetear" cuando hay algo que resetear, para no ensuciar la UI.
@@ -1681,19 +1914,23 @@ function att(){
     :"";
   const prows=filteredPlayers.length===0?`<div style="text-align:center;padding:20px;color:var(--tm);font-size:14px">${attFilter?"Sin jugadores en este estado.":"Sin jugadores."}</div>`:
     [...filteredPlayers].sort((a,b)=>{const an=a.number==null?999:a.number;const bn=b.number==null?999:b.number;return an-bn;}).map((p,i)=>{
-      const st=sess[p.id]||"present";const v=AV[st];
-      const jLabel=st==="excused"?justShortLabel(sess,p.id):"";
+      const eff=effectiveState(p);
+      const st=eff.st;const v=AV[st];
+      const jLabel=st==="excused"?(eff.auto&&!sess[p.id+"_jr"]?"🤕 Lesionado/a":justShortLabel(sess,p.id)):"";
       const ps=getPS(sess,p.id);
       const showScore=f.playerScore&&(st==="present"||st==="late");
-      const isInj=!!p.injured||/lesion/i.test(p.notes||"");
+      // Solo mostramos el badge de lesionado si lo estaba en ESA fecha (no en días previos a startDate).
+      const isInj=isInjuredOn(p,S.date);
       const avatar=p.photo?`<img class="pavatar" src="${p.photo}" alt="" style="margin-right:2px"/>`:"";
+      const autoHint=eff.auto?`<span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(107,114,128,.2);color:#9ca3af" title="Justificado automáticamente por lesión">AUTO</span>`:"";
       return`<div class="pr">
         <div class="pnum-wrap"><div class="pnum" style="background:linear-gradient(135deg,${t?.color||"#F06318"},${t?.color||"#F06318"}80)">${p.number!=null?p.number:"?"}</div>${isInj?`<span class="injury-dot" title="Lesionado">!</span>`:""}</div>
         ${avatar}
         <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:15px;display:flex;align-items:center;flex-wrap:wrap">${esc(p.name)}${isInj?`<span class="injury-badge" title="Lesionado">🚑</span>`:""}</div>
+          <div style="font-weight:600;font-size:15px;display:flex;align-items:center;flex-wrap:wrap;gap:4px">${esc(p.name)}${isInj?`<span class="injury-badge" title="Lesionado">🚑</span>`:""}</div>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">
             <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:12px;font-weight:700;background:${v.bg};color:${v.c}">${v.i} ${v.l}</span>
+            ${autoHint}
             ${st==="excused"?`<button class="just-pill ${jLabel?"filled":""}" onclick="openJustModal('${p.id}','${esc(p.name)}')">${jLabel?esc(jLabel):"+ Motivo"}</button>`:""}
           </div>
           ${showScore?`<div class="stars-sm" style="margin-top:4px">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span onclick="setPlayerScore('${p.id}',${i})" style="font-size:13px;cursor:pointer;color:${i<=ps?"#f59e0b":"#2a4060"}">★</span>`).join("")}</div>`:""}
@@ -1737,8 +1974,9 @@ function att(){
 function stats(){
   const t=S.teams.find(x=>x.id===S.teamId);
   const players=pl(S.teamId);
-  const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
-  const total=allSess.length;
+  const sessList=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([k,v])=>({date:k.replace(S.teamId+"_",""),data:v}));
+  const allSess=sessList.map(s=>s.data);
+  const total=sessList.length;
   const thr=S.cfg.riskThreshold;
   const feat=S.cfg.features;
   const view=S.statsView||"table";
@@ -1747,25 +1985,31 @@ function stats(){
     <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}</div></div>
   </div></header>
-  <div class="content"><div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📊</div><div style="font-size:14px;color:var(--tm)">Sin sesiones aún.<br/>Pasa lista primero.</div></div></div>
+  <div class="content"><div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📊</div><div style="font-size:14px;color:var(--tm);margin-bottom:14px">Sin sesiones aún.<br/>Pasa lista primero.</div><button class="btn-p" style="max-width:240px;margin:0 auto" onclick="navTo('att',{date:td()})">✅ Pasar lista ahora</button></div></div>
   ${navBar()}`;
 
-  const sortedSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([k,v])=>({date:k.replace(S.teamId+"_",""),data:v})).sort((a,b)=>b.date.localeCompare(a.date));
+  const sortedSess=[...sessList].sort((a,b)=>b.date.localeCompare(a.date));
   const pst=players.map(p=>{
-    let pr=0,ab=0,la=0,ex=0,streak=0;
-    allSess.forEach(s=>{const v=s[p.id];if(v==="present")pr++;else if(v==="absent")ab++;else if(v==="late")la++;else if(v==="excused")ex++;else pr++;});
+    const c=_countAtt(p,sessList);
+    let streak=0;
     for(const s of sortedSess){const v=s.data[p.id]||"present";if(v==="absent")streak++;else break;}
     let scoreSum=0,scoreCnt=0;
     allSess.forEach(s=>{const sc=s[p.id+"_score"];if(sc){scoreSum+=sc;scoreCnt++;}});
-    return{...p,pr,ab,la,ex,streak,pct:pc(pr+la,total),avgScore:scoreCnt>0?(scoreSum/scoreCnt).toFixed(1):null};
-  }).sort((a,b)=>b.pct-a.pct);
+    const isInj=isInjured(p);
+    const wasAtRisk=injuryWasAtRisk(p);
+    const injStart=injuryStart(p);
+    return{...p,pr:c.pr,ab:c.ab,la:c.la,ex:c.ex,tot:c.tot,streak,pct:pc(c.pr+c.la,c.tot),avgScore:scoreCnt>0?(scoreSum/scoreCnt).toFixed(1):null,isInj,wasAtRisk,injStart};
+  }).sort((a,b)=>b.pct-a.pct||((a.number==null?999:a.number)-(b.number==null?999:b.number)));
 
   const f=S.sf||"all";
-  const riskCnt=pst.filter(p=>p.pct<thr).length;
-  const strCnt=pst.filter(p=>p.streak>=2).length;
+  // Riesgo FEB: jugadores actualmente por debajo del umbral, MÁS lesionados que
+  // ya estaban en riesgo al lesionarse (el entrenador necesita seguir viéndolos
+  // aunque su % esté congelado por auto-justificación).
+  const riskCnt=pst.filter(p=>(!p.isInj&&p.pct<thr&&p.tot>0)||(p.isInj&&p.wasAtRisk)).length;
+  const strCnt=pst.filter(p=>!p.isInj&&p.streak>=2).length;
   let teamAvgScore=null;
   if(feat.teamScore){const sc2=allSess.filter(s=>s._teamScore).map(s=>s._teamScore);if(sc2.length>0)teamAvgScore=(sc2.reduce((a,b)=>a+b,0)/sc2.length).toFixed(1);}
-  const fil=f==="risk"?pst.filter(p=>p.pct<thr):f==="str"?pst.filter(p=>p.streak>=2):pst;
+  const fil=f==="risk"?pst.filter(p=>(!p.isInj&&p.pct<thr&&p.tot>0)||(p.isInj&&p.wasAtRisk)):f==="str"?pst.filter(p=>!p.isInj&&p.streak>=2):pst;
 
   /* ── Charts view HTML ── */
   const chartsHTML=`
@@ -1790,7 +2034,7 @@ function stats(){
     <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--td);display:flex;align-items:center;gap:8px">
       <span style="display:flex;gap:10px;flex-wrap:wrap">
         <span><span style="color:#22c55e">■</span> ≥90%</span>
-        <span><span style="color:#f59e0b">■</span> ≥${thr}%</span>
+        <span><span style="color:#f59e0b">■</span> ${thr}%–89%</span>
         <span><span style="color:#ef4444">■</span> &lt;${thr}% (riesgo FEB)</span>
       </span>
     </div>`;
@@ -1798,25 +2042,40 @@ function stats(){
   /* ── Table view HTML ── */
   const teamScoreStatHtml=teamAvgScore?`<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">⭐</span><div style="flex:1"><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">Valoración media del equipo</div><div style="font-family:var(--font-d);font-size:26px;font-weight:900;color:#f59e0b;margin-top:2px">${teamAvgScore}<span style="font-size:13px;color:var(--td)">/10</span></div></div></div>`:"";
   const tableRows=fil.map(p=>{
-    const c=p.pct>=90?"#22c55e":p.pct>=thr?"#f59e0b":"#ef4444";
+    const noData=p.tot===0;
+    const c=noData?"#6b7280":p.isInj?"#7a9cc8":p.pct>=90?"#22c55e":p.pct>=thr?"#f59e0b":"#ef4444";
+    const origLbl=p.isInj?injuryOriginLabel(p):"";
+    const injNotes=p.isInj&&p.injury?p.injury.notes:"";
+    const injDys=p.isInj&&p.injStart?injuryDays(p.injStart):0;
+    const injInfoLine=[p.injStart?"desde "+fdCompact(p.injStart):"",origLbl].filter(Boolean).join(" · ");
+    const injBox=p.isInj
+      ?`<div style="font-size:12px;background:rgba(122,156,200,.1);border:1px solid rgba(122,156,200,.25);border-radius:6px;padding:6px 8px;color:#7a9cc8;margin-bottom:6px">
+          <div><span style="font-weight:700">🚑 Lesionado · ${injDys} día${injDys===1?"":"s"}</span>${p.wasAtRisk?` <span style="color:#ef4444;font-weight:700">· ⚠️ ya en riesgo al lesionarse (${p.injury?.snapshotPct??"—"}%)</span>`:""}</div>
+          ${injInfoLine?`<div style="font-size:11px;color:var(--tm);margin-top:2px">${esc(injInfoLine)}</div>`:""}
+          ${injNotes?`<div style="font-size:11px;color:var(--tm);margin-top:2px;font-style:italic">"${esc(injNotes)}"</div>`:""}
+          <div style="font-size:10px;color:var(--td);margin-top:2px">${p.wasAtRisk?"Sigue contando en Riesgo FEB con el % congelado.":"Excluido del riesgo FEB mientras dure la lesión."}</div>
+        </div>`
+      :"";
     return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-        <div class="pnum" style="background:linear-gradient(135deg,${t?.color||"#F06318"},${t?.color||"#F06318"}80);width:34px;height:34px;border-radius:8px;font-size:14px">${p.number||"?"}</div>
-        <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>
-        <div style="font-family:var(--font-d);font-weight:900;font-size:30px;color:${c};line-height:1">${p.pct}<span style="font-size:13px">%</span></div>
+        <div class="pnum" style="background:linear-gradient(135deg,${t?.color||"#F06318"},${t?.color||"#F06318"}80);width:34px;height:34px;border-radius:8px;font-size:14px">${p.number!=null?p.number:"?"}</div>
+        <div style="flex:1"><div style="font-weight:600;font-size:15px;display:flex;align-items:center;flex-wrap:wrap">${esc(p.name)}${p.isInj?`<span class="injury-badge" title="Lesionado">🚑</span>`:""}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}${noData?" · sin sesiones":""}</div></div>
+        <div style="font-family:var(--font-d);font-weight:900;font-size:${noData?"22":"30"}px;color:${c};line-height:1">${noData?"—":p.pct+"<span style=\"font-size:13px\">%</span>"}</div>
       </div>
-      <div style="height:5px;background:var(--s3);border-radius:3px;overflow:hidden;margin-bottom:10px"><div style="height:100%;border-radius:3px;background:${c};width:${p.pct}%;transition:width .4s"></div></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:${p.streak>=2||p.avgScore?"8":"0"}px">
+      <div style="height:5px;background:var(--s3);border-radius:3px;overflow:hidden;margin-bottom:10px"><div style="height:100%;border-radius:3px;background:${c};width:${noData?0:p.pct}%;transition:width .4s"></div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:${p.isInj||p.streak>=2||p.avgScore?"8":"0"}px">
         ${[["✓",p.pr,"#22c55e","Pres"],["✗",p.ab,"#ef4444","Aus"],["⏱",p.la,"#f59e0b","Tard"],["◎",p.ex,"#6b7280","Just"]].map(([i,v,c2,l])=>`<div style="background:var(--s3);border-radius:6px;padding:6px 0;text-align:center"><div style="font-family:var(--font-d);color:${c2};font-weight:900;font-size:18px">${v}</div><div style="font-size:10px;color:var(--tm)">${l}</div></div>`).join("")}
       </div>
-      ${p.streak>=2?`<div style="font-size:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:5px 8px;color:#ef4444;margin-bottom:6px">⚠️ ${p.streak} sesiones seguidas faltando</div>`:""}
+      ${injBox}
+      ${!p.isInj&&p.streak>=2?`<div style="font-size:12px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:5px 8px;color:#ef4444;margin-bottom:6px">⚠️ ${p.streak} sesiones seguidas faltando</div>`:""}
       ${feat.playerScore&&p.avgScore?`<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:6px"><span style="font-size:10px;color:var(--td);font-weight:700">⭐ VAL. MEDIA</span><span style="margin-left:auto;font-family:var(--font-d);font-weight:900;color:#f59e0b;font-size:18px">${p.avgScore}<span style="font-size:11px;color:var(--td)">/10</span></span><span style="font-size:12px">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span style="color:${i<=Math.round(p.avgScore)?"#f59e0b":"#2a4060"}">★</span>`).join("")}</span></div>`:""}
     </div>`;
   }).join("")+(fil.length===0?`<div style="text-align:center;padding:20px;color:var(--tm);font-size:14px">Sin jugadores en esta categoría</div>`:"");
 
-  // Overview stats bar
-  const totalPr=allSess.reduce((a,s)=>a+players.filter(p=>{const v=s[p.id]||"present";return v==="present"||v==="late";}).length,0);
-  const avgAll=pc(totalPr,total*players.length);
+  // Overview stats bar — media ponderada por jugador-sesiones activas
+  const sumPr=pst.reduce((a,p)=>a+p.pr+p.la,0);
+  const sumPs=pst.reduce((a,p)=>a+p.tot,0);
+  const avgAll=pc(sumPr,sumPs);
 
   return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="navBack()">←</button>
@@ -1873,6 +2132,7 @@ function stats(){
 function hist(){
   const t=S.teams.find(x=>x.id===S.teamId);
   const players=pl(S.teamId);
+  const thr=S.cfg.riskThreshold||75;
   const allEntries=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([k,v])=>({k,date:k.replace(S.teamId+"_",""),data:v})).sort((a,b)=>b.date.localeCompare(a.date));
   const months=[...new Set(allEntries.map(e=>e.date.slice(0,7)))].sort().reverse();
   const entries=S.histMonth?allEntries.filter(e=>e.date.startsWith(S.histMonth)):allEntries;
@@ -1880,23 +2140,35 @@ function hist(){
   let mStats="";
   if(entries.length>0&&players.length>0){
     const mTot=entries.length;
-    const mTotPr=entries.reduce((a,e)=>a+players.filter(p=>(e.data[p.id]||"present")==="present"||(e.data[p.id])==="late").length,0);
-    const mAvgPct=pc(mTotPr,mTot*players.length);
+    // Media ponderada por jugador-sesión activo (respeta fecha de alta del jugador)
+    let sumPr=0,sumPs=0;
+    entries.forEach(e=>{
+      players.forEach(p=>{
+        const start=_playerStartDate(p,allEntries);
+        if(start&&e.date<start)return;
+        sumPs++;
+        const v=e.data[p.id]||"present";
+        if(v==="present"||v==="late")sumPr++;
+      });
+    });
+    const mAvgPct=pc(sumPr,sumPs);
     let mAvgScore="";
     if(S.cfg.features.teamScore){const sc2=entries.filter(e=>e.data._teamScore).map(e=>e.data._teamScore);mAvgScore=sc2.length>0?(sc2.reduce((a,b)=>a+b,0)/sc2.length).toFixed(1):"";}
     mStats=`<div style="display:flex;gap:8px;margin-bottom:12px">
       <div class="sbox" style="flex:1;padding:10px 12px"><div style="font-family:var(--font-d);font-weight:900;font-size:24px;color:var(--orange)">${mTot}</div><div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase">Sesiones</div></div>
-      <div class="sbox" style="flex:1;padding:10px 12px"><div style="font-family:var(--font-d);font-weight:900;font-size:24px;color:${mAvgPct>=90?"#22c55e":mAvgPct>=75?"#f59e0b":"#ef4444"}">${mAvgPct}%</div><div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase">Media</div></div>
+      <div class="sbox" style="flex:1;padding:10px 12px"><div style="font-family:var(--font-d);font-weight:900;font-size:24px;color:${mAvgPct>=90?"#22c55e":mAvgPct>=thr?"#f59e0b":"#ef4444"}">${mAvgPct}%</div><div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase">Media</div></div>
       ${mAvgScore?`<div class="sbox" style="flex:1;padding:10px 12px"><div style="font-family:var(--font-d);font-weight:900;font-size:24px;color:#f59e0b">${mAvgScore}★</div><div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase">Val. media</div></div>`:""}
     </div>`;
   }
   const rows=entries.length===0?`<div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📅</div><div style="font-size:14px;color:var(--tm)">Sin entrenamientos ${S.histMonth?"este mes":""}</div></div>`:
     `<div class="card">${entries.map((e,i)=>{
-      const pr=players.filter(p=>(e.data[p.id]||"present")==="present").length;
-      const ab=players.filter(p=>e.data[p.id]==="absent").length;
-      const la=players.filter(p=>e.data[p.id]==="late").length;
-      const ex=players.filter(p=>e.data[p.id]==="excused").length;
-      const p2=pc(pr+la,players.length);const c=p2>=90?"#22c55e":p2>=75?"#f59e0b":"#ef4444";
+      // Solo cuenta jugadores de alta en la fecha de la sesión
+      const activeP=players.filter(p=>{const start=_playerStartDate(p,allEntries);return !start||e.date>=start;});
+      const pr=activeP.filter(p=>(e.data[p.id]||"present")==="present").length;
+      const ab=activeP.filter(p=>e.data[p.id]==="absent").length;
+      const la=activeP.filter(p=>e.data[p.id]==="late").length;
+      const ex=activeP.filter(p=>e.data[p.id]==="excused").length;
+      const p2=activeP.length?pc(pr+la,activeP.length):0;const c=p2>=90?"#22c55e":p2>=thr?"#f59e0b":"#ef4444";
       const ts=e.data._teamScore;
       return`<div class="he" style="${i===entries.length-1?"border-bottom:none":""}">
         <div style="display:flex;align-items:center;gap:8px">
@@ -1935,11 +2207,22 @@ function team(){
   const coaches=(t.coaches||[]).filter(Boolean);
   const prows=players.length===0?`<div class="empty"><div style="font-size:36px;margin-bottom:10px;opacity:.4">👤</div><div style="font-size:14px;color:var(--tm)">Sin jugadores aún.</div></div>`:
     `<div class="card">${[...players].sort((a,b)=>{const an=a.number==null?999:a.number;const bn=b.number==null?999:b.number;return an-bn;}).map(p=>{
-      const isInj=!!p.injured||/lesion/i.test(p.notes||"");
-      const badge=isInj?`<span class="injury-badge" title="Lesionado">🚑</span>`:"";
+      const isInj=isInjured(p);
+      const iStart=injuryStart(p);
+      const iDays=iStart?injuryDays(iStart):0;
+      const badge=isInj?`<span class="injury-badge" title="Lesionado${iStart?" desde "+fd(iStart,false):""}">🚑</span>`:"";
       const pnum=`<div class="pnum-wrap"><div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}99)">${p.number!=null?p.number:"?"}</div>${isInj?`<span class="injury-dot" title="Lesionado">!</span>`:""}</div>`;
       const avatar=p.photo?`<img class="pavatar" src="${p.photo}" alt=""/>`:"";
-      return `<div class="pr">${pnum}${avatar}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px;display:flex;align-items:center;flex-wrap:wrap">${esc(p.name)}${badge}</div><div style="font-size:12px;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.position||"—")}${p.notes?" · "+esc(p.notes):""}</div></div><button onclick="openPlayerModal(${JSON.stringify({...p,id:p.id}).replace(/"/g,'&quot;')})" style="padding:5px 9px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:13px;margin-right:4px">✏️</button><button onclick="delPlayer('${p.id}','${esc(p.name)}')" style="padding:5px 9px;border-radius:6px;border:none;background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:13px">🗑</button></div>`;
+      // Formato compacto para no cortar en filas estrechas: "🚑 10/04 (6d)"
+      const injLine=isInj?`🚑 ${iStart?fdCompact(iStart):""}${iDays?` (${iDays}d)`:""}`:"";
+      const subLine=[p.position||"—",injLine,p.notes].filter(Boolean).join(" · ");
+      // Botón dedicado de lesión entre ✏️ y 🗑. Rojo si activa (abre alta rápida),
+      // gris si no (abre modal para marcar).
+      const injBtnStyle=isInj
+        ?"background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45);color:#ef4444"
+        :"background:var(--s2);border:1px solid var(--border);color:var(--td)";
+      const injBtn=`<button onclick="openInjuryModal('${p.id}')" title="${isInj?"Dar de alta / editar lesión":"Marcar lesión"}" style="padding:5px 9px;border-radius:6px;cursor:pointer;font-size:13px;margin-right:4px;${injBtnStyle}">🚑</button>`;
+      return `<div class="pr">${pnum}${avatar}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px;display:flex;align-items:center;flex-wrap:wrap">${esc(p.name)}${badge}</div><div style="font-size:12px;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(subLine)}</div></div><button onclick="openPlayerModal(${JSON.stringify({...p,id:p.id}).replace(/"/g,'&quot;')})" title="Editar datos" style="padding:5px 9px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:13px;margin-right:4px">✏️</button>${injBtn}<button onclick="delPlayer('${p.id}','${esc(p.name)}')" title="Eliminar" style="padding:5px 9px;border-radius:6px;border:none;background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:13px">🗑</button></div>`;
     }).join("")}</div>`;
   const schedRows=t.schedule&&Object.keys(t.schedule).length?Object.entries(t.schedule).sort((a,b)=>+a[0]-+b[0]).map(([i,time])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:14px">${DAYSF[i]}</div><div style="color:var(--orange);font-family:var(--font-d);font-weight:700;font-size:15px">${time||"—"}</div></div>`).join(""):`<div style="font-size:13px;color:var(--tm);padding:8px 0">Sin horario</div>`;
   // Attendance stats bar
@@ -2359,7 +2642,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.1 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.7 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -2405,7 +2688,6 @@ function openPlayerModal(init){
   const sugg=init?.number||nextFreeDorsal(S.teamId,init?.id);
   const dorsalVal=init&&init.number!=null?String(init.number):"";
   const photoVal=init?.photo||"";
-  const isInjured=init&&(!!init.injured||/lesion/i.test(init?.notes||""));
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div><div class="mtitle">${init?"Editar Jugador":"Nuevo Jugador"}</div>
     <div style="margin-bottom:14px">
@@ -2428,15 +2710,33 @@ function openPlayerModal(init){
       </div>
     </div>
     <div class="fg"><label class="fl">Posición</label><select class="fi" id="${id}-p">${["", ...POSITIONS].map(p=>`<option value="${p}" ${(init?.position||"")==p?"selected":""}>${p||"Sin especificar"}</option>`).join("")}</select></div>
-    <div class="fg"><label class="fl">Notas</label><input class="fi" id="${id}-o" value="${esc(init?.notes||"")}" placeholder="Capitán, lesionado, rol..."/></div>
-    <div style="display:flex;align-items:center;gap:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;cursor:pointer;user-select:none;-webkit-user-select:none" onclick="togglePlayerInjury('${id}')">
-      <input type="checkbox" id="${id}-inj" ${isInjured?"checked":""} style="width:20px;height:20px;accent-color:#ef4444;flex-shrink:0;margin:0;-webkit-appearance:auto;appearance:auto;pointer-events:none"/>
-      <div style="flex:1"><div style="font-weight:600;font-size:14px;color:${isInjured?"#ef4444":"var(--tx)"}">🚑 Lesionado</div><div style="font-size:11px;color:var(--tm)">Marca una chincheta roja en la plantilla</div></div>
-    </div>
+    <div class="fg"><label class="fl">Notas</label><input class="fi" id="${id}-o" value="${esc(init?.notes||"")}" placeholder="Capitán, rol, rotación..."/></div>
     <button class="btn-p" onclick="savePlayer('${id}','${init?.id||""}')">${init?"Guardar":"Añadir"}</button>
     <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
+}
+
+// Construye las opciones del dropdown de sesión/partido según el origen.
+// Muestra hasta 24 elementos recientes; el seleccionado se mantiene aunque
+// sea más antiguo para no perderlo al reabrir el modal.
+function buildInjSourceOptions(origin,selectedId){
+  const tid=S.teamId;if(!tid)return"";
+  let items=[];
+  if(origin==="training"){
+    items=Object.keys(S.sessions||{}).filter(k=>k.startsWith(tid+"_")).map(k=>({id:k.replace(tid+"_",""),date:k.replace(tid+"_",""),label:fd(k.replace(tid+"_",""),false)}));
+  }else if(origin==="match"){
+    items=(S.matches[tid]||[]).map(m=>({id:m.id,date:m.date,label:(m.date?fd(m.date,false)+" · ":"")+(m.rival||"Partido")}));
+  }else return"";
+  items.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const limited=items.slice(0,24);
+  // Si el seleccionado no está en los 24 recientes, lo añadimos al principio para no perderlo.
+  if(selectedId&&!limited.some(x=>x.id===selectedId)){
+    const extra=items.find(x=>x.id===selectedId);
+    if(extra)limited.unshift(extra);
+  }
+  const opts=[`<option value="">— Selecciona —</option>`].concat(limited.map(x=>`<option value="${esc(x.id)}" ${x.id===selectedId?"selected":""}>${esc(x.label)}</option>`));
+  return opts.join("");
 }
 
 function nextFreeDorsal(teamId,excludeId){
@@ -2475,11 +2775,189 @@ function clearPlayerPhoto(mid){
   if(cl)cl.style.display="none";
   if(inp)inp.value="";
 }
-function togglePlayerInjury(mid){
-  const cb=document.getElementById(mid+"-inj");if(!cb)return;
-  cb.checked=!cb.checked;
-  const lbl=cb.closest("div").querySelector("div > div");
-  if(lbl)lbl.style.color=cb.checked?"#ef4444":"var(--tx)";
+// ═══ MODAL DEDICADO DE LESIÓN ═══
+// Se abre desde el botón 🚑 de la fila del jugador. Gestiona activar/desactivar
+// la lesión y todos los detalles (fecha, origen, explicación). Independiente
+// del modal de editar datos básicos.
+function openInjuryModal(pid){
+  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return;
+  if(isInjured(p)){openInjuryRecoveryModal(pid);return;}
+  openInjuryNewModal(pid);
+}
+// Modal de NUEVA lesión: startDate, origen y explicación. Sin estimación de tiempo
+// (las lesiones pueden durar desde horas hasta meses, no tiene sentido un único campo
+// de semanas). Si se necesita la estimación puede incluirse en la explicación.
+function openInjuryNewModal(pid){
+  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return;
+  const id="m-inj-"+pid;
+  document.getElementById(id)?.remove();
+  const el=document.createElement("div");el.id=id;
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const injDate=td();
+  const injOrigin="unknown";
+  const lastInjury=(Array.isArray(p.injuryHistory)&&p.injuryHistory.length)?p.injuryHistory[p.injuryHistory.length-1]:null;
+  const ORIGINS=[["training","🏀 Entreno"],["match","🏆 Partido"],["out","🌐 Fuera"],["unknown","❔ Desconocido"]];
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">🚑 Marcar lesión</div>
+    <div class="msub">👤 ${esc(p.name)}${p.number!=null?` · #${p.number}`:""}</div>
+    ${lastInjury?`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--td)">📋 Última lesión: ${fdCompact(lastInjury.startDate||"")} → ${fdCompact(lastInjury.endDate||"")} (${lastInjury.days||0} d)</div>`:""}
+    <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--td);line-height:1.5">Auto-justifica el pase de lista desde la fecha de inicio y congela su % FEB.</div>
+    <div class="fg"><label class="fl">Fecha de lesión</label><input class="fi" type="date" id="${id}-date" value="${esc(injDate)}"/></div>
+    <div class="fg"><label class="fl">Origen</label>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px" id="${id}-origins">${ORIGINS.map(([k,lb])=>`<button type="button" class="inj-origin${injOrigin===k?" sel":""}" data-k="${k}" onclick="setInjOrigin('${id}','${k}')" style="padding:10px 8px;border-radius:8px;border:1px solid ${injOrigin===k?"#ef4444":"var(--border)"};background:${injOrigin===k?"rgba(239,68,68,.12)":"var(--s3)"};color:${injOrigin===k?"#ef4444":"var(--tx)"};font-size:12px;font-weight:700;cursor:pointer">${lb}</button>`).join("")}</div>
+      <select class="fi" id="${id}-src" style="display:none"></select>
+    </div>
+    <div class="fg"><label class="fl">Explicación (opcional)</label><textarea class="fi" id="${id}-notes" rows="3" style="resize:none" placeholder="Esguince, tendinitis, zona afectada, estimación..."></textarea>
+      <div style="font-size:11px;color:var(--tm);margin-top:4px">Se usará como motivo en las justificaciones diarias durante la baja</div>
+    </div>
+    <button class="btn-p" onclick="saveInjury('${id}','${pid}')">🚑 Guardar lesión</button>
+    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+  el.dataset.mode="new";
+}
+// Modal de ALTA para jugador ya lesionado: muestra resumen + botones de alta
+// rápida y edición de detalles. Es lo que se abre al pulsar 🚑 sobre un lesionado.
+function openInjuryRecoveryModal(pid){
+  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return;
+  const inj=(p.injury&&typeof p.injury==="object")?p.injury:{};
+  const id="m-inj-"+pid;
+  document.getElementById(id)?.remove();
+  const el=document.createElement("div");el.id=id;
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const days=inj.startDate?injuryDays(inj.startDate):0;
+  const origLbl=injuryOriginLabel(p);
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">🚑 Lesión activa</div>
+    <div class="msub">👤 ${esc(p.name)}${p.number!=null?` · #${p.number}`:""}</div>
+    <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);border-radius:10px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-weight:700;font-size:14px;color:#ef4444;margin-bottom:6px">Lleva ${days} día${days===1?"":"s"} lesionado</div>
+      ${inj.startDate?`<div style="font-size:12px;color:var(--td)">Desde: ${fd(inj.startDate,false)}</div>`:""}
+      ${origLbl?`<div style="font-size:12px;color:var(--td);margin-top:2px">Origen: ${esc(origLbl)}</div>`:""}
+      ${inj.notes?`<div style="font-size:12px;color:var(--tm);margin-top:4px;font-style:italic">"${esc(inj.notes)}"</div>`:""}
+    </div>
+    <button class="btn-p" style="background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="confirmInjuryRecovery('${pid}')">✅ Dar de alta médica</button>
+    <button class="btn-s" onclick="openInjuryEditModal('${pid}')">✏️🚑 Editar datos de la lesión</button>
+    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cerrar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+// Confirma y ejecuta el alta médica directamente sin abrir el modal grande.
+// Archiva la lesión, backfillea sesiones hasta hoy y limpia p.injury.
+function confirmInjuryRecovery(pid){
+  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return;
+  const prev=p.injury&&typeof p.injury==="object"?p.injury:null;
+  if(!prev||!prev.active){toast("✅ Sin cambios");return;}
+  const endDate=td();
+  const startDate=prev.startDate||endDate;
+  const days=injuryDays(startDate,endDate);
+  const tid=S.teamId;
+  applyInjuryToSessions(tid,pid,startDate,endDate,prev.notes||"");
+  const hist=Array.isArray(p.injuryHistory)?p.injuryHistory.slice():[];
+  hist.push({startDate,endDate,days,origin:prev.origin||"unknown",originId:prev.originId||"",originLabel:prev.originLabel||"",notes:prev.notes||"",snapshotPct:prev.snapshotPct,snapshotWasAtRisk:!!prev.snapshotWasAtRisk});
+  S.players[S.teamId]=pl(S.teamId).map(x=>x.id===pid?{...x,injured:false,injury:null,injuryHistory:hist}:x);
+  document.getElementById("m-inj-"+pid)?.remove();
+  save();render();
+  toast(`✅ Alta médica · ${days} día${days===1?"":"s"} justificados`);
+}
+// Modal de edición de una lesión activa: cambiar startDate, origen o notas sin
+// dar el alta. Útil si el entrenador metió mal la fecha o quiere añadir detalle.
+function openInjuryEditModal(pid){
+  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return;
+  const inj=(p.injury&&typeof p.injury==="object")?p.injury:{};
+  const id="m-inj-"+pid;
+  document.getElementById(id)?.remove();
+  const el=document.createElement("div");el.id=id;
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const injDate=inj.startDate||td();
+  const injOrigin=inj.origin||"unknown";
+  const injOriginId=inj.originId||"";
+  const injNotes=inj.notes||"";
+  const ORIGINS=[["training","🏀 Entreno"],["match","🏆 Partido"],["out","🌐 Fuera"],["unknown","❔ Desconocido"]];
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">✏️ Editar lesión</div>
+    <div class="msub">👤 ${esc(p.name)}${p.number!=null?` · #${p.number}`:""}</div>
+    <div class="fg"><label class="fl">Fecha de lesión</label><input class="fi" type="date" id="${id}-date" value="${esc(injDate)}"/></div>
+    <div class="fg"><label class="fl">Origen</label>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px" id="${id}-origins">${ORIGINS.map(([k,lb])=>`<button type="button" class="inj-origin${injOrigin===k?" sel":""}" data-k="${k}" onclick="setInjOrigin('${id}','${k}')" style="padding:10px 8px;border-radius:8px;border:1px solid ${injOrigin===k?"#ef4444":"var(--border)"};background:${injOrigin===k?"rgba(239,68,68,.12)":"var(--s3)"};color:${injOrigin===k?"#ef4444":"var(--tx)"};font-size:12px;font-weight:700;cursor:pointer">${lb}</button>`).join("")}</div>
+      <select class="fi" id="${id}-src" style="display:${injOrigin==="training"||injOrigin==="match"?"block":"none"}">${buildInjSourceOptions(injOrigin,injOriginId)}</select>
+    </div>
+    <div class="fg"><label class="fl">Explicación (opcional)</label><textarea class="fi" id="${id}-notes" rows="3" style="resize:none" placeholder="Esguince, tendinitis, zona afectada...">${esc(injNotes)}</textarea>
+      <div style="font-size:11px;color:var(--tm);margin-top:4px">Se usará como motivo en las justificaciones diarias durante la baja</div>
+    </div>
+    <button class="btn-p" onclick="saveInjury('${id}','${pid}')">Guardar cambios</button>
+    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+  el.dataset.mode="edit";
+}
+// Compat: ya no se usa desde UI (no hay check en los nuevos modales) pero se deja
+// como no-op por si algún flujo antiguo lo llama. El flujo de alta ahora está en
+// openInjuryRecoveryModal / confirmInjuryRecovery.
+function toggleInjActive(mid){}
+// Cambia el origen de la lesión y refresca el dropdown de sesiones/partidos.
+function setInjOrigin(mid,k){
+  const wrap=document.getElementById(mid+"-origins");if(!wrap)return;
+  wrap.querySelectorAll(".inj-origin").forEach(btn=>{
+    const on=btn.dataset.k===k;
+    btn.classList.toggle("sel",on);
+    btn.style.border="1px solid "+(on?"#ef4444":"var(--border)");
+    btn.style.background=on?"rgba(239,68,68,.12)":"var(--s3)";
+    btn.style.color=on?"#ef4444":"var(--tx)";
+  });
+  const sel=document.getElementById(mid+"-src");
+  if(sel){
+    if(k==="training"||k==="match"){
+      sel.style.display="block";
+      sel.innerHTML=buildInjSourceOptions(k,"");
+    }else{
+      sel.style.display="none";
+      sel.innerHTML="";
+    }
+  }
+}
+// Persiste la lesión activa (nueva o editada). El alta se gestiona por separado
+// en confirmInjuryRecovery. Siempre crea/mantiene p.injury.active=true y
+// backfillea las sesiones desde startDate hasta hoy como excused+injury para
+// que no baje el % de asistencia durante la baja.
+function saveInjury(mid,pid){
+  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return;
+  const tid=S.teamId;
+  const prev=p.injury&&typeof p.injury==="object"?p.injury:null;
+  const startDate=document.getElementById(mid+"-date")?.value||td();
+  const originBtn=document.querySelector(`#${mid}-origins .inj-origin.sel`);
+  const origin=originBtn?.dataset.k||"unknown";
+  const srcEl=document.getElementById(mid+"-src");
+  const originId=(origin==="training"||origin==="match")&&srcEl?srcEl.value||"":"";
+  const originLabel=srcEl&&srcEl.selectedOptions&&srcEl.selectedOptions[0]&&srcEl.value?srcEl.selectedOptions[0].textContent:"";
+  const injNotesVal=document.getElementById(mid+"-notes")?.value.trim()||"";
+  // Preserva el snapshot si la fecha no cambia; recalcula si es nueva lesión o cambió la fecha.
+  let snapshotPct,snapshotWasAtRisk;
+  if(prev&&prev.active&&prev.startDate===startDate&&typeof prev.snapshotPct==="number"){
+    snapshotPct=prev.snapshotPct;
+    snapshotWasAtRisk=!!prev.snapshotWasAtRisk;
+  }else{
+    const sessList=Object.entries(S.sessions).filter(([k])=>k.startsWith(tid+"_")).map(([k,v])=>({date:k.replace(tid+"_",""),data:v}));
+    const snap=computeInjurySnapshot(p,startDate,sessList);
+    snapshotPct=snap.pct;
+    const thr=S.cfg.riskThreshold||75;
+    snapshotWasAtRisk=snap.tot>0&&snap.pct<thr;
+  }
+  const injuryObj={active:true,startDate,origin,originId,originLabel,notes:injNotesVal,snapshotPct,snapshotWasAtRisk};
+  // Backfill: todas las sesiones entre startDate y hoy → excused + motivo lesión.
+  // También limpia marcas _jr='injury' que queden fuera del nuevo rango (p.ej. si
+  // el entrenador mueve la fecha hacia adelante).
+  applyInjuryToSessions(tid,pid,startDate,null,injNotesVal);
+  S.players[S.teamId]=pl(S.teamId).map(x=>x.id===pid?{...x,injured:true,injury:injuryObj,injuryHistory:Array.isArray(x.injuryHistory)?x.injuryHistory:[]}:x);
+  document.getElementById(mid)?.remove();
+  save();render();
+  toast(prev&&prev.active?"✏️ Lesión actualizada":"🚑 Lesión guardada · asistencia justificada");
 }
 
 function openDeleteConfirm(teamId,date){
@@ -2562,15 +3040,11 @@ function savePlayer(mid,eid){
   let notes=document.getElementById(mid+"-o").value.trim();
   const img=document.getElementById(mid+"-photo-img");
   const photo=(img&&img.src&&img.style.display!=="none"&&img.src.startsWith("data:"))?img.src:"";
-  const injCb=document.getElementById(mid+"-inj");
-  const inj=!!(injCb&&injCb.checked);
-  // Sincroniza la etiqueta "lesionado" en notas según el check
-  const hasInjTxt=/lesion/i.test(notes);
-  if(inj&&!hasInjTxt){notes=notes?"Lesionado · "+notes:"Lesionado";}
-  if(!inj&&hasInjTxt){notes=notes.replace(/\b[lL]esionad[oa]\b[\s·,:;-]*/,"").replace(/^[\s·,:;-]+|[\s·,:;-]+$/g,"").trim();}
-  const p={name,number:numV!==""?numV:null,position:pos,notes,photo,injured:inj};
-  if(eid){S.players[S.teamId]=pl(S.teamId).map(x=>x.id===eid?{...x,...p}:x);toast("✅ Actualizado");}
-  else{if(!S.players[S.teamId])S.players[S.teamId]=[];S.players[S.teamId].push({id:uid(),...p});toast("✅ Añadido");}
+  // Limpia rastros legacy de "Lesionado" en notas. La lesión se gestiona con el botón 🚑.
+  notes=notes.replace(/\b[lL]esionad[oa]\b[\s·,:;-]*/,"").replace(/^[\s·,:;-]+|[\s·,:;-]+$/g,"").trim();
+  const patch={name,number:numV!==""?numV:null,position:pos,notes,photo};
+  if(eid){S.players[S.teamId]=pl(S.teamId).map(x=>x.id===eid?{...x,...patch}:x);toast("✅ Actualizado");}
+  else{if(!S.players[S.teamId])S.players[S.teamId]=[];S.players[S.teamId].push({id:uid(),addedAt:td(),...patch});toast("✅ Añadido");}
   document.getElementById(mid)?.remove();save();render();
 }
 function delPlayer(id,name){
@@ -2596,10 +3070,25 @@ function chgDate(d){const dt=new Date(S.date+"T12:00:00");dt.setDate(dt.getDate(
 function cycleAtt(pid){
   const k=sk(S.teamId,S.date);
   const sess={...S.sessions[k]||{}};
-  const cur=sess[pid]||"present";
+  // Para lesionados el estado efectivo es "excused" (auto). Si no hay estado
+  // explícito, arrancamos desde el auto para que el ciclo tenga sentido visual.
+  let cur=sess[pid];
+  if(!cur){
+    const p=pl(S.teamId).find(x=>x.id===pid);
+    if(p&&isInjured(p)){
+      const st=injuryStart(p);
+      if(!st||st<=S.date)cur="excused";
+    }
+    if(!cur)cur="present";
+  }
   const next=ASTS[(ASTS.indexOf(cur)+1)%ASTS.length];
   sess[pid]=next;
   if(next!=="excused"){delete sess[pid+"_jr"];delete sess[pid+"_jn"];}
+  else if(!sess[pid+"_jr"]){
+    // Si el jugador está lesionado y pasamos a excused sin motivo, ponemos "injury".
+    const p=pl(S.teamId).find(x=>x.id===pid);
+    if(p&&isInjured(p))sess[pid+"_jr"]="injury";
+  }
   S.sessions[k]=sess;save();render();
 }
 
@@ -2642,7 +3131,22 @@ function setPlayerScore(pid,v){
 function _flushSess(){
   const k=sk(S.teamId,S.date);
   const sess={...S.sessions[k]||{}};
-  pl(S.teamId).forEach(p=>{if(!sess[p.id])sess[p.id]="present";});
+  // Auto-justifica lesionados (con startDate<=fecha) cuando no hay estado
+  // explícito. Persiste excused + _jr='injury' para que el motivo se note
+  // en exports y en la tabla de justificaciones.
+  pl(S.teamId).forEach(p=>{
+    if(!sess[p.id]){
+      if(isInjured(p)){
+        const st=injuryStart(p);
+        if(!st||st<=S.date){
+          sess[p.id]="excused";
+          if(!sess[p.id+"_jr"])sess[p.id+"_jr"]="injury";
+          return;
+        }
+      }
+      sess[p.id]="present";
+    }
+  });
   const notes=document.getElementById("att-notes")?.value||"";
   sess._notes=notes;
   const exEl=document.getElementById("att-exercises");
