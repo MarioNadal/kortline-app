@@ -1059,7 +1059,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.6.7",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.6.9",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -2762,7 +2762,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.8 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.9 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -3143,7 +3143,9 @@ function toggleFeat(key){S.cfg.features[key]=!S.cfg.features[key];const btn=docu
 function handleLogo(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{S.clubLogo=e.target.result;save();render();toast("✅ Logo actualizado");};r.readAsDataURL(file);}
 function saveClubSettings(){const name=document.getElementById("cfg-name")?.value.trim();if(name)S.clubName=name;const abrev=document.getElementById("cfg-abrev")?.value.trim();S.clubAbrev=abrev!==undefined?abrev:S.clubAbrev;const lema=document.getElementById("cfg-lema")?.value.trim();S.clubLema=lema!==undefined?lema:S.clubLema;const risk=document.getElementById("cfg-risk")?.value;if(risk)S.cfg.riskThreshold=parseInt(risk);save();document.getElementById("m-club-settings")?.remove();render();toast("✅ Configuración guardada");}
 function saveTeam(mid,eid){
-  const name=document.getElementById(mid+"-n").value.trim();if(!name)return;
+  // Normalización v1.6.9: los nombres de equipo se guardan siempre en MAYÚSCULAS
+  // para coherencia con cómo se muestran en la UI y con la confirmación tipografiada de borrado.
+  const name=document.getElementById(mid+"-n").value.trim().toUpperCase();if(!name)return;
   const cat=document.getElementById(mid+"-cat").value;
   const c1=document.getElementById(mid+"-coach1")?.value.trim()||"";const c2=document.getElementById(mid+"-coach2")?.value.trim()||"";
   const coaches=[c1,c2].filter(Boolean);
@@ -5608,8 +5610,9 @@ function _confirmTyped(msg, requiredText, confirmLabel, onConfirm){
     <div style="font-size:14px;line-height:1.6;color:var(--tx);margin-bottom:16px;text-align:center">${msg}</div>
     <div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;margin-bottom:14px">
       <div style="font-size:12px;color:var(--td);margin-bottom:6px">Escribe <b style="color:#ef4444;letter-spacing:1px">${requiredText}</b> para confirmar:</div>
-      <input id="confirm-typed-input" class="fi" placeholder="${requiredText}" oninput="
-        const ok=this.value.trim()===document.getElementById('m-confirm-typed')._req;
+      <input id="confirm-typed-input" class="fi" placeholder="${requiredText}" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" oninput="
+        this.value=this.value.toUpperCase();
+        const ok=this.value.trim()===document.getElementById('m-confirm-typed')._req.toUpperCase();
         const btn=document.getElementById('confirm-typed-btn');
         btn.disabled=!ok;btn.style.opacity=ok?'1':'0.35';btn.style.cursor=ok?'pointer':'not-allowed';
       " style="text-transform:uppercase;letter-spacing:1px;font-weight:700"/>
@@ -5619,7 +5622,10 @@ function _confirmTyped(msg, requiredText, confirmLabel, onConfirm){
   </div>`;
   el._req=requiredText;
   el.querySelector("#confirm-typed-btn").onclick=()=>{
-    if(document.getElementById("confirm-typed-input")?.value.trim()===requiredText){
+    // v1.6.9: comparación case-insensitive para que el input visual en mayúsculas
+    // (text-transform:uppercase) no engañe al usuario si el value real está en minúsculas.
+    const v=(document.getElementById("confirm-typed-input")?.value||"").trim().toUpperCase();
+    if(v===requiredText.toUpperCase()){
       el.remove();onConfirm();
     }
   };

@@ -9,7 +9,28 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.8 — Valoración colectiva inteligente, info FEB y bottom sheets _(actual)_
+### v1.6.9 — Nombres de equipo en MAYÚSCULAS y fix del borrado _(actual)_
+
+**Nombres de equipo normalizados**
+
+- Al crear o editar un equipo, el nombre se guarda siempre en **MAYÚSCULAS** (`toUpperCase()` en `saveTeam`). Coherente con cómo ya se venía mostrando en tarjetas, pase de lista y confirmación tipografiada de borrado.
+- No se fuerza mayúsculas en nombres de jugadores ni en otros campos — sólo en el nombre del equipo.
+- Sin migración: los equipos existentes quedan como estén hasta que el entrenador los edite (decisión consciente para no tocar datos en caliente).
+
+**Fix: borrado de equipo fallaba al escribir en minúsculas**
+
+- El input del modal de confirmación de borrado tenía `text-transform:uppercase` como estilo CSS, lo que hacía que el texto se viera en mayúsculas pero el `value` real mantenía la caja que escribía el usuario. La comparación estricta `value===requiredText` no coincidía y el botón nunca se activaba.
+- Solución: el `oninput` ahora ejecuta `this.value=this.value.toUpperCase()` para normalizar el valor real. Además, la comparación del botón es case-insensitive como red de seguridad ante pegados. Añadidos `autocapitalize="characters"`, `autocomplete="off"`, `autocorrect="off"` y `spellcheck="false"` al input.
+
+**Bugs resueltos v1.6.9**
+
+| ID | Descripción |
+|----|-------------|
+| B-33 | Borrar un equipo requería escribir el nombre exactamente en mayúsculas — el `text-transform:uppercase` del input era solo visual y no coincidía con el valor comparado |
+
+---
+
+### v1.6.8 — Valoración colectiva inteligente, info FEB y bottom sheets
 
 **Valoración colectiva auto-calculada**
 

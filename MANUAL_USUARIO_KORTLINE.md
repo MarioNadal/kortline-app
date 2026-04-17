@@ -1,6 +1,6 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.6.8**
+**Versión 1.6.9**
 _Kortline — De la Pista al Dato_
 
 ---
@@ -40,6 +40,8 @@ Dentro de ⚙️ Configuración encontrarás la sección **🎯 Seguimiento avan
 Pantalla **Equipos** → **＋**. Configura nombre, categoría, entrenador/es, días y horarios, y color identificativo.
 
 > 💡 **Horarios rápidos:** escribe directamente la hora y la casilla del día se marca sola. No hace falta pulsar antes el check.
+
+> 🔠 **Nombres en mayúsculas:** desde v1.6.9, el nombre del equipo se guarda siempre en MAYÚSCULAS aunque lo escribas en minúsculas. Los equipos antiguos conservan su formato hasta que los edites.
 
 ### Añadir jugadores
 
@@ -436,4 +438,4 @@ Puedes pulsar fuera del panel, pulsar "Cancelar", o arrastrar la barrita gris de
 
 ---
 
-_Kortline v1.6.8 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_
+_Kortline v1.6.9 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_
