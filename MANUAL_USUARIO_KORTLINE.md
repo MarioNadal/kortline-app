@@ -1,6 +1,6 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.6.9**
+**Versión 1.6.10**
 _Kortline — De la Pista al Dato_
 
 ---
@@ -146,6 +146,18 @@ Las 4 cajas **PRES / AUSE / TARD / JUST** de la parte superior son clicables:
 ### Reset rápido
 
 Si has modificado asistencias y quieres volver a empezar, aparece un enlace discreto **↺ Resetear a presentes** arriba a la derecha de la lista (solo si hay cambios). Pide confirmación antes de aplicar para evitar resets accidentales.
+
+### Guardar y cambios sin guardar (v1.6.10)
+
+La asistencia (los estados de cada jugador) se guarda **automáticamente** al ciclar el botón. Las **notas del entrenador**, **ejercicios** y **valoración** necesitan pulsar **💾 Guardar**.
+
+- Si has guardado y luego editas las notas, el botón vuelve a `💾 Guardar` (naranja) para avisarte que hay cambios pendientes.
+- Si intentas salir (←, HOY, cambio de fecha, otra pestaña de la navbar) con cambios sin guardar, Kortline abre un aviso con 3 opciones:
+  - **💾 Guardar y salir** — guarda y te lleva al destino.
+  - **🗑 Descartar y salir** — pierde los cambios y sale.
+  - **✏️ Seguir editando** — vuelve a la pantalla.
+
+El mismo patrón se aplica a **notas del partido** y a los modales de **equipo**, **jugador**, **lesión**, **partido** y **ajustes del club**.
 
 ### Funciones opcionales (activadas en ⚙️ Configuración)
 
@@ -438,4 +450,4 @@ Puedes pulsar fuera del panel, pulsar "Cancelar", o arrastrar la barrita gris de
 
 ---
 
-_Kortline v1.6.9 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_
+_Kortline v1.6.10 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_

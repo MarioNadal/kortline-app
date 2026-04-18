@@ -999,6 +999,14 @@ function _initDragDismiss(){
       handle.removeEventListener("pointerup",onUp);
       handle.removeEventListener("pointercancel",onUp);
       modal.style.transition="transform .25s ease";
+      // Si supera el umbral pero hay cambios sin guardar en este modal,
+      // rebota el modal a su posición y lanza el gate dirty (v1.6.10).
+      if(dy>120 && _dirty && _dirty.ctx==="modal" && overlay && overlay.id===_dirty.modalId){
+        modal.style.transform="translateX(-50%) translateY(0)";
+        if(overlay)overlay.style.background="rgba(0,0,0,.88)";
+        _guardedExit(()=>overlay?.remove());
+        return;
+      }
       if(dy>120){
         modal.style.transform="translateX(-50%) translateY(100%)";
         setTimeout(()=>{overlay?.remove();},250);
@@ -1013,6 +1021,109 @@ function _initDragDismiss(){
   });
 }
 _initDragDismiss();
+
+/* ═══════════════════════════════════════
+   DIRTY TRACKING — cambios sin guardar (v1.6.10)
+   Una única variable global _dirty mantiene el contexto con cambios
+   pendientes. _guardedExit intercepta navegación/cierre y ofrece modal
+   con 3 opciones: Guardar y salir · Descartar y salir · Seguir editando.
+═══════════════════════════════════════ */
+let _dirty = null; // null | {save: fn, discard?: fn, label: str, ctx: str, modalId?: str}
+
+function markDirty(cfg){
+  // Evita re-disparar si ya está en el mismo contexto
+  if(_dirty && _dirty.ctx===cfg.ctx && _dirty.modalId===cfg.modalId) return;
+  _dirty = cfg;
+  _syncDirtyUI();
+}
+function clearDirty(){
+  const was=_dirty;
+  _dirty=null;
+  if(was)_syncDirtyUI();
+}
+function _syncDirtyUI(){
+  // Pase de lista: el botón de guardar vuelve a estado activo cuando hay cambios
+  const btn=document.getElementById("btn-save-att");
+  if(btn){
+    if(_dirty && _dirty.ctx==="att"){
+      btn.textContent="💾 Guardar";
+      btn.style.background="";
+    }
+  }
+  // Notas del partido: badge pendiente
+  const mnbtn=document.getElementById("btn-save-match-notes");
+  if(mnbtn){
+    if(_dirty && _dirty.ctx==="matchNotes"){
+      mnbtn.textContent="💾 Guardar notas";
+      mnbtn.style.background="";
+    }
+  }
+}
+
+function _confirmDirty(cfg, onDiscard, onSave){
+  document.getElementById("m-dirty-confirm")?.remove();
+  const el=document.createElement("div");
+  el.id="m-dirty-confirm";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;";
+  const labelHtml=cfg.label?" en <b style='color:var(--orange)'>"+cfg.label+"</b>":"";
+  el.innerHTML=`<div style="background:var(--s);border:1px solid rgba(240,99,24,.35);border-radius:16px;padding:22px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,.7)">
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:32px;margin-bottom:6px">⚠️</div>
+      <div style="font-weight:900;font-size:16px;color:var(--orange)">Cambios sin guardar</div>
+    </div>
+    <div style="font-size:14px;line-height:1.6;color:var(--tx);margin-bottom:18px;text-align:center">Tienes cambios sin guardar${labelHtml}.<br/>¿Qué quieres hacer?</div>
+    <button id="dirty-save" style="width:100%;padding:13px;border:none;border-radius:9px;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white;margin-bottom:8px">💾 Guardar y salir</button>
+    <button id="dirty-discard" style="width:100%;padding:13px;border:none;border-radius:9px;font-weight:800;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#ef4444,#b91c1c);color:white;margin-bottom:8px">🗑 Descartar y salir</button>
+    <button id="dirty-stay" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:9px;font-weight:700;font-size:15px;cursor:pointer;background:var(--s2);color:var(--td)">✏️ Seguir editando</button>
+  </div>`;
+  document.body.appendChild(el);
+  el.querySelector("#dirty-save").onclick=()=>{el.remove();onSave();};
+  el.querySelector("#dirty-discard").onclick=()=>{el.remove();onDiscard();};
+  el.querySelector("#dirty-stay").onclick=()=>{el.remove();};
+}
+
+// Punto único de paso para cualquier acción de salida (nav atrás, cerrar modal, cambio de pantalla).
+function _guardedExit(proceed){
+  if(!_dirty){proceed();return;}
+  const cfg=_dirty;
+  _confirmDirty(cfg,
+    ()=>{ // Descartar
+      if(cfg.discard){try{cfg.discard();}catch(e){console.error(e);}}
+      clearDirty();
+      proceed();
+    },
+    ()=>{ // Guardar
+      let ok=true;
+      try{const r=cfg.save();if(r===false)ok=false;}catch(e){console.error(e);ok=false;}
+      if(!ok){toast("⚠️ No se pudo guardar. Revisa los campos.");return;}
+      clearDirty();
+      proceed();
+    }
+  );
+}
+
+// Engancha listeners genéricos a todos los inputs/selects/textareas de un modal.
+function _attachModalDirtyTracking(modalId, saveFn, label){
+  const m=document.getElementById(modalId);
+  if(!m)return;
+  const handler=()=>markDirty({save:saveFn, discard:()=>document.getElementById(modalId)?.remove(), label, ctx:"modal", modalId});
+  m.querySelectorAll("input,select,textarea").forEach(i=>{
+    i.addEventListener("input",handler);
+    i.addEventListener("change",handler);
+  });
+}
+
+// Cierra un modal respetando el gate dirty.
+// Sólo pregunta si el dirty actual pertenece a este mismo modal — así abrir
+// un modal con dirty pendiente en otra pantalla y cerrarlo sin tocar nada
+// no dispara un aviso confuso.
+function _closeModal(modalId){
+  if(_dirty && _dirty.ctx==="modal" && _dirty.modalId===modalId){
+    _guardedExit(()=>{document.getElementById(modalId)?.remove();});
+  }else{
+    document.getElementById(modalId)?.remove();
+  }
+}
 
 /* ═══════════════════════════════════════
    INFO MODAL — RIESGO FEB
@@ -1059,7 +1170,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.6.9",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.6.10",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -1658,6 +1769,24 @@ function exportExcel(){
    RENDER
 ═══════════════════════════════════════ */
 function render(){
+  // v1.6.10: captura borrador del pase de lista antes de re-renderizar
+  // para que notas/ejercicios no se pierdan al tocar asistencia o cambiar de fecha.
+  if(S.screen==="att"){
+    const n=document.getElementById("att-notes");
+    const ex=document.getElementById("att-exercises");
+    if(n||ex){
+      S._attDraft={
+        teamId:S.teamId, date:S.date,
+        notes:n?n.value:undefined,
+        ex:ex?ex.value:undefined
+      };
+    }
+  }
+  // v1.6.10: captura borrador de notas del partido
+  if(S.screen==="matchDetail"){
+    const mn=document.getElementById("match-notes");
+    if(mn)S._matchNotesDraft={matchId:S.matchId,teamId:S.teamId,notes:mn.value};
+  }
   _destroyCharts();
   const r=document.getElementById("root");
   if(S.screen==="hoy")r.innerHTML=hoy();
@@ -1678,37 +1807,42 @@ function render(){
 /* ── helpers ── */
 // Navegación con pila — guarda estado actual y avanza
 function navTo(screen,opts={}){
-  S.navStack=[...(S.navStack||[]).slice(-20),{
-    screen:S.screen,teamId:S.teamId,matchId:S.matchId,
-    date:S.date,eventId:S.eventId,histMonth:S.histMonth,
-    statsView:S.statsView,sf:S.sf
-  }];
-  // Filtro de asistencia es efímero: solo vive mientras estás en "att"
-  if(screen!=="att")S.attFilter="";
-  Object.assign(S,opts);
-  S.screen=screen;
-  render();
+  const doNav=()=>{
+    S.navStack=[...(S.navStack||[]).slice(-20),{
+      screen:S.screen,teamId:S.teamId,matchId:S.matchId,
+      date:S.date,eventId:S.eventId,histMonth:S.histMonth,
+      statsView:S.statsView,sf:S.sf
+    }];
+    // Filtro de asistencia es efímero: solo vive mientras estás en "att"
+    if(screen!=="att")S.attFilter="";
+    Object.assign(S,opts);
+    S.screen=screen;
+    render();
+  };
+  _guardedExit(doNav);
 }
 // Volver atrás desapilando — siempre va al sitio exacto de donde vienes
 function navBack(){
-  const stack=S.navStack||[];
-  if(!stack.length){
-    // Fallback sensato según pantalla actual
-    const fallbacks={att:'team',stats:'team',hist:'team',share:'att',
-      matchList:'team',matchDetail:'matchList',liveGame:'matchDetail',
-      eventos:'team'};
-    S.screen=fallbacks[S.screen]||'hoy';
-    render();return;
-  }
-  const prev=stack[stack.length-1];
-  S.navStack=stack.slice(0,-1);
-  S.screen=prev.screen;S.teamId=prev.teamId;S.matchId=prev.matchId;
-  S.date=prev.date;S.eventId=prev.eventId;S.histMonth=prev.histMonth;
-  S.statsView=prev.statsView;S.sf=prev.sf;
-  render();
+  _guardedExit(()=>{
+    const stack=S.navStack||[];
+    if(!stack.length){
+      // Fallback sensato según pantalla actual
+      const fallbacks={att:'team',stats:'team',hist:'team',share:'att',
+        matchList:'team',matchDetail:'matchList',liveGame:'matchDetail',
+        eventos:'team'};
+      S.screen=fallbacks[S.screen]||'hoy';
+      render();return;
+    }
+    const prev=stack[stack.length-1];
+    S.navStack=stack.slice(0,-1);
+    S.screen=prev.screen;S.teamId=prev.teamId;S.matchId=prev.matchId;
+    S.date=prev.date;S.eventId=prev.eventId;S.histMonth=prev.histMonth;
+    S.statsView=prev.statsView;S.sf=prev.sf;
+    render();
+  });
 }
 // Navegación raíz (navbar) — limpia la pila
-function navRoot(screen){S.navStack=[];S.screen=screen;render();}
+function navRoot(screen){_guardedExit(()=>{S.navStack=[];S.screen=screen;render();});}
 function logoHtml(size=42,r=10){if(S.clubLogo)return`<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0;background:var(--s2);border:1px solid var(--border)"><img src="${S.clubLogo}" style="width:100%;height:100%;object-fit:cover"/></div>`;return`<div style="width:${size}px;height:${size}px;border-radius:${r}px;overflow:hidden;flex-shrink:0"><img src="${_ICON_SVG_URL}" style="width:100%;height:100%;display:block"/></div>`;}
 function scheduleChips(sc){if(!sc||!Object.keys(sc).length)return`<span style="font-size:12px;color:var(--tm)">Sin días</span>`;return Object.entries(sc).sort((a,b)=>+a[0]-+b[0]).map(([i,t])=>`<span class="schedule-chip">${DAYS[i]}${t?" · "+t:""}</span>`).join("");}
 function toggleHtml(key,title,desc){const on=S.cfg.features[key];return`<div class="toggle-row"><div class="toggle-info"><div class="toggle-title">${title}</div><div class="toggle-desc">${desc}</div></div><button class="tswitch ${on?"on":""}" onclick="toggleFeat('${key}')"></button></div>`;}
@@ -2024,8 +2158,12 @@ function att(){
       </div>`;
     }).join("");
   const ts=sess._teamScore||0;
+  // v1.6.10: usa borrador si coincide teamId+date (notas/ejercicios aún no guardadas no se pierden al re-render)
+  const draft=(S._attDraft&&S._attDraft.teamId===S.teamId&&S._attDraft.date===S.date)?S._attDraft:null;
+  const notesVal=(draft&&draft.notes!=null)?draft.notes:(sess._notes||"");
+  const exVal=(draft&&draft.ex!=null)?draft.ex:(sess._exercises||"");
   const photoHtml=f.photos?`<div class="fg"><label class="fl">📷 Foto del entrenamiento</label><div class="photo-box" onclick="document.getElementById('att-photo-input').click()">${sess._photo?`<img src="${sess._photo}"/><div style="font-size:11px;color:var(--td);margin-top:6px">Toca para cambiar</div>`:`<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px;color:var(--tm)">Añadir foto</div>`}</div><input type="file" id="att-photo-input" accept="image/*" style="display:none" onchange="handlePhoto(this)"/>${sess._photo?`<button onclick="removePhoto()" style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer;margin-top:6px;display:block">✕ Quitar foto</button>`:""}</div>`:"";
-  const exercisesHtml=f.exercises?`<div class="fg"><label class="fl">📋 Ejercicios del entrenamiento</label><textarea class="fi" id="att-exercises" rows="3" style="resize:none">${esc(sess._exercises||"")}</textarea></div>`:"";
+  const exercisesHtml=f.exercises?`<div class="fg"><label class="fl">📋 Ejercicios del entrenamiento</label><textarea class="fi" id="att-exercises" rows="3" style="resize:none" oninput="markDirty({save:saveAtt,label:'Pase de lista',ctx:'att'})">${esc(exVal)}</textarea></div>`:"";
   const tsLabels=["","Muy mal","Mal","Regular","Regular","Normal","Normal","Bien","Bien","Muy bien","Excelente"];
   const isAutoMode=f.playerScore&&!sess._teamScoreManual;
   const hasIndivScores=f.playerScore&&players.some(p=>sess[p.id+"_score"]>0);
@@ -2072,16 +2210,16 @@ function att(){
       <button onclick="chgDate(-1)" style="background:none;border:none;color:var(--td);cursor:pointer;font-size:22px;padding:0 6px">‹</button>
       <div style="flex:1;text-align:center;font-family:var(--font-d);font-weight:800;font-size:17px">${fd(S.date,true)}</div>
       <button onclick="chgDate(1)" style="background:none;border:none;color:var(--td);cursor:pointer;font-size:22px;padding:0 6px">›</button>
-      <button onclick="S.date=td();render()" style="background:rgba(240,99,24,.15);color:var(--orange);border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:12px;font-weight:700">HOY</button>
+      <button onclick="_guardedExit(()=>{S.date=td();S._attDraft=null;render();})" style="background:rgba(240,99,24,.15);color:var(--orange);border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:12px;font-weight:700">HOY</button>
     </div>
     <div class="agrid">${agrid}</div>
     ${filterBanner}
     ${bulkRow}
     <div class="card">${prows}</div>
     ${exercisesHtml}${photoHtml}${teamScoreHtml}
-    <div class="fg"><label class="fl">📝 Notas del entrenador</label><input class="fi" id="att-notes" value="${esc(sess._notes||"")}" placeholder="Solo visibles para el entrenador..."/></div>
+    <div class="fg"><label class="fl">📝 Notas del entrenador</label><input class="fi" id="att-notes" value="${esc(notesVal)}" placeholder="Solo visibles para el entrenador..." oninput="markDirty({save:saveAtt,label:'Pase de lista',ctx:'att'})"/></div>
     <div style="display:flex;gap:8px">
-      <button class="btn-p" id="btn-save-att" onclick="saveAtt()" style="flex:1">💾 Guardar</button>
+      <button class="btn-p" id="btn-save-att" onclick="saveAtt()" style="flex:1${(_dirty&&_dirty.ctx==="att")?"":";background:#0d3320"}">${(_dirty&&_dirty.ctx==="att")?"💾 Guardar":"✅ Guardado"}</button>
       <button onclick="saveAttAndShare()" style="width:50px;height:50px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:22px;flex-shrink:0">📤</button>
     </div>
   </div>
@@ -2716,7 +2854,7 @@ function openClubSettings(){
   document.getElementById("m-club-settings")?.remove();
   const el=document.createElement("div");el.id="m-club-settings";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
-  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.onclick=e=>{if(e.target===el)_closeModal("m-club-settings");};
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div>
     <div style="text-align:center;margin-bottom:18px"><img src="${_FULL_SVG_URL}" style="height:40px;max-width:100%;opacity:0.95"/></div>
@@ -2762,13 +2900,14 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.9 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.10 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
-    <button class="btn-s" onclick="document.getElementById('m-club-settings').remove()">Cancelar</button>
+    <button class="btn-s" onclick="_closeModal('m-club-settings')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
+  _attachModalDirtyTracking("m-club-settings", saveClubSettings, "Ajustes del club");
 }
 
 function dayScheduleRows(mid,initSched){
@@ -2784,7 +2923,7 @@ function openTeamModal(init){
   const sc=init?.color||COLORS[0];const coaches=init?.coaches||["",""];
   const catsHtml=CATEGORIES.map(c=>`<option value="${c}" ${(init?.category||"")==c?"selected":""}>${c}</option>`).join("");
   const el=document.createElement("div");el.id=id;el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
-  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.onclick=e=>{if(e.target===el)_closeModal(id);};
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div><div class="mtitle">${init?"Editar Equipo":"Nuevo Equipo"}</div>
     <div class="fg"><label class="fl">Nombre</label><input class="fi" id="${id}-n" value="${esc(init?.name||"")}" placeholder="ej. Infantil Masculino A"/></div>
@@ -2795,16 +2934,17 @@ function openTeamModal(init){
     <div class="fg"><label class="fl">📅 Días y horarios</label><div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:4px 12px;">${dayScheduleRows(id,init?.schedule)}</div></div>
     <div class="fg"><label class="fl">Color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="${id}-cols">${COLORS.map(c=>`<div class="cdot ${sc===c?"s":""}" data-col="${c}" style="background:${c}" onclick="togCol(this,'${id}-cols')"></div>`).join("")}</div></div>
     <button class="btn-p" onclick="saveTeam('${id}','${init?.id||""}')">${init?"Guardar":"Crear Equipo"}</button>
-    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
+  _attachModalDirtyTracking(id, ()=>saveTeam(id, init?.id||""), init?"Editar equipo":"Nuevo equipo");
 }
 
 function openPlayerModal(init){
   const id=init?"m-edit-pl-"+init.id:"m-add-pl";
   document.getElementById(id)?.remove();
   const el=document.createElement("div");el.id=id;el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
-  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.onclick=e=>{if(e.target===el)_closeModal(id);};
   const sugg=init?.number||nextFreeDorsal(S.teamId,init?.id);
   const dorsalVal=init&&init.number!=null?String(init.number):"";
   const photoVal=init?.photo||"";
@@ -2832,9 +2972,10 @@ function openPlayerModal(init){
     <div class="fg"><label class="fl">Posición</label><select class="fi" id="${id}-p">${["", ...POSITIONS].map(p=>`<option value="${p}" ${(init?.position||"")==p?"selected":""}>${p||"Sin especificar"}</option>`).join("")}</select></div>
     <div class="fg"><label class="fl">Notas</label><input class="fi" id="${id}-o" value="${esc(init?.notes||"")}" placeholder="Capitán, rol, rotación..."/></div>
     <button class="btn-p" onclick="savePlayer('${id}','${init?.id||""}')">${init?"Guardar":"Añadir"}</button>
-    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
+  _attachModalDirtyTracking(id, ()=>savePlayer(id, init?.id||""), init?"Editar jugador":"Nuevo jugador");
 }
 
 // Construye las opciones del dropdown de sesión/partido según el origen.
@@ -2913,7 +3054,7 @@ function openInjuryNewModal(pid){
   document.getElementById(id)?.remove();
   const el=document.createElement("div");el.id=id;
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
-  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.onclick=e=>{if(e.target===el)_closeModal(id);};
   const injDate=td();
   const injOrigin="unknown";
   const lastInjury=(Array.isArray(p.injuryHistory)&&p.injuryHistory.length)?p.injuryHistory[p.injuryHistory.length-1]:null;
@@ -2933,10 +3074,11 @@ function openInjuryNewModal(pid){
       <div style="font-size:11px;color:var(--tm);margin-top:4px">Se usará como motivo en las justificaciones diarias durante la baja</div>
     </div>
     <button class="btn-p" onclick="saveInjury('${id}','${pid}')">🚑 Guardar lesión</button>
-    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
   el.dataset.mode="new";
+  _attachModalDirtyTracking(id, ()=>saveInjury(id,pid), "Marcar lesión");
 }
 // Modal de ALTA para jugador ya lesionado: muestra resumen + botones de alta
 // rápida y edición de detalles. Es lo que se abre al pulsar 🚑 sobre un lesionado.
@@ -3012,10 +3154,11 @@ function openInjuryEditModal(pid){
       <div style="font-size:11px;color:var(--tm);margin-top:4px">Se usará como motivo en las justificaciones diarias durante la baja</div>
     </div>
     <button class="btn-p" onclick="saveInjury('${id}','${pid}')">Guardar cambios</button>
-    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
   el.dataset.mode="edit";
+  _attachModalDirtyTracking(id, ()=>saveInjury(id,pid), "Editar lesión");
 }
 // Compat: ya no se usa desde UI (no hay check en los nuevos modales) pero se deja
 // como no-op por si algún flujo antiguo lo llama. El flujo de alta ahora está en
@@ -3047,7 +3190,7 @@ function setInjOrigin(mid,k){
 // backfillea las sesiones desde startDate hasta hoy como excused+injury para
 // que no baje el % de asistencia durante la baja.
 function saveInjury(mid,pid){
-  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return;
+  const p=pl(S.teamId).find(x=>x.id===pid);if(!p)return false;
   const tid=S.teamId;
   const prev=p.injury&&typeof p.injury==="object"?p.injury:null;
   const startDate=document.getElementById(mid+"-date")?.value||td();
@@ -3075,9 +3218,11 @@ function saveInjury(mid,pid){
   // el entrenador mueve la fecha hacia adelante).
   applyInjuryToSessions(tid,pid,startDate,null,injNotesVal);
   S.players[S.teamId]=pl(S.teamId).map(x=>x.id===pid?{...x,injured:true,injury:injuryObj,injuryHistory:Array.isArray(x.injuryHistory)?x.injuryHistory:[]}:x);
+  clearDirty();
   document.getElementById(mid)?.remove();
   save();render();
   toast(prev&&prev.active?"✏️ Lesión actualizada":"🚑 Lesión guardada · asistencia justificada");
+  return true;
 }
 
 function openDeleteConfirm(teamId,date){
@@ -3141,11 +3286,11 @@ function toggleDayTime(cb,tid){const ti=document.getElementById(tid);if(!ti)retu
 function syncDayCheckFromTime(ti,cid){const cb=document.getElementById(cid);if(!cb)return;cb.checked=!!ti.value;}
 function toggleFeat(key){S.cfg.features[key]=!S.cfg.features[key];const btn=document.querySelector(`[onclick="toggleFeat('${key}')"]`);if(btn){btn.classList.toggle("on",S.cfg.features[key]);}}
 function handleLogo(input){const file=input.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{S.clubLogo=e.target.result;save();render();toast("✅ Logo actualizado");};r.readAsDataURL(file);}
-function saveClubSettings(){const name=document.getElementById("cfg-name")?.value.trim();if(name)S.clubName=name;const abrev=document.getElementById("cfg-abrev")?.value.trim();S.clubAbrev=abrev!==undefined?abrev:S.clubAbrev;const lema=document.getElementById("cfg-lema")?.value.trim();S.clubLema=lema!==undefined?lema:S.clubLema;const risk=document.getElementById("cfg-risk")?.value;if(risk)S.cfg.riskThreshold=parseInt(risk);save();document.getElementById("m-club-settings")?.remove();render();toast("✅ Configuración guardada");}
+function saveClubSettings(){const name=document.getElementById("cfg-name")?.value.trim();if(name)S.clubName=name;const abrev=document.getElementById("cfg-abrev")?.value.trim();S.clubAbrev=abrev!==undefined?abrev:S.clubAbrev;const lema=document.getElementById("cfg-lema")?.value.trim();S.clubLema=lema!==undefined?lema:S.clubLema;const risk=document.getElementById("cfg-risk")?.value;if(risk)S.cfg.riskThreshold=parseInt(risk);save();clearDirty();document.getElementById("m-club-settings")?.remove();render();toast("✅ Configuración guardada");return true;}
 function saveTeam(mid,eid){
   // Normalización v1.6.9: los nombres de equipo se guardan siempre en MAYÚSCULAS
   // para coherencia con cómo se muestran en la UI y con la confirmación tipografiada de borrado.
-  const name=document.getElementById(mid+"-n").value.trim().toUpperCase();if(!name)return;
+  const name=document.getElementById(mid+"-n").value.trim().toUpperCase();if(!name)return false;
   const cat=document.getElementById(mid+"-cat").value;
   const c1=document.getElementById(mid+"-coach1")?.value.trim()||"";const c2=document.getElementById(mid+"-coach2")?.value.trim()||"";
   const coaches=[c1,c2].filter(Boolean);
@@ -3153,10 +3298,12 @@ function saveTeam(mid,eid){
   const colorEl=document.querySelector("#"+mid+"-cols .cdot.s");const color=colorEl?(colorEl.dataset.col||colorEl.style.background):COLORS[0];
   if(eid){S.teams=S.teams.map(t=>t.id===eid?{...t,name,category:cat,schedule,color,coaches}:t);toast("✅ Actualizado");}
   else{S.teams.push({id:uid(),name,category:cat,schedule,color,coaches});toast("✅ Equipo creado");}
+  clearDirty();
   document.getElementById(mid)?.remove();save();render();
+  return true;
 }
 function savePlayer(mid,eid){
-  const name=document.getElementById(mid+"-n").value.trim();if(!name)return;
+  const name=document.getElementById(mid+"-n").value.trim();if(!name)return false;
   const numV=document.getElementById(mid+"-d").value.replace(/[^0-9]/g,"").slice(0,2);
   const pos=document.getElementById(mid+"-p").value;
   let notes=document.getElementById(mid+"-o").value.trim();
@@ -3167,7 +3314,9 @@ function savePlayer(mid,eid){
   const patch={name,number:numV!==""?numV:null,position:pos,notes,photo};
   if(eid){S.players[S.teamId]=pl(S.teamId).map(x=>x.id===eid?{...x,...patch}:x);toast("✅ Actualizado");}
   else{if(!S.players[S.teamId])S.players[S.teamId]=[];S.players[S.teamId].push({id:uid(),addedAt:td(),...patch});toast("✅ Añadido");}
+  clearDirty();
   document.getElementById(mid)?.remove();save();render();
+  return true;
 }
 function delPlayer(id,name){
   _confirm("¿Eliminar a <b>"+name+"</b>?","🗑 Eliminar",()=>{S.players[S.teamId]=pl(S.teamId).filter(p=>p.id!==id);save();render();toast("🗑 Eliminado");});
@@ -3187,7 +3336,14 @@ function delTeam(name){
   );
 }
 
-function chgDate(d){const dt=new Date(S.date+"T12:00:00");dt.setDate(dt.getDate()+d);S.date=dt.toISOString().split("T")[0];S.attFilter="";render();}
+function chgDate(d){
+  _guardedExit(()=>{
+    const dt=new Date(S.date+"T12:00:00");dt.setDate(dt.getDate()+d);
+    S.date=dt.toISOString().split("T")[0];S.attFilter="";
+    S._attDraft=null; // al cambiar de día el borrador deja de tener sentido
+    render();
+  });
+}
 
 function cycleAtt(pid){
   const k=sk(S.teamId,S.date);
@@ -3376,8 +3532,16 @@ function setTeamTLMakes(n){
   });
 }
 
-function saveAtt(){_flushSess();const btn=document.getElementById("btn-save-att");if(btn){btn.textContent="✅ Guardado";btn.style.background="#0d3320";}toast("✅ Guardado");}
-function saveAttAndShare(){_flushSess();S.screen="share";render();}
+function saveAtt(){
+  _flushSess();
+  S._attDraft=null; // v1.6.10: se vuelcan al state, ya no hay borrador pendiente
+  clearDirty();
+  const btn=document.getElementById("btn-save-att");
+  if(btn){btn.textContent="✅ Guardado";btn.style.background="#0d3320";}
+  toast("✅ Guardado");
+  return true;
+}
+function saveAttAndShare(){_flushSess();S._attDraft=null;clearDirty();S.screen="share";render();}
 async function handlePhoto(input){
   const file=input.files[0];if(!file)return;
   const img=new Image();const canvas=document.createElement("canvas");const ctx=canvas.getContext("2d");
@@ -3663,8 +3827,8 @@ function matchDetail(){
     ${sorted.length===0?`<div style="text-align:center;padding:20px;color:var(--tm);font-size:14px">Sin jugadores en la plantilla.</div>`:`<div class="card" style="margin-bottom:14px">${convRows}</div>`}
 
     <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:6px">📝 Notas del partido</div>
-    <textarea class="fi" id="match-notes" rows="3" style="resize:none;margin-bottom:14px">${esc(m.notes||"")}</textarea>
-    <button class="btn-s" onclick="saveMatchNotes()">💾 Guardar notas</button>
+    <textarea class="fi" id="match-notes" rows="3" style="resize:none;margin-bottom:14px" oninput="markDirty({save:saveMatchNotes,label:'Notas del partido',ctx:'matchNotes'})">${esc((S._matchNotesDraft&&S._matchNotesDraft.matchId===S.matchId)?S._matchNotesDraft.notes:(m.notes||""))}</textarea>
+    <button class="btn-s" id="btn-save-match-notes" onclick="saveMatchNotes()" style="${(_dirty&&_dirty.ctx==="matchNotes")?"":"background:#0d3320;color:#22c55e"}">${(_dirty&&_dirty.ctx==="matchNotes")?"💾 Guardar notas":"✅ Notas guardadas"}</button>
 
     ${m.rivalStatsEnabled?`
     <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:10px 14px;margin-top:14px;display:flex;align-items:center;gap:10px">
@@ -3695,7 +3859,7 @@ function openMatchModal(init){
   const _defM=init?.qMins??_catDef.qMins;
   const el=document.createElement("div");el.id=mid;
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
-  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.onclick=e=>{if(e.target===el)_closeModal(mid);};
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">${init?"Editar Partido":"Nuevo Partido"}</div>
@@ -3746,9 +3910,10 @@ function openMatchModal(init){
       <button id="${mid}-tos-btn" class="tswitch ${init?.teamOnlyStats?'on':''}" onclick="this.classList.toggle('on')"></button>
     </div>
     <button class="btn-p" onclick="saveMatchMeta('${mid}','${init?.id||""}')">${init?"Guardar":"Crear Partido"}</button>
-    <button class="btn-s" onclick="document.getElementById('${mid}').remove()">Cancelar</button>
+    <button class="btn-s" onclick="_closeModal('${mid}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
+  _attachModalDirtyTracking(mid, ()=>saveMatchMeta(mid, init?.id||""), init?"Editar partido":"Nuevo partido");
 }
 function setLocBtn(mid,loc){
   ["home","away","neutral"].forEach(l=>{const b=document.getElementById(mid+"-loc-"+l);if(b)b.classList.toggle("on",l===loc);});
@@ -3960,7 +4125,7 @@ function _convFinish(){
 }
 
 function saveMatchMeta(mid,eid){
-  const rival=document.getElementById(mid+"-rival")?.value.trim();if(!rival)return toast("⚠️ Escribe el nombre del rival");
+  const rival=document.getElementById(mid+"-rival")?.value.trim();if(!rival){toast("⚠️ Escribe el nombre del rival");return false;}
   const date=document.getElementById(mid+"-date")?.value||"";
   const time=document.getElementById(mid+"-time")?.value||"";
   const venue=document.getElementById(mid+"-venue")?.value.trim()||"";
@@ -3974,16 +4139,19 @@ function saveMatchMeta(mid,eid){
   if(eid){
     S.matches[S.teamId]=S.matches[S.teamId].map(m=>m.id===eid?{...m,rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats}:m);
     toast("✅ Partido actualizado");
+    clearDirty();
     document.getElementById(mid)?.remove();save();render();
   } else {
     const nm={id:uid(),rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,q:[null,null,null,null,null,null,null,null,null,null],convocados:[],titulares:[],capitan:null,rivalPlayers:[],notes:""};
     S.matches[S.teamId].push(nm);
     S.matchId=nm.id;
+    clearDirty();
     save();
     document.getElementById(mid)?.remove();
     // Open convocatoria setup wizard immediately
     openConvSetup();
   }
+  return true;
 }
 function _qStep(idx,delta){
   const m=mById(S.teamId,S.matchId);if(!m)return;
@@ -4079,9 +4247,15 @@ function saveMatchScore(){
   save();toast("✅ Marcador guardado");render();
 }
 function saveMatchNotes(){
-  const m=mById(S.teamId,S.matchId);if(!m)return;
+  const m=mById(S.teamId,S.matchId);if(!m)return false;
   m.notes=document.getElementById("match-notes")?.value.trim()||"";
-  save();toast("✅ Notas guardadas");
+  save();
+  S._matchNotesDraft=null;
+  clearDirty();
+  const btn=document.getElementById("btn-save-match-notes");
+  if(btn){btn.textContent="✅ Notas guardadas";btn.style.background="#0d3320";btn.style.color="#22c55e";}
+  toast("✅ Notas guardadas");
+  return true;
 }
 function toggleConvocado(pid){
   const m=mById(S.teamId,S.matchId);if(!m)return;

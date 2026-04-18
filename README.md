@@ -9,7 +9,42 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.9 — Nombres de equipo en MAYÚSCULAS y fix del borrado _(actual)_
+### v1.6.10 — Dirty tracking y aviso de cambios sin guardar _(actual)_
+
+**Sistema transversal de detección de cambios sin guardar**
+
+Nueva variable global `_dirty` que mantiene el contexto con cambios pendientes. Intercepta navegación (← atrás, navbar, `HOY`, cambio de fecha) y cierre de modales (X, backdrop, drag-to-dismiss). Al detectar intención de salir con cambios, abre un modal con 3 opciones: **💾 Guardar y salir**, **🗑 Descartar y salir**, **✏️ Seguir editando**.
+
+**Pantallas con el patrón aplicado**
+
+- **Pase de lista** (asistencia): el botón `💾 Guardar` vuelve a estado activo al editar notas/ejercicios tras haber guardado. Tras guardar muestra `✅ Guardado`. El borrador de notas/ejercicios **ya no se pierde** al tocar asistencia, cambiar fecha o re-renderizar (nuevo `S._attDraft` en memoria).
+- **Notas del partido**: mismo patrón con botón `💾 Guardar notas` ↔ `✅ Notas guardadas` y borrador preservado en `S._matchNotesDraft`.
+- **Ajustes del club**: dirty tracking sobre todos los inputs. Cerrar con X, backdrop o arrastre dispara el aviso si hay cambios.
+- **Modal de equipo** (crear/editar): idem.
+- **Modal de jugador** (crear/editar): idem.
+- **Modal de lesión** (marcar y editar): idem.
+- **Modal de partido** (crear/editar): idem.
+
+**Utilidades nuevas**
+
+- `markDirty(cfg)` · `clearDirty()` · `_guardedExit(proceed)` — API central.
+- `_confirmDirty(cfg, onDiscard, onSave)` — modal de 3 opciones.
+- `_attachModalDirtyTracking(modalId, saveFn, label)` — engancha listeners genéricos a inputs/selects/textareas de un modal.
+- `_closeModal(modalId)` — cierra un modal respetando el gate dirty.
+- `navBack` / `navTo` / `navRoot` y el drag-to-dismiss respetan el gate.
+
+**Bugs resueltos v1.6.10**
+
+| ID | Descripción |
+|----|-------------|
+| B-34 | Tras pulsar Guardar en el pase de lista, editar notas/ejercicios no reactivaba el botón para volver a guardar |
+| B-35 | Salir del pase de lista con cambios sin guardar en notas descartaba silenciosamente sin avisar |
+| B-36 | Tocar asistencia (cycleAtt) o cambiar de fecha perdía las notas/ejercicios no guardadas |
+| B-37 | Cerrar modales (equipo, jugador, lesión, partido, ajustes) con X/backdrop/arrastre descartaba cambios sin aviso |
+
+---
+
+### v1.6.9 — Nombres de equipo en MAYÚSCULAS y fix del borrado
 
 **Nombres de equipo normalizados**
 
