@@ -147,17 +147,18 @@ Las 4 cajas **PRES / AUSE / TARD / JUST** de la parte superior son clicables:
 
 Si has modificado asistencias y quieres volver a empezar, aparece un enlace discreto **↺ Resetear a presentes** arriba a la derecha de la lista (solo si hay cambios). Pide confirmación antes de aplicar para evitar resets accidentales.
 
-### Guardar y cambios sin guardar (v1.6.10)
+### Autoguardado del pase de lista (v1.6.11)
 
-La asistencia (los estados de cada jugador) se guarda **automáticamente** al ciclar el botón. Las **notas del entrenador**, **ejercicios** y **valoración** necesitan pulsar **💾 Guardar**.
+**Todo el pase de lista se autoguarda.** No hay botón 💾 Guardar.
 
-- Si has guardado y luego editas las notas, el botón vuelve a `💾 Guardar` (naranja) para avisarte que hay cambios pendientes.
-- Si intentas salir (←, HOY, cambio de fecha, otra pestaña de la navbar) con cambios sin guardar, Kortline abre un aviso con 3 opciones:
-  - **💾 Guardar y salir** — guarda y te lleva al destino.
-  - **🗑 Descartar y salir** — pierde los cambios y sale.
-  - **✏️ Seguir editando** — vuelve a la pantalla.
+- Asistencia, justificaciones, valoración colectiva, valoración individual y foto se guardan **al instante** al tocarlos.
+- Notas del entrenador y ejercicios se autoguardan **~0,8 segundos** después de dejar de escribir.
 
-El mismo patrón se aplica a **notas del partido** y a los modales de **equipo**, **jugador**, **lesión**, **partido** y **ajustes del club**.
+En la parte inferior, donde antes estaba el botón Guardar, ahora hay una caja verde con el mensaje **💾 Autoguardado activo**. Cada vez que Kortline persiste los cambios parpadea a **✓ Guardado** durante un segundo y medio. A su derecha sigue el botón circular verde 📤 para compartir la sesión por WhatsApp.
+
+Si sales de la pantalla antes de que se complete el autoguardado (← atrás, botón HOY, cambio de fecha, 📤 compartir, navbar), Kortline vuelca el borrador al instante antes de cambiar de pantalla — no pierdes nada.
+
+> El aviso de "cambios sin guardar" (💾 Guardar y salir · 🗑 Descartar · ✏️ Seguir editando) se mantiene en **notas del partido** y en los modales de **equipo**, **jugador**, **lesión**, **partido** y **ajustes del club**. Ahí sí tiene sentido porque hay un concepto de "cancelar sin crear el registro".
 
 ### Funciones opcionales (activadas en ⚙️ Configuración)
 

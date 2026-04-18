@@ -9,11 +9,42 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.10 — Dirty tracking y aviso de cambios sin guardar _(actual)_
+### v1.6.11 — Autoguardado del pase de lista _(actual)_
+
+**Se elimina el botón 💾 Guardar del pase de lista**
+
+La asistencia ya se persiste al instante (cada toque en el botón de estado, cada estrella, cada cambio de justificación). Las únicas piezas que aún dependían de un botón Guardar explícito eran las **notas del entrenador** y los **ejercicios del entrenamiento**. Desde v1.6.11 estas también se autoguardan con debounce de **800 ms** después de dejar de escribir.
+
+**Indicador de autoguardado**
+
+Donde antes estaba el botón grande naranja ahora hay una caja discreta en verde con el mensaje `💾 Autoguardado activo`. Cada vez que se persisten los cambios parpadea a `✓ Guardado` durante 1,5 segundos y vuelve al estado de reposo. El botón circular verde de WhatsApp 📤 se mantiene a la derecha.
+
+**Commit al salir**
+
+Si el usuario sale de la pantalla antes de que transcurra el debounce (`←` atrás, navbar, `HOY`, cambio de fecha, 📤 compartir), el borrador en memoria se vuelca al state y a localStorage de forma síncrona. No se pierde ni un carácter.
+
+**Alcance del dirty tracking**
+
+El sistema introducido en v1.6.10 sigue vivo, pero limitado a donde realmente aporta valor:
+
+- **Notas del partido** (modal de detalle del partido) — mantiene botón explícito porque la pantalla tiene más contexto editable al mismo tiempo.
+- **Modales CRUD** (equipo, jugador, lesión, partido, ajustes del club) — aquí el gate de tres opciones es necesario para evitar registros fantasma al cancelar.
+
+**Bugs resueltos v1.6.11**
+
+| ID | Descripción |
+|----|-------------|
+| B-38 | El pase de lista exigía un paso manual de Guardar para las notas/ejercicios aunque el resto de campos ya eran autoguardados — fricción innecesaria |
+
+---
+
+### v1.6.10 — Dirty tracking y aviso de cambios sin guardar
 
 **Sistema transversal de detección de cambios sin guardar**
 
 Nueva variable global `_dirty` que mantiene el contexto con cambios pendientes. Intercepta navegación (← atrás, navbar, `HOY`, cambio de fecha) y cierre de modales (X, backdrop, drag-to-dismiss). Al detectar intención de salir con cambios, abre un modal con 3 opciones: **💾 Guardar y salir**, **🗑 Descartar y salir**, **✏️ Seguir editando**.
+
+> Nota v1.6.11: el pase de lista se migró a autoguardado, por lo que ya no aparece en este listado. El dirty tracking se mantiene en notas del partido y modales CRUD.
 
 **Pantallas con el patrón aplicado**
 
