@@ -306,20 +306,64 @@ Equipo → Partidos → partido → **▶ Empezar partido** (o **🔴 Continuar 
 
 Si intentas empezar con menos de 5 jugadores en pista, aparece un picker de 5 slots. Cada slot vacío tiene un botón **＋** para elegir entre los convocados. El botón **▶ Empezar partido** se activa solo cuando los 5 están rellenos. Sin 5 titulares **no se puede entrar**.
 
-### Registrar acciones
+### Registrar acciones (v1.7.2)
 
-1. **Toca un jugador** en la cuadrícula "En Pista"
-2. Pulsa la acción: +2, +3, +1 TL, fallos, rebotes, asistencias, robos, tapones, faltas...
-3. Al registrar, el jugador **se deselecciona automáticamente**
+El flujo cambió en v1.7.2: ahora vas de la **acción** al **jugador**, no al revés.
 
-### Tipos de falta (v1.6.13)
+1. **Toca la acción** en el banner siempre visible (ej: **+3 Triple**).
+2. La app pregunta **"¿Quién?"** con 5 botones grandes del quinteto en pista.
+3. Tocas el jugador.
+4. (Si Shot Chart está activo) → tocar la zona de la cancha.
+5. **Encadenamientos automáticos opcionales:**
+   - Tras canasta → "¿Asistencia?" con los demás del quinteto + botón Saltar.
+   - Tras fallo → "¿Rebote?" con todos + opción "Rebote del rival" + Saltar.
 
-El ACTPAD del jugador seleccionado tiene 4 botones de falta:
+> 💡 **Las cards del quinteto son para sustituir, no para registrar acciones.** Si tocas una card del quinteto, se abre el modal de sustitución.
+
+### Sección de faltas (v1.6.15)
+
+El ACTPAD del jugador seleccionado tiene una **caja propia 🤚 FALTAS** al final, separada de las acciones genéricas (asistencia, robo, tapón, pérdida). Los 4 tipos de falta:
 
 - **FALT** Personal — la falta de toda la vida. Suma 1 al contador del jugador y al de equipo.
-- **TÉC** Técnica — protesta, demora, banquillo. Default 1 TL + posesión (FIBA 2024-25).
+- **TÉC** Técnica — protesta, demora, banquillo. Default **1 TL + posesión** (FIBA 2024-25).
 - **ANT** Antideportiva — contacto excesivo, intencional. 2 TL + posesión.
 - **DESC** Descalificante — agresión, segunda antideportiva, expulsión inmediata. 2 TL + posesión.
+
+**Badge dinámico** a la derecha del título de la sección:
+
+- `F:0/4` (gris) → no hay bonus, todavía.
+- `F:4/4 · PRÓX BONUS` (amarillo) → la siguiente falta tirará TL.
+- `F:5 · BONUS` (verde) → estamos en bonus, las faltas defensivas tiran TL.
+
+### Faltas del rival con tiros libres (v1.7.1)
+
+Cuando el rival comete falta —tanto si sumas el contador con el `+` de **FALTAS rival** del header como si tienes jugadores rivales registrados y le asignas la falta a uno— Kortline abre un modal nuevo:
+
+1. **Picker de tirador nuestro** — lista con dos secciones: **EN PISTA** (los 5 actuales, resaltados) y **BANQUILLO** (los demás convocados). Útil para corregir si te equivocaste de jugador o si hubo sustitución rápida.
+2. **Nº de tiros libres** con default según contexto:
+   - Falta personal sin bonus rival → `Sin TL`.
+   - Falta personal con bonus rival (rivalFouls ≥5 en el cuarto) → `2 TL` + banner verde **⚠️ BONUS rival · esta falta tira 2 TL**.
+   - Técnica → `1 TL`. Antideportiva/Descalificante → `2 TL`.
+3. **Continuar — marcar tiros** abre el modal granular tiro a tiro.
+
+### Modal de tiros libres tiro a tiro (v1.7.1)
+
+Todos los modales granulares de TL arrancan con todos los tiros marcados como **✗ fallado** por defecto. **Toca solo los que entran** (cambian a ✓). Otro toque vuelve a ✗.
+
+El botón Guardar muestra el conteo en tiempo real: "Guardar (2/3 entran)". Siempre habilitado — si no tocas ninguno, se registra `0/3 entran` (los 3 fallaron).
+
+### Modal de tiros libres inteligente (v1.6.15)
+
+Cuando registras una falta, el modal de TL se abre con un **default según el contexto**:
+
+- Falta personal sin bonus → **Sin TL** preseleccionado (lo más común).
+- Falta personal en bonus → **2 TL** + banner verde **⚠️ BONUS · esta falta tira 2 TL**.
+- Falta técnica → **1 TL**.
+- Antideportiva / Descalificante → **2 TL**.
+
+Tras elegir el nº de TL > 0, el flujo es **granular tiro a tiro**: aparece un botón `?` por cada tiro libre. Tócalo una vez para marcarlo ✓ entra, otra vez ✗ falla. Cuando todos están marcados, "Confirmar" registra los puntos al rival.
+
+> Si el partido es con jugadores del rival registrados, el modal te pide primero seleccionar al jugador rival al que se le tiran. Si no, los TL se anotan como puntos genéricos del rival.
 
 **Descalificación automática.** Kortline marca al jugador como ⛔ DQ cuando:
 
@@ -330,6 +374,28 @@ El ACTPAD del jugador seleccionado tiene 4 botones de falta:
 - Recibe **1 descalificante** directa.
 
 El contador (●●●) y el color de su tarjeta avisan: gris (0–3), amarillo (4), rojo (descalificado).
+
+### 🎯 Modo Shot Chart (v1.7.0)
+
+**Activación.** En el modal de **Crear/Editar partido**, activa el toggle **🎯 Modo Shot Chart [PRO]**. Solo afecta al partido en curso — puedes tener unos partidos con shot chart y otros sin.
+
+**Cómo funciona.** Cuando está ON, cada vez que pulses **+2 / +3 / ✗2 / ✗3** en el ACTPAD del jugador, la app abre la cancha de baloncesto a pantalla completa. Toca la zona donde se hizo el tiro y queda registrado.
+
+- Si tocas **dentro del arco** y has pulsado **+2** → registra +2.
+- Si tocas **fuera del arco** y has pulsado **+3** → registra +3.
+- Si hay **discrepancia** (pulsaste +2 pero tocaste fuera del arco) → la app te avisa y te deja elegir: **Sí, registrar como 3p** o **Mantener como 2p**.
+
+**Mapa de tiros 📍.** Mientras el partido está activo, en el header del live game tienes un botón **📍** que abre el **Mapa de tiros** del partido. Tras finalizar el partido, el botón también está en el detalle.
+
+El mapa muestra:
+
+- **3 cards** con 2pt, triples y total (intentados/anotados con %).
+- **La cancha grande** con todos los tiros: 🟢 verde para 2pt anotado, 🔵 azul para triple, ✗ rojo para fallado.
+- **Filtros**: por jugador, por cuarto, anotados/fallados/todos.
+
+**Notas.** Los tiros libres no usan shot chart (siempre se tiran desde la misma línea). Si un partido se creó antes de v1.7.0, no tiene shot chart — puedes activarlo editando el partido.
+
+---
 
 ### Reloj se para con falta (v1.6.13)
 

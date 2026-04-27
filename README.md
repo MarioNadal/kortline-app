@@ -9,7 +9,225 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.14 — Medio tiempo configurable + hotfix B-42 _(actual)_
+### v1.7.2 — Modo banco: flujo "acción → jugador" con cadenas _(actual)_
+
+Cambio de paradigma del live game. Hasta v1.7.1 había que **tocar primero el jugador** y luego la acción. Ahora es al revés: el banner de acciones está siempre visible, tocas la acción y la app pregunta **"¿quién?"**.
+
+**Por qué.** La jugada se piensa primero como "¡canasta de 3!" y luego "¿quién la metió?". Es como suena, no como se anota a la antigua. Coincide con el flujo de Swish y Basketball Stats Assistant.
+
+**Layout nuevo del live game**
+
+1. Header con reloj, marcador y faltas (igual que antes).
+2. **Quinteto en pista** con cards compactas (#dorsal · puntos · nombre corto · faltas). **Tocar una card = abrir modal de sustitución** (no registra acción).
+3. **Banner ⚡ ACCIONES siempre visible** con secciones:
+   - ⚡ PUNTOS: +2, +3, +1 / ✗2, ✗3, ✗TL.
+   - 📦 REBOTES: OF, DEF.
+   - 🎯 OTROS: AST, ROB, TAP, PER.
+   - 🤚 FALTAS: FALT, TÉC, ANT, DESC + badge `F:N/4 · BONUS`.
+
+**Flujo de captura**
+
+1. Tocas una acción (ej: **+3 Triple**).
+2. Modal "¿Quién?" con 5 botones grandes del quinteto (dorsal en el color del equipo, nombre corto, puntos acumulados).
+3. Tocas Carlos.
+4. (Si shot chart=ON) → modal de la cancha para tocar la zona.
+
+**Encadenamientos automáticos**
+
+Tras ciertas acciones se abre un modal opcional con botón "Saltar":
+
+- **Tras canasta anotada (+2/+3)** → modal **🎁 Asistencia** con los otros 4 jugadores en pista. Tocas quién dio la asistencia o "Sin asistencia · Saltar".
+- **Tras fallo (✗2/✗3) o TL fallado (✗TL)** → modal **📦 Rebote** con los 5 jugadores en pista (cualquiera puede coger su propio rebote ofensivo). Tocas quién = registra rebote ofensivo. Botón **🔴 Rebote del rival** para registrar rebote defensivo del rival, o **Sin rebote · Saltar**.
+
+Cada paso de la cadena tiene siempre un escape (cancelar/saltar) — no fuerza al usuario a registrar todo. Si la jugada es rápida y no quieres asistencia, saltas.
+
+**Lo que sigue igual**
+
+- Faltas siguen abriendo el modal de TL inteligente (v1.6.15).
+- Falta del rival sigue abriendo el modal de TL para nuestro equipo (v1.7.1, Fix B).
+- Modal granular de TL sigue arrancando con todos en ✗ (v1.7.1, Fix A).
+- Shot Chart sigue funcionando con el toggle del partido (v1.7.0).
+- El selector "CASADEMONT / SURNE" sigue alternando para registrar al rival cuando hay rivalPlayers.
+
+**Decisión técnica**
+
+El `selectLivePid` sigue existiendo pero solo lo usan algunas pantallas internas (no el banner). El nuevo flujo no toca el modelo de datos — solo cambia cómo se introducen las acciones. Toda la persistencia, log, stats, shot chart, mapa, etc. funciona igual.
+
+---
+
+### v1.7.1 — Faltas del rival con TL + modal granular más natural
+
+**Fix A · Modal granular de tiros libres con default ✗ y toggle ✓/✗**
+
+Antes los TL arrancaban con `?` (sin marcar) y obligaban a tocarlos todos antes de poder confirmar. La realidad es que la mayoría de los TL en sénior amateur fallan, así que tocar uno por uno solo cuando entran es más rápido y elimina la ambigüedad.
+
+Ahora:
+
+- Todos los TL **arrancan en ✗ (fallado)** por defecto.
+- **Un toque** → ✓ (entra).
+- **Otro toque** → vuelve a ✗.
+- Botón Guardar siempre habilitado, mostrando el conteo: **"Guardar (2/3 entran)"** en tiempo real.
+
+Aplicado a los 3 modales granulares: `openTLShootModal` (con rivales registrados), `openTeamTLShootModal` (sin rivales) y el nuevo `openOurTLShootModal` (cuando los TL los tira nuestro equipo).
+
+**Fix B · Falta del rival → modal TL para NUESTRO equipo**
+
+Antes, cuando el rival cometía falta:
+- Pulsabas el `+` de FALTAS rival en el header → solo incrementaba el contador. No abría modal.
+- O si tenías rivalPlayers registrados, asignar falta al jugador rival → solo incrementaba contador.
+
+Ahora **siempre que el rival comete falta** se abre un modal nuevo `openOurFoulTLModal` que pregunta:
+
+1. **¿Quién tira de NUESTRO equipo?** Lista con dos secciones:
+   - **EN PISTA** (resaltado en naranja, badge "EN PISTA").
+   - **BANQUILLO** (badge gris). Útil para errores de pista o sustituciones rápidas.
+2. **Nº de tiros libres** con default según contexto:
+   - Personal sin bonus rival → `Sin TL`.
+   - Personal en bonus rival (rivalFouls ≥5) → `2 TL` + banner verde "⚠️ BONUS rival · esta falta tira 2 TL".
+   - Técnica → `1 TL`.
+   - Antideportiva / Descalificante → `2 TL`.
+
+Tras "Continuar — marcar tiros" se abre el modal granular `openOurTLShootModal` (✗ default). Al confirmar:
+
+- Suma `made` puntos a nuestro marcador del cuarto actual.
+- Suma `made` a `live.stats[pid].p1m` y `missed` a `live.stats[pid].p1a` del jugador.
+- Log: "Carlos TL: 2/3".
+
+**Otros**
+
+- La parada de reloj con falta (B-38) ahora también se aplica cuando la comete el rival, no solo nuestro equipo.
+
+---
+
+### v1.7.0 — Modo Pro Shot Chart 🎯
+
+Primera versión "mayor" de Kortline desde el cierre del seguimiento en vivo. Introduce el **Modo Shot Chart** estilo Swish / Basketball Stats Assistant: capturar la zona de cada tiro de campo en una cancha SVG y generar mapa de tiros del partido.
+
+**Activación**
+
+Toggle nuevo en el modal de **Crear/Editar partido**:
+
+> 🎯 **Modo Shot Chart** [PRO]
+> Cada tiro de campo (+2/+3 y fallos) abre la cancha para tocar la zona donde se hizo. Genera mapa de tiros del partido.
+> Default: OFF.
+
+Persistido en `m.shotChart`. Cuando está ON, todo el flujo de tiros de campo cambia (los tiros libres mantienen su flujo normal — son siempre desde la línea, no aporta capturar zona).
+
+**Flujo de captura**
+
+1. Tocas un jugador → ACTPAD.
+2. Pulsas **+2 / +3 / ✗2 / ✗3**.
+3. Se abre el **modal de captura** con la cancha SVG ocupando casi toda la pantalla. Header con `+2 anotado` (verde) o `✗ Fallo de 3` (rojo) según el botón.
+4. **Pulsas la zona** donde se hizo el tiro.
+5. Si la zona detectada coincide con el botón → registra y cierra automáticamente.
+6. Si **discrepa** (ej: pulsaste +2 pero tocaste fuera del arco) → **pre-aviso** "¿Cambiar a 3 puntos? Pulsaste 2 pero la zona donde tocaste está fuera del arco". Decides Sí (cambia a 3) o No (mantiene 2).
+
+**Detección de zonas**
+
+Helper `_classifyShot(x,y)` que aplica las reglas FIBA reales sobre proporciones de cancha (15m × 14m media cancha, aro a 1.575m del fondo, arco de 3 a 6.75m, líneas rectas del corner three a 0.90m de las bandas):
+
+- Línea recta del corner three: `x < 90cm` o `x > 1410cm` → 3.
+- Arco curvo: distancia desde el aro ≥ 6.75m → 3, < → 2.
+
+**Cancha SVG**
+
+Media cancha vertical en proporciones FIBA reales. Líneas: tablero, aro (resaltado en naranja Kortline), zona/pintura, semicírculo del tiro libre, arco de 3, línea recta del corner three, semicírculo de no-charge, semicírculo del medio campo. Estilizada con paleta dark, líneas blancas semitransparentes.
+
+**Pantalla 📍 Mapa de tiros**
+
+Accesible desde:
+
+- Botón **📍** en el header del live game (sólo visible si `m.shotChart=true`).
+- Botón **📍** en el detalle del partido finalizado (sólo si hay tiros registrados).
+
+Vista:
+
+- **3 cards de resumen**: 2pt anotados/intentados con %, triples anotados/intentados con %, total acierto.
+- **Cancha grande con todos los tiros** como puntos: 🟢 verde para 2pt anotado, 🔵 azul para triple anotado, ✗ rojo para fallado.
+- **Filtros**: jugador (dropdown), cuarto (chips), anotados/fallados/todos.
+- **Leyenda** abajo.
+
+**Modelo de datos**
+
+```js
+m.shotChart = true; // toggle del partido
+m.live.shots = [
+  { pid, made: true|false, value: 2|3, x, y, q, clockAt, ts }
+]
+```
+
+`x` y `y` están normalizados 0–1 (origen arriba-izquierda del SVG). Esto desacopla del tamaño exacto del SVG en pantalla.
+
+**Retrocompatibilidad**
+
+Partidos creados antes de v1.7.0 tienen `m.shotChart` sin definir → tratado como `false`. Funcionan exactamente igual que en v1.6.15. Solo los partidos nuevos (o editados con el toggle) entran al flujo de Shot Chart.
+
+**Pendiente para v1.7.1** (iteración 2)
+
+- 🟢 Heatmap por zonas con % por zona (esquinas, codos, top of the key, pintura, etc.).
+- 🟢 Mapa agregado por jugador (toda la temporada, no solo un partido).
+- 🟢 Exportar PNG del mapa para compartir por WhatsApp.
+- 🟢 Toque mantenido (long-press) en un tiro del mapa para ver detalles (jugador, cuarto, tiempo).
+
+---
+
+### v1.6.15 — UX del live: faltas, TL granular y nombres
+
+Pasada de QA UX usando un PBP real (Casademont vs Surne Bilbao, Liga Endesa). Se reprodujeron ~160 jugadas en la app desplegada y se identificaron las fricciones del flujo en vivo. Esta versión cierra las críticas y dos cambios mayores pedidos: sección de faltas dedicada y flujo unificado de TL.
+
+**F1 · Modal de Tiros Libres "inteligente"**
+
+El modal ya no preselecciona siempre `2 TL`. Ahora calcula el default según contexto:
+
+- Falta personal (`foul`) sin bonus → **`Sin TL`** (lo más común: cambio de posesión).
+- Falta personal en bonus (≥5 faltas de equipo en el cuarto) → **`2 TL`** + banner verde **"⚠️ BONUS · esta falta tira 2 TL"**.
+- Falta técnica (`ftech`) → **`1 TL`** (FIBA 2024-25).
+- Antideportiva / descalificante → **`2 TL`**.
+
+El banner de bonus es muy visible — el anotador no se le pasa que esa falta ya entra con TL. Reduce drásticamente el número de "Saltar sin asignar" cuando no estás en bonus.
+
+**Flujo unificado de tiros libres tiro a tiro**
+
+Antes había dos flujos según si tenías jugadores del rival registrados:
+
+- **Con rivales** → modal granular tiro-a-tiro con `?` que cambia a ✓/✗.
+- **Sin rivales** → fila inline `0 / 1 / 2 / 3` para "cuántos entran" en total.
+
+Ahora **ambos flujos son granulares** — siempre marcas cada TL como entra (✓) o falla (✗). Esto:
+
+- Coincide con cómo se anota tiro a tiro en banquillo.
+- Evita ambigüedades ("entraron 2 de 3" no dice cuál falló).
+- Es coherente entre los dos modos.
+
+**F2 · Helper `_shortName` para nombres con inicial**
+
+Antes la card on-court de un jugador llamado **"I. Javier Rodríguez"** mostraba **"I."** (`name.split(" ")[0]`). Ahora el helper detecta si el primer trozo es una inicial (`length≤2` o termina en `.`) y usa el siguiente. Aplicado en court cards, bench cards, modal de TL, descripción de sustituciones y log del partido. Para nombres normales (`"Santi Yusta"`) se sigue usando el primer nombre como antes.
+
+**🤚 Sección de faltas dedicada en el ACTPAD**
+
+Las 4 faltas (FALT, TÉC, ANT, DESC) ya no comparten fila con asistencias y robos. Ahora tienen su propia caja con:
+
+- Título **🤚 FALTAS** en mayúsculas, color naranja-amarillo.
+- Badge dinámico a la derecha que cambia según el estado:
+  - `F:0/4` (gris) cuando no hay bonus.
+  - `F:4/4 · PRÓX BONUS` (amarillo) cuando la próxima va a tirar TL.
+  - `F:5 · BONUS` (verde) cuando ya estamos en bonus.
+- 4 botones más grandes (no compactos), separados de la caja de "OTROS" que ahora solo tiene AST/ROB/TAP/PER.
+
+**Toast "⏱ Reloj parado por falta"**
+
+Antes, cuando `stopOnFoul` paraba el reloj con una falta, el cambio era silencioso (botón ⏸ → ▶). Ahora aparece un toast efímero "⏱ Reloj parado por falta" para que el anotador vea el motivo.
+
+**Pendientes para v1.6.16 / v1.7**
+
+- 🟢 Botón `↺ Deshacer última jugada` prominente.
+- 🟢 Confirmación al cambiar a una pestaña de cuarto pasado.
+- 🟢 Modo rápido (jugador no se deselecciona tras cada acción) configurable en ajustes.
+- 🚀 **v1.7.0 · Modo Pro Shot Chart** — registro de tiros con coordenadas en cancha SVG, mapa de calor por jugador, exportación PNG.
+
+---
+
+### v1.6.14 — Medio tiempo configurable + hotfix B-42
 
 **Selector de duración del medio tiempo en el overlay**
 

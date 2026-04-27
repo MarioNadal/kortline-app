@@ -1452,7 +1452,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.0",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.2",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3202,7 +3202,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.2 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4864,10 +4864,10 @@ function liveGame(){
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
       const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
-      return`<button class="court-card ${isSel?"sel":""} ${disq&&!isSel?"disq":""}" onclick="selectLivePid('${p.id}')">
-        <div style="font-size:9px;font-weight:700;color:${isSel?"var(--orange)":"var(--td)"};margin-bottom:2px">#${p.number||"?"}</div>
-        <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:${isSel?"var(--orange)":"var(--tx)"}">${pts}</div>
-        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:${isSel?"var(--orange)":"var(--td)"}">${esc(_shortName(p.name))}</div>
+      return`<button class="court-card ${disq?"disq":""}" onclick="openSubModal('${p.id}')" title="Tocar para sustituir">
+        <div style="font-size:9px;font-weight:700;color:var(--td);margin-bottom:2px">#${p.number||"?"}</div>
+        <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:var(--tx)">${pts}</div>
+        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:var(--td)">${esc(_shortName(p.name))}</div>
         <div style="font-size:12px;font-weight:800;min-height:14px;color:${fc};letter-spacing:-1px">${foulDots||""}</div>
       </button>`;
     }).join("");
@@ -4887,10 +4887,10 @@ function liveGame(){
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
       const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
-      return`<button class="court-card ${isSel?"sel":""} ${disq&&!isSel?"disq":""}" onclick="selectLivePid('${p.id}')" style="${isSel?"border-color:#ef4444":""}">${""}
-        <div style="font-size:9px;font-weight:700;color:${isSel?"#ef4444":"var(--td)"};margin-bottom:2px">#${p.number||"?"}</div>
-        <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:${isSel?"#ef4444":"var(--tx)"}">${pts}</div>
-        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:${isSel?"#ef4444":"var(--td)"}">${esc(_shortName(p.name))}</div>
+      return`<button class="court-card ${disq?"disq":""}" onclick="openRivalSubModal('${p.id}')" title="Tocar para sustituir">${""}
+        <div style="font-size:9px;font-weight:700;color:var(--td);margin-bottom:2px">#${p.number||"?"}</div>
+        <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:var(--tx)">${pts}</div>
+        <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:var(--td)">${esc(_shortName(p.name))}</div>
         <div style="font-size:12px;font-weight:800;min-height:14px;color:${fc};letter-spacing:-1px">${foulDots||""}</div>
       </button>`;
     }).join("");
@@ -4917,95 +4917,84 @@ function liveGame(){
       ]
     }
   ];
-  const selP=selPid?courtP.find(p=>p.id===selPid)||rivalCourtP.find(p=>p.id===selPid):null;
-  const selPisRival=selPid?!!rivalCourtP.find(p=>p.id===selPid):false;
-  const selPColor=selPisRival?"#ef4444":t.color;
-  const actionBlock=!selP?"":`
-    <div style="border:1px solid ${selPisRival?"rgba(239,68,68,.35)":"rgba(240,99,24,.35)"};border-radius:14px;overflow:hidden;margin-bottom:8px">
-      <!-- Player header -->
-      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:${selPisRival?"rgba(239,68,68,.1)":"rgba(240,99,24,.1)"};border-bottom:1px solid ${selPisRival?"rgba(239,68,68,.25)":"rgba(240,99,24,.25)"}">
-        <div class="pnum" style="background:linear-gradient(135deg,${selPColor},${selPColor}88);width:30px;height:30px;border-radius:7px;font-size:12px;flex-shrink:0">${selP.number||"?"}</div>
-        <div style="flex:1">
-          <div style="font-weight:800;font-size:15px">${esc(selP.name)}</div>
-          <div style="font-size:11px;color:var(--td)">
-            ${(()=>{const st=live.stats[selP.id]||{};const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;const f=_totalFouls(st);const dq=_isDQ(st);return pts+" pts · "+f+" falta"+(f===1?"":"s")+(dq?" · ⛔ DQ":"");})()}
-          </div>
-        </div>
-        <button onclick="selectLivePid(null)" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--td);cursor:pointer;font-size:13px;padding:4px 9px;font-weight:700">✕ cerrar</button>
+  // v1.7.2 · Banner de acciones siempre visible (modo banco).
+  // Cada botón llama a openActionPicker(action, pts) que abre el modal "¿quién?".
+  const actionBlock=`
+    <div style="border:1px solid rgba(240,99,24,.35);border-radius:14px;overflow:hidden;margin-bottom:8px">
+      <!-- Header del banner -->
+      <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(240,99,24,.1);border-bottom:1px solid rgba(240,99,24,.25)">
+        <div style="font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange)">⚡ Acciones</div>
+        <div style="font-size:11px;color:var(--td);flex:1;text-align:right">Toca una acción · luego elige el jugador</div>
       </div>
-
       <!-- Puntos -->
       <div style="padding:10px 10px 8px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#22c55e;margin-bottom:7px">⚡ PUNTOS</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px">
-          <button class="action-btn" onclick="liveAction('${selPid}','p2m',2)" style="border-color:#22c55e88;background:#22c55e20;color:#22c55e;padding:10px 4px">
+          <button class="action-btn" onclick="openActionPicker('p2m',2)" style="border-color:#22c55e88;background:#22c55e20;color:#22c55e;padding:10px 4px">
             <div style="font-family:var(--font-d);font-size:24px;font-weight:900;line-height:1">+2</div>
             <div style="font-size:10px;margin-top:2px">Canasta</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','p3m',3)" style="border-color:#22c55e88;background:#22c55e20;color:#22c55e;padding:10px 4px">
+          <button class="action-btn" onclick="openActionPicker('p3m',3)" style="border-color:#22c55e88;background:#22c55e20;color:#22c55e;padding:10px 4px">
             <div style="font-family:var(--font-d);font-size:24px;font-weight:900;line-height:1">+3</div>
             <div style="font-size:10px;margin-top:2px">Triple</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','p1m',1)" style="border-color:#22c55e88;background:#22c55e20;color:#22c55e;padding:10px 4px">
+          <button class="action-btn" onclick="openActionPicker('p1m',1)" style="border-color:#22c55e88;background:#22c55e20;color:#22c55e;padding:10px 4px">
             <div style="font-family:var(--font-d);font-size:24px;font-weight:900;line-height:1">+1</div>
             <div style="font-size:10px;margin-top:2px">Tiro Libre</div>
           </button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-          <button class="action-btn" onclick="liveAction('${selPid}','p2a',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:7px 4px">
+          <button class="action-btn" onclick="openActionPicker('p2a',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:7px 4px">
             <div style="font-size:16px;font-weight:900">✗ 2</div>
             <div style="font-size:10px;margin-top:1px;opacity:.8">Fallo 2pt</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','p3a',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:7px 4px">
+          <button class="action-btn" onclick="openActionPicker('p3a',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:7px 4px">
             <div style="font-size:16px;font-weight:900">✗ 3</div>
             <div style="font-size:10px;margin-top:1px;opacity:.8">Fallo 3pt</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','p1a',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:7px 4px">
+          <button class="action-btn" onclick="openActionPicker('p1a',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:7px 4px">
             <div style="font-size:16px;font-weight:900">✗ TL</div>
             <div style="font-size:10px;margin-top:1px;opacity:.8">Fallo TL</div>
           </button>
         </div>
       </div>
-
       <!-- Rebotes -->
       <div style="padding:10px 10px 8px;border-bottom:1px solid var(--border)">
         <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#a855f7;margin-bottom:7px">📦 REBOTES</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <button class="action-btn" onclick="liveAction('${selPid}','ro',0)" style="border-color:#a855f755;background:#a855f712;color:#a855f7;padding:9px 4px">
+          <button class="action-btn" onclick="openActionPicker('ro',0)" style="border-color:#a855f755;background:#a855f712;color:#a855f7;padding:9px 4px">
             <div style="font-size:16px;font-weight:900">OF</div>
             <div style="font-size:10px;margin-top:2px">Ofensivo</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','rd',0)" style="border-color:#6b728055;background:#6b728012;color:#9ca3af;padding:9px 4px">
+          <button class="action-btn" onclick="openActionPicker('rd',0)" style="border-color:#6b728055;background:#6b728012;color:#9ca3af;padding:9px 4px">
             <div style="font-size:16px;font-weight:900">DEF</div>
             <div style="font-size:10px;margin-top:2px">Defensivo</div>
           </button>
         </div>
       </div>
-
       <!-- Otros -->
       <div style="padding:10px 10px 10px">
         <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#06b6d4;margin-bottom:7px">🎯 OTROS</div>
-        <!-- OTROS: solo asistencia, robo, tapón, pérdida (v1.6.15) -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
-          <button class="action-btn" onclick="liveAction('${selPid}','ast',0)" style="border-color:#06b6d455;background:#06b6d412;color:#06b6d4;padding:8px 2px">
+          <button class="action-btn" onclick="openActionPicker('ast',0)" style="border-color:#06b6d455;background:#06b6d412;color:#06b6d4;padding:8px 2px">
             <div style="font-size:15px;font-weight:900">AST</div>
             <div style="font-size:9px;margin-top:2px">Asist</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','stl',0)" style="border-color:#3b82f655;background:#3b82f612;color:#3b82f6;padding:8px 2px">
+          <button class="action-btn" onclick="openActionPicker('stl',0)" style="border-color:#3b82f655;background:#3b82f612;color:#3b82f6;padding:8px 2px">
             <div style="font-size:15px;font-weight:900">ROB</div>
             <div style="font-size:9px;margin-top:2px">Robo</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','blk',0)" style="border-color:#8b5cf655;background:#8b5cf612;color:#8b5cf6;padding:8px 2px">
+          <button class="action-btn" onclick="openActionPicker('blk',0)" style="border-color:#8b5cf655;background:#8b5cf612;color:#8b5cf6;padding:8px 2px">
             <div style="font-size:15px;font-weight:900">TAP</div>
             <div style="font-size:9px;margin-top:2px">Tapón</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','to',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:8px 2px">
+          <button class="action-btn" onclick="openActionPicker('to',0)" style="border-color:#ef444455;background:#ef444412;color:#ef4444;padding:8px 2px">
             <div style="font-size:15px;font-weight:900">PER</div>
             <div style="font-size:9px;margin-top:2px">Pérdida</div>
           </button>
         </div>
       </div>
-      <!-- 🤚 FALTAS: caja propia con título y badge dinámico (v1.6.15) -->
+      <!-- 🤚 FALTAS -->
       <div style="padding:10px 10px 10px;border-top:1px solid var(--border);background:rgba(245,158,11,.04)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
           <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#f59e0b">🤚 Faltas</div>
@@ -5017,19 +5006,19 @@ function liveGame(){
           })()}
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
-          <button class="action-btn" onclick="liveAction('${selPid}','foul',0)" style="border-color:#f59e0b66;background:#f59e0b14;color:#f59e0b;padding:10px 4px" title="Falta personal">
+          <button class="action-btn" onclick="openActionPicker('foul',0)" style="border-color:#f59e0b66;background:#f59e0b14;color:#f59e0b;padding:10px 4px" title="Falta personal">
             <div style="font-size:15px;font-weight:900">FALT</div>
             <div style="font-size:9px;margin-top:2px">Personal</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','ftech',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:10px 4px" title="Técnica — 1 TL + posesión">
+          <button class="action-btn" onclick="openActionPicker('ftech',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:10px 4px" title="Técnica — 1 TL + posesión">
             <div style="font-size:15px;font-weight:900">TÉC</div>
             <div style="font-size:9px;margin-top:2px">Técnica</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','funsport',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:10px 4px" title="Antideportiva — 2 TL + posesión">
+          <button class="action-btn" onclick="openActionPicker('funsport',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:10px 4px" title="Antideportiva — 2 TL + posesión">
             <div style="font-size:15px;font-weight:900">ANT</div>
             <div style="font-size:9px;margin-top:2px">Antidep.</div>
           </button>
-          <button class="action-btn" onclick="liveAction('${selPid}','fdq',0)" style="border-color:#dc2626;background:#dc262625;color:#fca5a5;padding:10px 4px" title="Descalificante — expulsión inmediata">
+          <button class="action-btn" onclick="openActionPicker('fdq',0)" style="border-color:#dc2626;background:#dc262625;color:#fca5a5;padding:10px 4px" title="Descalificante — expulsión inmediata">
             <div style="font-size:15px;font-weight:900">DESC</div>
             <div style="font-size:9px;margin-top:2px">Descalif.</div>
           </button>
@@ -5415,7 +5404,7 @@ function liveGame(){
     <!-- On Court -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${live.activeTeam==='rival'?'#ef4444':t.color}">▶ EN PISTA (${live.activeTeam==='rival'?rivalCourtP.length:courtP.length}/5)</div>
-      <div style="font-size:11px;color:var(--tm)">Toca un jugador → registrar acción</div>
+      <div style="font-size:11px;color:var(--tm)">Toca un jugador → sustituir</div>
     </div>
     ${teamOnly
       ? '<div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">👥</span><div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange)">Modo equipo</div><div style="font-size:12px;color:var(--td);margin-top:1px">Stats globales · sin seguimiento individual</div></div></div>'+teamActionBlock
@@ -5463,6 +5452,175 @@ function _ensureQSlot(live,qi){
   while(live.qScores.length<=qi)live.qScores.push([0,0]);
   if(!live.qScores[qi])live.qScores[qi]=[0,0];
 }
+/* ═══════════════════════════════════════
+   MODO BANCO (v1.7.2) — flujo "acción → jugador"
+   El banner del live game muestra TODAS las acciones siempre visibles.
+   Al pulsar una, se abre openActionPicker que pregunta qué jugador del
+   quinteto en pista la realizó. Tras canastas se encadena ¿asistencia?,
+   tras fallos se encadena ¿rebote?.
+═══════════════════════════════════════ */
+const _ACTION_LABELS={
+  p2m:{txt:"+2 Canasta",emoji:"🏀",color:"#22c55e"},
+  p3m:{txt:"+3 Triple",emoji:"🎯",color:"#22c55e"},
+  p1m:{txt:"+1 TL",emoji:"🆓",color:"#22c55e"},
+  p2a:{txt:"✗ Fallo de 2",emoji:"✗",color:"#ef4444"},
+  p3a:{txt:"✗ Fallo de 3",emoji:"✗",color:"#ef4444"},
+  p1a:{txt:"✗ Fallo de TL",emoji:"✗",color:"#ef4444"},
+  ro:{txt:"Rebote ofensivo",emoji:"📦",color:"#a855f7"},
+  rd:{txt:"Rebote defensivo",emoji:"🛡",color:"#a855f7"},
+  ast:{txt:"Asistencia",emoji:"🎁",color:"#06b6d4"},
+  stl:{txt:"Robo",emoji:"✋",color:"#3b82f6"},
+  blk:{txt:"Tapón",emoji:"🚫",color:"#8b5cf6"},
+  to:{txt:"Pérdida",emoji:"❌",color:"#ef4444"},
+  foul:{txt:"Falta personal",emoji:"🤚",color:"#f59e0b"},
+  ftech:{txt:"Falta técnica",emoji:"🤚",color:"#ef4444"},
+  funsport:{txt:"Falta antideportiva",emoji:"🤚",color:"#ef4444"},
+  fdq:{txt:"Falta descalificante",emoji:"🤚",color:"#dc2626"}
+};
+
+// Punto de entrada: el usuario pulsó una acción del banner. Pregunta el jugador.
+function openActionPicker(action,pts){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  document.getElementById("m-actpicker")?.remove();
+  const players=pl(S.teamId);
+  const onCourt=m.live.onCourt||[];
+  const courtP=onCourt.map(id=>players.find(x=>x.id===id)).filter(Boolean);
+  const meta=_ACTION_LABELS[action]||{txt:action,emoji:"·",color:"var(--tx)"};
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const teamColor=t?.color||"#F06318";
+
+  const cards=courtP.map(p=>{
+    const st=m.live.stats?.[p.id]||{};
+    const pts2=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+    return `<button onclick="_pickActionFor('${p.id}','${action}',${pts||0})" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;border-radius:12px;border:2px solid ${meta.color}55;background:rgba(0,0,0,.25);color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
+      <div style="width:40px;height:40px;border-radius:9px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:white">${p.number||"?"}</div>
+      <div style="font-weight:800;font-size:13px;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${esc(_shortName(p.name))}</div>
+      <div style="font-size:10px;color:var(--td)">${pts2} pts</div>
+    </button>`;
+  }).join("");
+
+  const el=document.createElement("div");
+  el.id="m-actpicker";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.96);z-index:9997;display:flex;align-items:center;justify-content:center;padding:20px;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.innerHTML=`<div style="width:100%;max-width:380px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:${meta.color};margin-bottom:6px">${meta.emoji} ${meta.txt}</div>
+      <div style="font-family:var(--font-d);font-weight:900;font-size:18px;color:var(--tx)">¿Quién?</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(courtP.length,5)},1fr);gap:7px;margin-bottom:14px">${cards}</div>
+    <button class="btn-s" onclick="document.getElementById('m-actpicker').remove()" style="width:100%">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+// Tras elegir el jugador en el picker
+window._pickActionFor=function(pid,action,pts){
+  document.getElementById("m-actpicker")?.remove();
+  // Registrar la acción base. liveAction se encarga del shot chart, faltas → TL, etc.
+  liveAction(pid,action,pts);
+  // Encadenamientos automáticos (tras un breve delay para no chocar con otros modales)
+  if(action==="p2m"||action==="p3m"){
+    setTimeout(()=>_chainAssist(pid,action),250);
+  } else if(action==="p2a"||action==="p3a"){
+    setTimeout(()=>_chainRebound(pid,action),250);
+  } else if(action==="p1a"){
+    // En TL fallado, también puede haber rebote (pero solo en el último TL).
+    // Lo dejamos opcional con la cadena.
+    setTimeout(()=>_chainRebound(pid,action),250);
+  }
+};
+
+// Cadena: tras canasta, ¿asistencia?
+function _chainAssist(scorerPid,action){
+  // Si hay otros modales activos, no encadenar
+  if(document.querySelector('.modal, [id^="m-"]'))return;
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const players=pl(S.teamId);
+  const onCourt=m.live.onCourt||[];
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const teamColor=t?.color||"#F06318";
+  const courtP=onCourt.map(id=>players.find(x=>x.id===id)).filter(Boolean).filter(p=>p.id!==scorerPid);
+  document.getElementById("m-chainast")?.remove();
+  const el=document.createElement("div");
+  el.id="m-chainast";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.96);z-index:9997;display:flex;align-items:center;justify-content:center;padding:20px;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const cards=courtP.map(p=>`<button onclick="_pickAssist('${p.id}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:12px;border:2px solid #06b6d455;background:rgba(0,0,0,.25);color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
+    <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:white">${p.number||"?"}</div>
+    <div style="font-weight:800;font-size:12px;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${esc(_shortName(p.name))}</div>
+  </button>`).join("");
+  el.innerHTML=`<div style="width:100%;max-width:380px">
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#06b6d4;margin-bottom:4px">🎁 Asistencia</div>
+      <div style="font-family:var(--font-d);font-weight:900;font-size:17px;color:var(--tx)">¿Quién dio la asistencia?</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(courtP.length||1,4)},1fr);gap:6px;margin-bottom:12px">${cards||'<div style="grid-column:1/-1;color:var(--tm);text-align:center;padding:14px">Sin compañeros en pista</div>'}</div>
+    <button onclick="document.getElementById('m-chainast').remove()" style="width:100%;padding:12px;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-weight:700">Sin asistencia · Saltar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+window._pickAssist=function(astPid){
+  document.getElementById("m-chainast")?.remove();
+  // Registrar asistencia directamente (sin pasar por openActionPicker)
+  window._scSkipChain=true;
+  liveAction(astPid,"ast",0);
+  window._scSkipChain=false;
+};
+
+// Cadena: tras fallo, ¿rebote? quien y de qué tipo
+function _chainRebound(shooterPid,action){
+  if(document.querySelector('.modal, [id^="m-"]'))return;
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const players=pl(S.teamId);
+  const onCourt=m.live.onCourt||[];
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const teamColor=t?.color||"#F06318";
+  const courtP=onCourt.map(id=>players.find(x=>x.id===id)).filter(Boolean);
+  document.getElementById("m-chainreb")?.remove();
+  const el=document.createElement("div");
+  el.id="m-chainreb";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.96);z-index:9997;display:flex;align-items:center;justify-content:center;padding:20px;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  const cards=courtP.map(p=>{
+    const isShoot=p.id===shooterPid;
+    return `<button onclick="_pickRebound('${p.id}','ro')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:12px;border:2px solid #a855f755;background:${isShoot?"rgba(168,85,247,.12)":"rgba(0,0,0,.25)"};color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
+      <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:white">${p.number||"?"}</div>
+      <div style="font-weight:800;font-size:12px;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${esc(_shortName(p.name))}</div>
+      <div style="font-size:9px;color:#a855f7;font-weight:700">OF</div>
+    </button>`;
+  }).join("");
+  el.innerHTML=`<div style="width:100%;max-width:380px">
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#a855f7;margin-bottom:4px">📦 Rebote</div>
+      <div style="font-family:var(--font-d);font-weight:900;font-size:17px;color:var(--tx)">¿Quién cogió el rebote?</div>
+      <div style="font-size:11px;color:var(--td);margin-top:3px">Toca un jugador nuestro = rebote ofensivo. Si fue del rival, pulsa "Rival" abajo.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(courtP.length,5)},1fr);gap:6px;margin-bottom:10px">${cards}</div>
+    <button onclick="_pickReboundRival()" style="width:100%;padding:12px;border-radius:9px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-weight:800;margin-bottom:8px">🔴 Rebote del rival</button>
+    <button onclick="document.getElementById('m-chainreb').remove()" style="width:100%;padding:12px;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-weight:700">Sin rebote · Saltar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+window._pickRebound=function(pid,type){
+  document.getElementById("m-chainreb")?.remove();
+  window._scSkipChain=true;
+  liveAction(pid,type||"ro",0);
+  window._scSkipChain=false;
+};
+window._pickReboundRival=function(){
+  document.getElementById("m-chainreb")?.remove();
+  // Registrar como rebote genérico del rival en el log (no entra en stats individuales si no hay rivalPlayers)
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const live=m.live;
+  const entry={pid:"rival",action:"rd",pts:0,q:live.q,clockAt:live.clockSec,desc:"Rebote rival"};
+  live.log=[...(live.log||[]),entry].slice(-80);
+  save();render();
+  toast("📦 Rebote del rival");
+};
+
 /* ═══════════════════════════════════════
    SHOT MAP · pantalla de visualización (v1.7.0)
 ═══════════════════════════════════════ */
@@ -5569,7 +5727,15 @@ function liveAction(pid,action,pts){
     const qi2=(live.q||1)-1;
     _ensureQSlot(live,qi2);
     if(pts>0)live.qScores[qi2][1]=(live.qScores[qi2][1]||0)+pts;
-    if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){if(!live.rivalFouls)live.rivalFouls=[0,0,0,0,0,0];live.rivalFouls[qi2]=(live.rivalFouls[qi2]||0)+1;}
+    if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){
+      if(!live.rivalFouls)live.rivalFouls=[0,0,0,0,0,0];live.rivalFouls[qi2]=(live.rivalFouls[qi2]||0)+1;
+      // v1.7.1 · Fix B: parar reloj si stopOnFoul + abrir modal TL para nuestro equipo
+      if(m.stopOnFoul&&live.clockRunning){
+        live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;
+        toast("⏱ Reloj parado por falta");
+      }
+      setTimeout(()=>openOurFoulTLModal(pid,action),120);
+    }
   } else {
   if(!m.teamOnlyStats){
     if(!live.stats[pid])live.stats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,ftech:0,funsport:0,fdq:0,stl:0,blk:0,to:0};
@@ -5710,9 +5876,8 @@ function openTLShootModal(rpid, total, foulerPid){
   const rname=rp?.name||"Rival";
   document.getElementById("m-tlshoot")?.remove();
 
-  // Build tiro buttons: each one toggles entre encesta/falla
-  // State: array of booleans (true=encesta)
-  const state=Array(total).fill(null); // null=sin marcar, true=entra, false=falla
+  // v1.7.1 · Fix A: state arranca en false (fallado) — toggle simple ✓/✗
+  const state=Array(total).fill(false);
   const el=document.createElement("div");
   el.id="m-tlshoot";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
@@ -5721,27 +5886,26 @@ function openTLShootModal(rpid, total, foulerPid){
 
   function btnHtml(i){
     const v=el._state[i];
-    if(v===null) return `<button onclick="setTLResult(${i},true)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px dashed var(--border);background:var(--s2);color:var(--td);font-weight:900;font-size:24px;cursor:pointer">?</button>`;
-    if(v===true) return `<button onclick="setTLResult(${i},false)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px solid #22c55e;background:rgba(34,197,94,.15);color:#22c55e;font-weight:900;font-size:22px;cursor:pointer">✓</button>`;
-    return `<button onclick="setTLResult(${i},null)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px solid #ef4444;background:rgba(239,68,68,.12);color:#ef4444;font-weight:900;font-size:22px;cursor:pointer">✗</button>`;
+    if(v===true) return `<button onclick="setTLResult(${i},false)" style="flex:1;padding:18px 0;border-radius:10px;border:1.5px solid #22c55e;background:rgba(34,197,94,.18);color:#22c55e;font-weight:900;font-size:26px;cursor:pointer">✓</button>`;
+    return `<button onclick="setTLResult(${i},true)" style="flex:1;padding:18px 0;border-radius:10px;border:1.5px solid #ef4444;background:rgba(239,68,68,.14);color:#ef4444;font-weight:900;font-size:26px;cursor:pointer">✗</button>`;
   }
 
   el._render=function(){
     const g=document.getElementById("tl-btns-grid");if(!g)return;
     g.innerHTML=Array.from({length:total},(_,i)=>btnHtml(i)).join("");
-    const all=el._state.every(v=>v!==null);
+    const made=el._state.filter(v=>v===true).length;
     const cb=document.getElementById("tl-confirm");
-    if(cb){cb.disabled=!all;cb.style.opacity=all?"1":"0.4";}
+    if(cb)cb.textContent=`Guardar (${made}/${total} entran)`;
   };
 
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">🎯 Tiros libres</div>
-    <div class="msub"><b style="color:#ef4444">${rname}</b> — ${total} tiro${total>1?"s":""}. Toca para marcar.</div>
-    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:10px">✓ ENTRA  ·  ✗ FALLA  ·  ? SIN MARCAR</div>
+    <div class="msub"><b style="color:#ef4444">${rname}</b> — ${total} tiro${total>1?"s":""}. Toca los que <b style="color:#22c55e">entran</b>.</div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:10px">Por defecto fallados ✗ · toca para marcar ✓ entra</div>
     <div id="tl-btns-grid" style="display:flex;gap:8px;margin-bottom:16px"></div>
-    <button class="btn-p" id="tl-confirm" onclick="saveTLResults('${rpid}',${total},'${foulerPid}')" disabled style="opacity:.4">Guardar tiros</button>
-    <button class="btn-s" onclick="document.getElementById('m-tlshoot').remove()">Saltar</button>
+    <button class="btn-p" id="tl-confirm" onclick="saveTLResults('${rpid}',${total},'${foulerPid}')">Guardar (0/${total} entran)</button>
+    <button class="btn-s" onclick="document.getElementById('m-tlshoot').remove()">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
   el._render();
@@ -5881,7 +6045,8 @@ function confirmTeamTL(){
 function openTeamTLShootModal(total){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   document.getElementById("m-teamtlshoot")?.remove();
-  const state=Array(total).fill(null); // null=sin marcar, true=entra, false=falla
+  // v1.7.1 · Fix A: state arranca en false (fallado) — toggle simple ✓/✗
+  const state=Array(total).fill(false);
   const el=document.createElement("div");
   el.id="m-teamtlshoot";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
@@ -5890,23 +6055,23 @@ function openTeamTLShootModal(total){
 
   function btnHtml(i){
     const v=el._state[i];
-    if(v===null) return `<button onclick="setTeamTLResult(${i},true)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px dashed var(--border);background:var(--s2);color:var(--td);font-weight:900;font-size:24px;cursor:pointer">?</button>`;
-    if(v===true) return `<button onclick="setTeamTLResult(${i},false)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px solid #22c55e;background:rgba(34,197,94,.15);color:#22c55e;font-weight:900;font-size:22px;cursor:pointer">✓</button>`;
-    return `<button onclick="setTeamTLResult(${i},null)" style="flex:1;padding:16px 0;border-radius:10px;border:1.5px solid #ef4444;background:rgba(239,68,68,.12);color:#ef4444;font-weight:900;font-size:22px;cursor:pointer">✗</button>`;
+    if(v===true) return `<button onclick="setTeamTLResult(${i},false)" style="flex:1;padding:18px 0;border-radius:10px;border:1.5px solid #22c55e;background:rgba(34,197,94,.18);color:#22c55e;font-weight:900;font-size:26px;cursor:pointer">✓</button>`;
+    return `<button onclick="setTeamTLResult(${i},true)" style="flex:1;padding:18px 0;border-radius:10px;border:1.5px solid #ef4444;background:rgba(239,68,68,.14);color:#ef4444;font-weight:900;font-size:26px;cursor:pointer">✗</button>`;
   }
   el._render=function(){
     const g=document.getElementById("teamtl-btns-grid");if(!g)return;
     g.innerHTML=Array.from({length:total},(_,i)=>btnHtml(i)).join("");
-    const all=el._state.every(v=>v!==null);
+    const made=el._state.filter(v=>v===true).length;
     const cb=document.getElementById("teamtl-confirm");
-    if(cb){cb.disabled=!all;cb.style.opacity=all?"1":"0.4";}
+    if(cb)cb.textContent=`Guardar (${made}/${total} entran)`;
   };
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">🎯 Tiros libres del rival</div>
-    <div class="msub">${total} tiro${total>1?"s":""} — toca cada uno para marcar ✓ entra / ✗ falla.</div>
+    <div class="msub">${total} tiro${total>1?"s":""} — toca los que <b style="color:#22c55e">entran</b>.</div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:10px">Por defecto fallados ✗</div>
     <div id="teamtl-btns-grid" style="display:flex;gap:8px;margin:14px 0">${Array.from({length:total},(_,i)=>btnHtml(i)).join("")}</div>
-    <button class="btn-p" id="teamtl-confirm" onclick="confirmTeamTLShoot(${total})" disabled style="opacity:.4">Confirmar</button>
+    <button class="btn-p" id="teamtl-confirm" onclick="confirmTeamTLShoot(${total})">Guardar (0/${total} entran)</button>
     <button class="btn-s" onclick="document.getElementById('m-teamtlshoot').remove()">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
@@ -5952,7 +6117,180 @@ function rivalFoulLive(delta){
   // Log it
   const live=m.live;
   if(delta>0)live.log=[{pid:"rival-foul",action:"rfoul",pts:0,q:live.q,clockAt:live.clockSec,desc:"Falta rival"},...(live.log||[])].slice(0,80);
+  // Parada de reloj con falta (también si la comete el rival)
+  if(delta>0&&m.stopOnFoul&&live.clockRunning){
+    live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;
+    toast("⏱ Reloj parado por falta");
+  }
   save();render();
+  // v1.7.1 · Fix B: tras una falta del rival, abrir modal de TL para nuestro equipo
+  if(delta>0)setTimeout(()=>openOurFoulTLModal(null,"foul"),120);
+}
+
+/* ═══════════════════════════════════════
+   FALTA DEL RIVAL → TL PARA NUESTRO EQUIPO (v1.7.1 · Fix B)
+   Tras una falta del rival, este modal pide:
+   1) Quién tira de NUESTRO equipo (lista pista + banquillo).
+   2) Nº de TL (default según bonus rival y tipo de falta).
+   Al confirmar, abre el modal granular con default ✗ y registra los TL
+   anotados como puntos de NUESTRO equipo + +N a stats[pid].p1m / p1a.
+═══════════════════════════════════════ */
+function openOurFoulTLModal(rpidOpt, foulKind){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  document.getElementById("m-ourtl")?.remove();
+  const players=pl(S.teamId);
+  const convIds=m.convocados||[];
+  const convP=players.filter(p=>convIds.includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+  const onCourt=m.live.onCourt||[];
+  // Default TL según bonus del rival y tipo
+  const _curQ=(m.live.q||1)-1;
+  const _rFouls=(m.live.rivalFouls||[])[_curQ]||0;
+  const _inBonus=_rFouls>=5;
+  let defaultTL=0;
+  if(foulKind==="ftech")defaultTL=1;
+  else if(foulKind==="funsport"||foulKind==="fdq")defaultTL=2;
+  else defaultTL=_inBonus?2:0;
+  const foulLabel=foulKind==="ftech"?" (técnica)":foulKind==="funsport"?" (antideportiva)":foulKind==="fdq"?" (descalificante)":"";
+  const bonusBanner=_inBonus&&(foulKind==="foul"||!foulKind)?`<div style="background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);color:#22c55e;border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:13px;font-weight:700;text-align:center">⚠️ BONUS rival · esta falta tira 2 TL</div>`:"";
+
+  const rivalPlayers=m.rivalPlayers||[];
+  const foulerName=rpidOpt?_shortName(rivalPlayers.find(p=>p.id===rpidOpt)?.name||"?"):"Rival";
+
+  const playerRowFor=(p,inPista)=>`<button onclick="selectOurTLShooter('${p.id}')" data-pid="${p.id}" style="display:flex;align-items:center;gap:10px;width:100%;background:${inPista?"rgba(240,99,24,.06)":"var(--s2)"};border:1.5px solid ${inPista?"rgba(240,99,24,.25)":"var(--border)"};border-radius:10px;padding:9px 11px;cursor:pointer;margin-bottom:5px;text-align:left">
+    <div style="width:30px;height:30px;border-radius:7px;background:rgba(240,99,24,.2);border:1px solid rgba(240,99,24,.4);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--orange);flex-shrink:0">${p.number||"?"}</div>
+    <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:14px">${esc(p.name)}</span>${inPista?'<span style="font-size:9px;color:var(--orange);font-weight:800;background:rgba(240,99,24,.15);padding:1px 5px;border-radius:4px">EN PISTA</span>':'<span style="font-size:9px;color:var(--td);font-weight:700;background:var(--s3);padding:1px 5px;border-radius:4px">BANQUILLO</span>'}</div>
+  </button>`;
+  const courtList=convP.filter(p=>onCourt.includes(p.id)).map(p=>playerRowFor(p,true)).join("");
+  const benchList=convP.filter(p=>!onCourt.includes(p.id)).map(p=>playerRowFor(p,false)).join("");
+
+  const el=document.createElement("div");
+  el.id="m-ourtl";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el._pid=null;
+  el._tl=defaultTL;
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">🏀 Tiros libres nuestros</div>
+    <div class="msub">Falta de <b style="color:#ef4444">${foulerName}</b>${foulLabel} — ¿quién tira?</div>
+    ${bonusBanner}
+    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--orange);margin-bottom:6px">EN PISTA</div>
+    <div id="ourtl-court">${courtList||'<div style="font-size:12px;color:var(--tm);padding:6px 0">Sin jugadores en pista.</div>'}</div>
+    ${benchList?`<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin:10px 0 6px">BANQUILLO</div><div id="ourtl-bench">${benchList}</div>`:""}
+    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin:12px 0 8px">Nº DE TIROS LIBRES</div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      ${[0,1,2,3].map(n=>`<button id="ourtl-n${n}" onclick="setOurTLCount(${n})" style="flex:1;padding:12px 0;border-radius:9px;border:${n===defaultTL?"2px solid var(--orange);background:rgba(249,115,22,.15);color:var(--orange)":"1px solid var(--border);background:var(--s2);color:var(--td)"};font-weight:900;font-size:16px;cursor:pointer">${n===0?"Sin TL":n+" TL"}</button>`).join("")}
+    </div>
+    <button class="btn-p" id="ourtl-confirm" onclick="confirmOurTL()" disabled style="opacity:.4">Selecciona un tirador</button>
+    <button class="btn-s" onclick="document.getElementById('m-ourtl').remove()">Saltar sin asignar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+window.selectOurTLShooter=function(pid){
+  const el=document.getElementById("m-ourtl");if(!el)return;
+  el._pid=pid;
+  document.querySelectorAll('#m-ourtl button[data-pid]').forEach(b=>{
+    const sel=b.dataset.pid===pid;
+    b.style.borderColor=sel?"var(--orange)":(b.style.borderColor.includes("240")?"rgba(240,99,24,.25)":"var(--border)");
+    b.style.background=sel?"rgba(240,99,24,.18)":(b.style.background.includes("240")?"rgba(240,99,24,.06)":"var(--s2)");
+  });
+  const cb=document.getElementById("ourtl-confirm");
+  if(cb){cb.disabled=false;cb.style.opacity="1";cb.textContent=el._tl===0?"Confirmar (sin TL)":"Continuar — marcar tiros";}
+};
+
+window.setOurTLCount=function(n){
+  const el=document.getElementById("m-ourtl");if(!el)return;
+  el._tl=n;
+  [0,1,2,3].forEach(i=>{const b=document.getElementById("ourtl-n"+i);if(!b)return;
+    b.style.border=i===n?"2px solid var(--orange)":"1px solid var(--border)";
+    b.style.background=i===n?"rgba(249,115,22,.15)":"var(--s2)";
+    b.style.color=i===n?"var(--orange)":"var(--td)";});
+  const cb=document.getElementById("ourtl-confirm");
+  if(cb&&!cb.disabled)cb.textContent=n===0?"Confirmar (sin TL)":"Continuar — marcar tiros";
+};
+
+function confirmOurTL(){
+  const el=document.getElementById("m-ourtl");if(!el)return;
+  const pid=el._pid;
+  const total=el._tl||0;
+  if(!pid){toast("⚠️ Selecciona quién tira");return;}
+  if(total===0){
+    el.remove();
+    toast("✅ Falta del rival registrada, sin tiros libres");
+    return;
+  }
+  el.remove();
+  openOurTLShootModal(pid,total);
+}
+
+// Modal granular tiro a tiro para NUESTRO tirador (v1.7.1)
+function openOurTLShootModal(pid,total){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const players=pl(S.teamId);
+  const p=players.find(x=>x.id===pid);
+  const pname=_shortName(p?.name||"?");
+  document.getElementById("m-ourtlshoot")?.remove();
+  const state=Array(total).fill(false); // default: todos fallados
+  const el=document.createElement("div");
+  el.id="m-ourtlshoot";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el._state=state;
+  el._pid=pid;
+
+  function btnHtml(i){
+    const v=el._state[i];
+    if(v===true) return `<button onclick="setOurTLResult(${i},false)" style="flex:1;padding:18px 0;border-radius:10px;border:1.5px solid #22c55e;background:rgba(34,197,94,.18);color:#22c55e;font-weight:900;font-size:26px;cursor:pointer">✓</button>`;
+    return `<button onclick="setOurTLResult(${i},true)" style="flex:1;padding:18px 0;border-radius:10px;border:1.5px solid #ef4444;background:rgba(239,68,68,.14);color:#ef4444;font-weight:900;font-size:26px;cursor:pointer">✗</button>`;
+  }
+  el._render=function(){
+    const g=document.getElementById("ourtl-btns-grid");if(!g)return;
+    g.innerHTML=Array.from({length:total},(_,i)=>btnHtml(i)).join("");
+    const made=el._state.filter(v=>v===true).length;
+    const cb=document.getElementById("ourtl-shoot-confirm");
+    if(cb)cb.textContent=`Guardar (${made}/${total} entran)`;
+  };
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">🎯 Tiros libres</div>
+    <div class="msub"><b style="color:var(--orange)">${esc(pname)}</b> — ${total} tiro${total>1?"s":""}. Toca los que <b style="color:#22c55e">entran</b>.</div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:10px">Por defecto fallados ✗</div>
+    <div id="ourtl-btns-grid" style="display:flex;gap:8px;margin:14px 0">${Array.from({length:total},(_,i)=>btnHtml(i)).join("")}</div>
+    <button class="btn-p" id="ourtl-shoot-confirm" onclick="confirmOurTLShoot('${pid}',${total})">Guardar (0/${total} entran)</button>
+    <button class="btn-s" onclick="document.getElementById('m-ourtlshoot').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+  el._render();
+}
+
+window.setOurTLResult=function(i,v){
+  const el=document.getElementById("m-ourtlshoot");if(!el)return;
+  el._state[i]=v;el._render();
+};
+
+function confirmOurTLShoot(pid,total){
+  const el=document.getElementById("m-ourtlshoot");if(!el)return;
+  const made=(el._state||[]).filter(v=>v===true).length;
+  const missed=total-made;
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const live=m.live;
+  const qi=(live.q||1)-1;
+  _ensureQSlot(live,qi);
+  // Stats individuales del tirador
+  if(!live.stats[pid])live.stats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,ftech:0,funsport:0,fdq:0,stl:0,blk:0,to:0};
+  live.stats[pid].p1m=(live.stats[pid].p1m||0)+made;
+  live.stats[pid].p1a=(live.stats[pid].p1a||0)+missed;
+  // Marcador
+  live.qScores[qi][0]=(live.qScores[qi][0]||0)+made;
+  // Log
+  const players=pl(S.teamId);
+  const pname=_shortName(players.find(p=>p.id===pid)?.name||"?");
+  const entry={pid,action:"p1m",pts:made,q:live.q,clockAt:live.clockSec,
+    desc:`${pname} TL: ${made}/${total}`};
+  live.log=[...(live.log||[]),entry].slice(-80);
+  el.remove();_syncLiveQ(m);save();render();
+  toast(`🎯 ${pname}: ${made}/${total} TL`);
 }
 
 function openEditQModal(){
