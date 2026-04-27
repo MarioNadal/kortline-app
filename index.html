@@ -1452,7 +1452,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.2",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.3",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3202,7 +3202,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.2 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.3 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4864,7 +4864,7 @@ function liveGame(){
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
       const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
-      return`<button class="court-card ${disq?"disq":""}" onclick="openSubModal('${p.id}')" title="Tocar para sustituir">
+      return`<button class="court-card ${disq?"disq":""}" onclick="openCourtSubModal('${p.id}')" title="Tocar para sustituir">
         <div style="font-size:9px;font-weight:700;color:var(--td);margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:var(--tx)">${pts}</div>
         <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:var(--td)">${esc(_shortName(p.name))}</div>
@@ -4887,7 +4887,7 @@ function liveGame(){
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
       const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
-      return`<button class="court-card ${disq?"disq":""}" onclick="openRivalSubModal('${p.id}')" title="Tocar para sustituir">${""}
+      return`<button class="court-card ${disq?"disq":""}" onclick="openCourtRivalSubModal('${p.id}')" title="Tocar para sustituir">${""}
         <div style="font-size:9px;font-weight:700;color:var(--td);margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:var(--tx)">${pts}</div>
         <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:var(--td)">${esc(_shortName(p.name))}</div>
@@ -6431,6 +6431,81 @@ function delRivalPlayer(id){
   m.rivalPlayers=(m.rivalPlayers||[]).filter(p=>p.id!==id);
   save();render();
 }
+// v1.7.2: tap en card del jugador en pista → modal "¿quién entra a sustituirlo?"
+// (Inverso de openSubModal, que parte del jugador en banquillo).
+function openCourtSubModal(outId){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const convIds=m.convocados||[];
+  const players=pl(S.teamId);
+  const convP=[...players].filter(p=>convIds.includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+  const onCourt=m.live.onCourt||[];
+  const benchP=convP.filter(p=>!onCourt.includes(p.id));
+  const outP=players.find(p=>p.id===outId);
+  document.getElementById("m-sub")?.remove();
+  const el=document.createElement("div");el.id="m-sub";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">↔ Sustitución</div>
+    <div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px">⬇️</span>
+      <div><div style="font-size:11px;color:var(--td);font-weight:700">SALE</div><div style="font-weight:800;font-size:16px">#${outP?.number||"?"} ${esc(outP?.name||"")}</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--td);margin-bottom:10px">¿Quién entra?</div>
+    <div class="card">
+      ${benchP.length===0?'<div style="padding:18px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores en banquillo.</div>':benchP.map((p,i)=>{
+        const st=m.live.stats[p.id]||{};
+        const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+        const f=_totalFouls(st);
+        const dq=_isDQ(st);
+        const fc=dq?"#ef4444":f>=4?"#f59e0b":"var(--td)";
+        return`<div class="pr" style="${i===benchP.length-1?"border-bottom:none":""};cursor:pointer${dq?";opacity:.5":""}" onclick="${dq?"toast('⛔ Jugador descalificado, no puede entrar')":`subPlayer('${p.id}','${outId}');document.getElementById('m-sub').remove()`}">
+          <div class="pnum-wrap"><div class="pnum" style="background:linear-gradient(135deg,var(--orange),var(--orange2))">${p.number||"?"}</div></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:15px">${esc(p.name)}${dq?' <span style="font-size:11px;color:#ef4444;font-weight:800">⛔ DQ</span>':''}</div>
+            <div style="font-size:11px;color:${fc}">${pts} pts · ${f} falta${f===1?"":"s"}</div>
+          </div>
+          <span style="font-size:18px;color:#22c55e">⬆️</span>
+        </div>`;
+      }).join("")}
+    </div>
+    <button class="btn-s" onclick="document.getElementById('m-sub').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
+// Versión rival: tap en card rival en pista → quién entra del banquillo rival
+function openCourtRivalSubModal(outId){
+  const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  const rp=m.rivalPlayers||[];
+  const onCourt=m.live.rivalOnCourt||[];
+  const benchP=rp.filter(p=>!onCourt.includes(p.id));
+  const outP=rp.find(p=>p.id===outId);
+  document.getElementById("m-rsub")?.remove();
+  const el=document.createElement("div");el.id="m-rsub";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
+  el.onclick=e=>{if(e.target===el)el.remove();};
+  el.innerHTML=`<div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">↔ Sustitución Rival</div>
+    <div style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px">⬇️</span>
+      <div><div style="font-size:11px;color:var(--td);font-weight:700">SALE</div><div style="font-weight:800;font-size:16px">#${outP?.number||"?"} ${esc(outP?.name||"")}</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--td);margin-bottom:10px">¿Quién entra?</div>
+    <div class="card">
+      ${benchP.length===0?'<div style="padding:18px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores rivales en banquillo.</div>':benchP.map((p,i)=>`<div class="pr" style="${i===benchP.length-1?"border-bottom:none":""};cursor:pointer" onclick="subRivalPlayer('${p.id}','${outId}');document.getElementById('m-rsub').remove()">
+        <div class="pnum-wrap"><div class="pnum" style="background:linear-gradient(135deg,#ef4444,#dc2626)">${p.number||"?"}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div></div>
+        <span style="font-size:18px;color:#22c55e">⬆️</span>
+      </div>`).join("")}
+    </div>
+    <button class="btn-s" onclick="document.getElementById('m-rsub').remove()">Cancelar</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+
 function openSubModal(inId){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const convIds=m.convocados||[];

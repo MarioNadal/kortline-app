@@ -9,7 +9,22 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.2 — Modo banco: flujo "acción → jugador" con cadenas _(actual)_
+### v1.7.3 — Hotfix sustitución desde card en pista _(actual)_
+
+**Bug en v1.7.2.** El cambio de paradigma redirigió el tap de las court cards a `openSubModal(p.id)`, que estaba pensado para llamarse desde el banquillo (el `id` representa al jugador que entra). Resultado: tocar Carlos en pista mostraba "ENTRA #11 Carlos Uno · ¿Quién sale?" — semánticamente al revés.
+
+**Fix.** Dos funciones nuevas inversas:
+
+- `openCourtSubModal(outId)` — modal "SALE #11 Carlos · ¿Quién entra?" con la lista del banquillo nuestro.
+- `openCourtRivalSubModal(outId)` — equivalente para el rival.
+
+Las court cards ahora apuntan a estas funciones. Jugadores descalificados (`_isDQ`) aparecen en gris en la lista de banquillo y no se pueden seleccionar (toast aviso "⛔ Jugador descalificado, no puede entrar").
+
+`openSubModal` y `openRivalSubModal` originales se mantienen — siguen siendo válidos para el flujo "tap en banquillo desde la stats table".
+
+---
+
+### v1.7.2 — Modo banco: flujo "acción → jugador" con cadenas
 
 Cambio de paradigma del live game. Hasta v1.7.1 había que **tocar primero el jugador** y luego la acción. Ahora es al revés: el banner de acciones está siempre visible, tocas la acción y la app pregunta **"¿quién?"**.
 
