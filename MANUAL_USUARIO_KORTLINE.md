@@ -312,6 +312,34 @@ Si intentas empezar con menos de 5 jugadores en pista, aparece un picker de 5 sl
 2. Pulsa la acción: +2, +3, +1 TL, fallos, rebotes, asistencias, robos, tapones, faltas...
 3. Al registrar, el jugador **se deselecciona automáticamente**
 
+### Tipos de falta (v1.6.13)
+
+El ACTPAD del jugador seleccionado tiene 4 botones de falta:
+
+- **FALT** Personal — la falta de toda la vida. Suma 1 al contador del jugador y al de equipo.
+- **TÉC** Técnica — protesta, demora, banquillo. Default 1 TL + posesión (FIBA 2024-25).
+- **ANT** Antideportiva — contacto excesivo, intencional. 2 TL + posesión.
+- **DESC** Descalificante — agresión, segunda antideportiva, expulsión inmediata. 2 TL + posesión.
+
+**Descalificación automática.** Kortline marca al jugador como ⛔ DQ cuando:
+
+- Acumula **5 faltas personales**, o
+- Acumula **2 técnicas**, o
+- Acumula **2 antideportivas**, o
+- Acumula **1 técnica + 1 antideportiva**, o
+- Recibe **1 descalificante** directa.
+
+El contador (●●●) y el color de su tarjeta avisan: gris (0–3), amarillo (4), rojo (descalificado).
+
+### Reloj se para con falta (v1.6.13)
+
+Toggle en el modal de **Crear/Editar partido**: **⏱ Reloj se para con falta**.
+
+- **ON** (default en sénior, junior, cadete, infantil, alevín, benjamín, escuela): cualquier falta detiene automáticamente el reloj de juego. Esta es la regla FIBA estricta.
+- **OFF** (default en 3x3 y "otro"): el reloj sigue corriendo con la falta.
+
+Útil para diferenciar partidos oficiales (donde el árbitro siempre para) de amistosos o entrenamientos donde el reloj puede seguir.
+
 ### Bloqueo de cuartos futuros
 
 Los tabs Q2 / Q3 / Q4 aparecen en gris y desactivados hasta que el reloj avanza. Puedes volver a cuartos pasados para revisar o añadir acciones, pero no saltar a uno que aún no ha empezado.

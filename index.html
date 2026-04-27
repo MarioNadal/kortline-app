@@ -588,6 +588,30 @@ function applyEditClock(){
   save();render();toast("⏱ Tiempo actualizado a "+_fmtClock(m.live.clockSec));
 }
 function _fmtClock(s){const m=Math.floor(s/60),ss=s%60;return m+":"+(ss<10?"0":"")+ss;}
+
+/* ═══════════════════════════════════════
+   DESCALIFICACIÓN POR FALTAS (v1.6.13 · B-47)
+   FIBA 36-37: un jugador queda descalificado por:
+   - 5 faltas personales acumuladas, o
+   - 2 faltas técnicas, o
+   - 2 faltas antideportivas, o
+   - 1 técnica + 1 antideportiva, o
+   - 1 falta descalificante directa.
+═══════════════════════════════════════ */
+function _isDQ(st){
+  if(!st)return false;
+  if((st.foul||0)>=5)return true;
+  if((st.ftech||0)>=2)return true;
+  if((st.funsport||0)>=2)return true;
+  if(((st.ftech||0)+(st.funsport||0))>=2)return true;
+  if((st.fdq||0)>=1)return true;
+  return false;
+}
+// Total de faltas para mostrar al usuario (suma todas las modalidades)
+function _totalFouls(st){
+  if(!st)return 0;
+  return (st.foul||0)+(st.ftech||0)+(st.funsport||0)+(st.fdq||0);
+}
 let _alertTimer=null;
 function _clockAlert(msg,dur=2000){
   document.querySelectorAll(".clock-alert").forEach(e=>e.remove());
@@ -926,11 +950,14 @@ function _resumeFromTm(){
 }
 const DAYSF=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
 const CATEGORIES=["Escuela","Benjamín","Alevín","Infantil","Cadete","Junior","Senior","3x3","Otro"];
-// Default quarters and minutes per category
+// Default quarters, minutes y stopOnFoul (B-53) por categoría.
+// stopOnFoul aplica en categorías que siguen FIBA estricto. En 3x3 el reloj
+// va aparte (cronómetro de posesión). En "Otro" lo dejamos OFF y el usuario
+// lo activa manualmente si su liga lo requiere.
 const CAT_DEFAULTS={
-  "Escuela":{quarters:6,qMins:8},"Benjamín":{quarters:6,qMins:8},"Alevín":{quarters:6,qMins:8},
-  "Infantil":{quarters:4,qMins:10},"Cadete":{quarters:4,qMins:10},"Junior":{quarters:4,qMins:10},
-  "Senior":{quarters:4,qMins:10},"3x3":{quarters:4,qMins:5},"Otro":{quarters:4,qMins:10}
+  "Escuela":{quarters:6,qMins:8,stopOnFoul:true},"Benjamín":{quarters:6,qMins:8,stopOnFoul:true},"Alevín":{quarters:6,qMins:8,stopOnFoul:true},
+  "Infantil":{quarters:4,qMins:10,stopOnFoul:true},"Cadete":{quarters:4,qMins:10,stopOnFoul:true},"Junior":{quarters:4,qMins:10,stopOnFoul:true},
+  "Senior":{quarters:4,qMins:10,stopOnFoul:true},"3x3":{quarters:4,qMins:5,stopOnFoul:false},"Otro":{quarters:4,qMins:10,stopOnFoul:false}
 };
 const COLORS=["#F06318","#1a6fc4","#22c55e","#ef4444","#a855f7","#ec4899","#06b6d4","#eab308","#ffffff"];
 const POSITIONS=["Base","Escolta","Alero","Ala-Pívot","Pívot"];
@@ -1171,7 +1198,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.6.12",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.6.13",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -2835,8 +2862,19 @@ function activateOT(){
   m.live.otCount=(m.live.otCount||0)+1;const newQ=(m.quarters||4)+m.live.otCount;
   if(!m.live.qScores)m.live.qScores=[];while(m.live.qScores.length<newQ)m.live.qScores.push([0,0]);
   m.live.q=newQ;m.live.clockSec=5*60;m.live.clockMins=5;m.live.clockRunning=false;
-  if(!m.live.teamFouls)m.live.teamFouls=[];while(m.live.teamFouls.length<newQ)m.live.teamFouls.push(0);
-  if(!m.live.rivalFouls)m.live.rivalFouls=[];while(m.live.rivalFouls.length<newQ)m.live.rivalFouls.push(0);
+  // v1.6.13 · B-42: las faltas de equipo en OT continúan del Q4 (regla FIBA 37.2),
+  // así el OT arranca con las faltas acumuladas del 4º cuarto (o del último OT
+  // si ya hubo prórrogas previas). Misma lógica para rivalFouls.
+  if(!m.live.teamFouls)m.live.teamFouls=[];
+  while(m.live.teamFouls.length<newQ){
+    const carry=m.live.teamFouls.length>0?(m.live.teamFouls[m.live.teamFouls.length-1]||0):0;
+    m.live.teamFouls.push(carry);
+  }
+  if(!m.live.rivalFouls)m.live.rivalFouls=[];
+  while(m.live.rivalFouls.length<newQ){
+    const carry=m.live.rivalFouls.length>0?(m.live.rivalFouls[m.live.rivalFouls.length-1]||0):0;
+    m.live.rivalFouls.push(carry);
+  }
   save();render();const otLabel=m.live.otCount===1?"OT":"OT"+m.live.otCount;_clockAlert("🏀 ¡"+otLabel+" — A jugar!",2000);
 }
 function addManualOT(){
@@ -2908,7 +2946,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.12 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.6.13 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4002,9 +4040,11 @@ function openMatchModal(init){
   document.getElementById(mid)?.remove();
   const _t2=S.teams.find(x=>x.id===S.teamId);
   const _cat=_t2?.category||"";
-  const _catDef=CAT_DEFAULTS[_cat]||{quarters:4,qMins:10};
+  const _catDef=CAT_DEFAULTS[_cat]||{quarters:4,qMins:10,stopOnFoul:false};
   const _defQ=init?.quarters??_catDef.quarters;
   const _defM=init?.qMins??_catDef.qMins;
+  // v1.6.13 · B-53: toggle "reloj se para con falta", default según categoría
+  const _defStop=init?.stopOnFoul??_catDef.stopOnFoul??false;
   const el=document.createElement("div");el.id=mid;
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
   el.onclick=e=>{if(e.target===el)_closeModal(mid);};
@@ -4056,6 +4096,13 @@ function openMatchModal(init){
         <div style="font-size:12px;color:var(--td);margin-top:2px">No registrar stats individuales, solo totales del equipo</div>
       </div>
       <button id="${mid}-tos-btn" class="tswitch ${init?.teamOnlyStats?'on':''}" onclick="this.classList.toggle('on')"></button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--s2);border:1px solid var(--border);border-radius:10px;margin-bottom:12px">
+      <div>
+        <div style="font-weight:700;font-size:14px">⏱ Reloj se para con falta</div>
+        <div style="font-size:12px;color:var(--td);margin-top:2px">FIBA: el reloj se detiene siempre que se pita una falta${_cat?` · default ${_cat}: ${_defStop?"ON":"OFF"}`:""}</div>
+      </div>
+      <button id="${mid}-sof-btn" class="tswitch ${_defStop?'on':''}" onclick="this.classList.toggle('on')"></button>
     </div>
     <button class="btn-p" onclick="saveMatchMeta('${mid}','${init?.id||""}')">${init?"Guardar":"Crear Partido"}</button>
     <button class="btn-s" onclick="_closeModal('${mid}')">Cancelar</button>
@@ -4283,14 +4330,15 @@ function saveMatchMeta(mid,eid){
   const qMins=parseInt(document.getElementById(mid+"-qmins")?.value)||10;
   const rivalStatsEnabled=document.getElementById(mid+"-rse-btn")?.classList.contains("on")||false;
   const teamOnlyStats=document.getElementById(mid+"-tos-btn")?.classList.contains("on")||false;
+  const stopOnFoul=document.getElementById(mid+"-sof-btn")?.classList.contains("on")||false;
   if(!S.matches[S.teamId])S.matches[S.teamId]=[];
   if(eid){
-    S.matches[S.teamId]=S.matches[S.teamId].map(m=>m.id===eid?{...m,rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats}:m);
+    S.matches[S.teamId]=S.matches[S.teamId].map(m=>m.id===eid?{...m,rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,stopOnFoul}:m);
     toast("✅ Partido actualizado");
     clearDirty();
     document.getElementById(mid)?.remove();save();render();
   } else {
-    const nm={id:uid(),rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,q:[null,null,null,null,null,null,null,null,null,null],convocados:[],titulares:[],capitan:null,rivalPlayers:[],notes:""};
+    const nm={id:uid(),rival,date,time,venue,location,quarters,qMins,rivalStatsEnabled,teamOnlyStats,stopOnFoul,q:[null,null,null,null,null,null,null,null,null,null],convocados:[],titulares:[],capitan:null,rivalPlayers:[],notes:""};
     S.matches[S.teamId].push(nm);
     S.matchId=nm.id;
     clearDirty();
@@ -4546,11 +4594,11 @@ function liveGame(){
     :courtP.map(p=>{
       const st=live.stats[p.id]||{};
       const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
-      const fouls=st.foul||0;
-      const disq=fouls>=5;
+      const fouls=_totalFouls(st);
+      const disq=_isDQ(st);
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
-      const fc=fouls>=5?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
+      const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
       return`<button class="court-card ${isSel?"sel":""} ${disq&&!isSel?"disq":""}" onclick="selectLivePid('${p.id}')">
         <div style="font-size:9px;font-weight:700;color:${isSel?"var(--orange)":"var(--td)"};margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:${isSel?"var(--orange)":"var(--tx)"}">${pts}</div>
@@ -4569,11 +4617,11 @@ function liveGame(){
     :rivalCourtP.map(p=>{
       const st=(live.rivalStats||{})[p.id]||{};
       const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
-      const fouls=st.foul||0;
-      const disq=fouls>=5;
+      const fouls=_totalFouls(st);
+      const disq=_isDQ(st);
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
-      const fc=fouls>=5?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
+      const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
       return`<button class="court-card ${isSel?"sel":""} ${disq&&!isSel?"disq":""}" onclick="selectLivePid('${p.id}')" style="${isSel?"border-color:#ef4444":""}">${""}
         <div style="font-size:9px;font-weight:700;color:${isSel?"#ef4444":"var(--td)"};margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:${isSel?"#ef4444":"var(--tx)"}">${pts}</div>
@@ -4615,7 +4663,7 @@ function liveGame(){
         <div style="flex:1">
           <div style="font-weight:800;font-size:15px">${esc(selP.name)}</div>
           <div style="font-size:11px;color:var(--td)">
-            ${(()=>{const st=live.stats[selP.id]||{};const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;const f=st.foul||0;return pts+" pts · "+f+" faltas";})()}
+            ${(()=>{const st=live.stats[selP.id]||{};const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;const f=_totalFouls(st);const dq=_isDQ(st);return pts+" pts · "+f+" falta"+(f===1?"":"s")+(dq?" · ⛔ DQ":"");})()}
           </div>
         </div>
         <button onclick="selectLivePid(null)" style="background:var(--s3);border:1px solid var(--border);border-radius:6px;color:var(--td);cursor:pointer;font-size:13px;padding:4px 9px;font-weight:700">✕ cerrar</button>
@@ -4672,7 +4720,7 @@ function liveGame(){
       <!-- Otros -->
       <div style="padding:10px 10px 10px">
         <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#06b6d4;margin-bottom:7px">🎯 OTROS</div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:4px">
           <button class="action-btn" onclick="liveAction('${selPid}','ast',0)" style="border-color:#06b6d455;background:#06b6d412;color:#06b6d4;padding:8px 2px">
             <div style="font-size:15px;font-weight:900">AST</div>
             <div style="font-size:9px;margin-top:2px">Asist</div>
@@ -4689,15 +4737,25 @@ function liveGame(){
             <div style="font-size:15px;font-weight:900">PER</div>
             <div style="font-size:9px;margin-top:2px">Pérdida</div>
           </button>
+        </div>
+        <!-- Faltas (v1.6.13): personal, técnica, antideportiva, descalificante -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">
           <button class="action-btn" onclick="liveAction('${selPid}','foul',0)" style="border-color:#f59e0b55;background:#f59e0b12;color:#f59e0b;padding:8px 2px">
-            <div style="font-size:15px;font-weight:900">FALT</div>
-            <div style="font-size:9px;margin-top:2px">Falta</div>
+            <div style="font-size:14px;font-weight:900">FALT</div>
+            <div style="font-size:9px;margin-top:2px">Personal</div>
           </button>
           <button class="action-btn" onclick="liveAction('${selPid}','ftech',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:8px 2px">
-            <div style="font-size:15px;font-weight:900">TÉC</div>
+            <div style="font-size:14px;font-weight:900">TÉC</div>
             <div style="font-size:9px;margin-top:2px">Técnica</div>
           </button>
-
+          <button class="action-btn" onclick="liveAction('${selPid}','funsport',0)" style="border-color:#ef444488;background:#ef444418;color:#ef4444;padding:8px 2px" title="Antideportiva — 2 TL + posesión">
+            <div style="font-size:14px;font-weight:900">ANT</div>
+            <div style="font-size:9px;margin-top:2px">Antidep.</div>
+          </button>
+          <button class="action-btn" onclick="liveAction('${selPid}','fdq',0)" style="border-color:#dc2626;background:#dc262625;color:#fca5a5;padding:8px 2px" title="Descalificante — expulsión inmediata">
+            <div style="font-size:14px;font-weight:900">DESC</div>
+            <div style="font-size:9px;margin-top:2px">Descalif.</div>
+          </button>
         </div>
       </div>
     </div>`;
@@ -4709,7 +4767,7 @@ function liveGame(){
       ${benchP.map(p=>{
         const st=live.stats[p.id]||{};
         const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
-        const fouls=st.foul||0;const fc=fouls>=5?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
+        const fouls=_totalFouls(st);const disq=_isDQ(st);const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
         return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;min-width:120px">
           <div style="font-family:var(--font-d);font-weight:900;font-size:20px;line-height:1">${pts}</div>
           <div style="flex:1;min-width:0">
@@ -4733,8 +4791,8 @@ function liveGame(){
     rivalBenchP.forEach(p=>{
       const st=(live.rivalStats||{})[p.id]||{};
       const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
-      const fouls=st.foul||0;
-      const fc=fouls>=5?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
+      const fouls=_totalFouls(st);
+      const fc=_isDQ(st)?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
       const pid=p.id;
       const fn=rc.length<5?"subRivalPlayer":"openRivalSubModal";
       const fa=rc.length<5?"'"+pid+"',null":"'"+pid+"'";
@@ -5115,8 +5173,8 @@ function liveGame(){
 /* ═══════════════════════════════════════
    LIVE GAME ACTIONS
 ═══════════════════════════════════════ */
-const _ACTLABELS={p2m:"+2 Canasta",p3m:"+3 Triple",p1m:"+1 TL",p2a:"Fallo 2pt",p3a:"Fallo 3pt",p1a:"Fallo TL",ro:"Reb. Ofensivo",rd:"Reb. Defensivo",ast:"Asistencia",foul:"Falta",ftech:"Falta Técnica",p2tl:"2 TL Recibidos",stl:"Robo",blk:"Tapón",to:"Pérdida",rival:"Rival +pts",timeout:"Tiempo muerto",sub:"Sustitución"};
-const _ACTCOLOR={p2m:"#22c55e",p3m:"#22c55e",p1m:"#22c55e",p2a:"#ef4444",p3a:"#ef4444",p1a:"#ef4444",ro:"#a855f7",rd:"#9ca3af",ast:"#06b6d4",foul:"#f59e0b",ftech:"#ef4444",p2tl:"#22c55e",stl:"#3b82f6",blk:"#8b5cf6",to:"#ef4444",rival:"#ef4444",timeout:"#f59e0b",sub:"#06b6d4"};
+const _ACTLABELS={p2m:"+2 Canasta",p3m:"+3 Triple",p1m:"+1 TL",p2a:"Fallo 2pt",p3a:"Fallo 3pt",p1a:"Fallo TL",ro:"Reb. Ofensivo",rd:"Reb. Defensivo",ast:"Asistencia",foul:"Falta",ftech:"Falta Técnica",funsport:"Falta Antideportiva",fdq:"Falta Descalificante",p2tl:"2 TL Recibidos",stl:"Robo",blk:"Tapón",to:"Pérdida",rival:"Rival +pts",timeout:"Tiempo muerto",sub:"Sustitución"};
+const _ACTCOLOR={p2m:"#22c55e",p3m:"#22c55e",p1m:"#22c55e",p2a:"#ef4444",p3a:"#ef4444",p1a:"#ef4444",ro:"#a855f7",rd:"#9ca3af",ast:"#06b6d4",foul:"#f59e0b",ftech:"#ef4444",funsport:"#ef4444",fdq:"#dc2626",p2tl:"#22c55e",stl:"#3b82f6",blk:"#8b5cf6",to:"#ef4444",rival:"#ef4444",timeout:"#f59e0b",sub:"#06b6d4"};
 function selectLivePid(pid){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   m.live.selPid=m.live.selPid===pid?null:pid;
@@ -5139,46 +5197,56 @@ function liveAction(pid,action,pts){
     const qi2=(live.q||1)-1;
     _ensureQSlot(live,qi2);
     if(pts>0)live.qScores[qi2][1]=(live.qScores[qi2][1]||0)+pts;
-    if(action==="foul"||action==="ftech"){if(!live.rivalFouls)live.rivalFouls=[0,0,0,0,0,0];live.rivalFouls[qi2]=(live.rivalFouls[qi2]||0)+1;}
+    if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){if(!live.rivalFouls)live.rivalFouls=[0,0,0,0,0,0];live.rivalFouls[qi2]=(live.rivalFouls[qi2]||0)+1;}
   } else {
   if(!m.teamOnlyStats){
-    if(!live.stats[pid])live.stats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0};
+    if(!live.stats[pid])live.stats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,ftech:0,funsport:0,fdq:0,stl:0,blk:0,to:0};
     live.stats[pid][action]=(live.stats[pid][action]||0)+1;
   }
   const qi=(live.q||1)-1;
   _ensureQSlot(live,qi);
   if(pts>0)live.qScores[qi][0]=(live.qScores[qi][0]||0)+pts;
-  if(action==="foul"||action==="ftech"){if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;}
+  if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;}
   }
   const pname=(pl(S.teamId).find(p=>p.id===pid)?.name||"?").split(" ")[0];
-  if(action==="foul"||action==="ftech"){
+  const isFoulAction=(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq");
+  if(isFoulAction){
+    // v1.6.13 · B-38: parar reloj con falta si el partido lo tiene activado
+    if(m.stopOnFoul&&live.clockRunning){live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;}
     const _m2=mById(S.teamId,S.matchId);
     const _rp=_m2?.rivalPlayers||[];
+    const isTechLike=(action==="ftech"||action==="funsport"||action==="fdq");
     if(_rp.length>0){
-      // Show rival player picker for free throws
-      setTimeout(()=>openFoulTLModal(pid,action==="ftech"),120);
+      setTimeout(()=>openFoulTLModal(pid,isTechLike,action),120);
     } else {
-      // No rival players - open team-level TL modal
-      setTimeout(()=>openTeamTLModal(pid, action==="ftech"), 120);
+      setTimeout(()=>openTeamTLModal(pid,isTechLike,action),120);
     }
   }
   const entry={pid,action,pts,q:live.q,clockAt:live.clockSec,desc:`${pname} — ${_ACTLABELS[action]||action}`};
   live.log=[...(live.log||[]),entry];
   if(live.log.length>80)live.log=live.log.slice(-80);
-  const f=(live.stats?.[pid]?.foul)||0;
-  if(f>=5)toast("⛔ "+pname+" — 5 faltas, DESCALIFICADO");
-  else if(f===4)toast("⚠️ "+pname+" — 4ª falta");
+  // v1.6.13 · B-47: descalificación considera personales + técnicas + antideportivas + descalificantes
+  const stP=live.stats?.[pid]||{};
+  if(_isDQ(stP))toast("⛔ "+pname+" — DESCALIFICADO");
+  else if((stP.foul||0)===4)toast("⚠️ "+pname+" — 4ª falta personal");
   _syncLiveQ(m);save();render();
 }
-function openFoulTLModal(foulerPid, isTech){
+function openFoulTLModal(foulerPid, isTech, foulKind){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   const live=m.live||{};
   const foulerName=(pl(S.teamId).find(p=>p.id===foulerPid)?.name||"?").split(" ")[0];
   const rivalPlayers=m.rivalPlayers||[];
   document.getElementById("m-foultl")?.remove();
 
-  // Number of TLs: technical=2, normal=2 by default (user changes)
-  const defaultTL=isTech?2:2;
+  // v1.6.13 · B-51: Default de TL según tipo de falta (FIBA 2024-25):
+  // - personal en bonus / lanzamiento de 2: 2 TL
+  // - técnica: 1 TL + posesión
+  // - antideportiva / descalificante: 2 TL + posesión
+  let defaultTL=2;
+  if(foulKind==="ftech")defaultTL=1;
+  else if(foulKind==="funsport"||foulKind==="fdq")defaultTL=2;
+  else if(isTech)defaultTL=1;
+  const foulLabel=foulKind==="ftech"?" (técnica)":foulKind==="funsport"?" (antideportiva)":foulKind==="fdq"?" (descalificante)":isTech?" (técnica)":"";
 
   const playerRows=rivalPlayers.length===0
     ?`<div style="font-size:13px;color:var(--tm);padding:12px 0;text-align:center">Sin jugadores del rival registrados.<br/>Añádelos en la convocatoria.</div>`
@@ -5197,7 +5265,7 @@ function openFoulTLModal(foulerPid, isTech){
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">🏀 Tiros libres</div>
-    <div class="msub">Falta de <b style="color:var(--orange)">${foulerName}</b>${isTech?" (técnica)":""} — ¿a quién le tiran?</div>
+    <div class="msub">Falta de <b style="color:var(--orange)">${foulerName}</b>${foulLabel} — ¿a quién le tiran?</div>
 
     <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">JUGADOR RIVAL FOULED</div>
     <div id="foultl-players">${playerRows}</div>
@@ -5339,15 +5407,17 @@ function liveTeamAction(action, pts){
   const qi=(live.q||1)-1;
   _ensureQSlot(live,qi);
   if(pts>0)live.qScores[qi][0]=(live.qScores[qi][0]||0)+pts;
-  if(action==="foul"||action==="ftech"){
+  if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){
     if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];
     live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;
+    // Parada de reloj con falta (v1.6.13 · B-38) si el partido lo tiene activado
+    if(m.stopOnFoul&&live.clockRunning){live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;}
     // Trigger rival TL picker
     const _rp=m.rivalPlayers||[];
-    if(_rp.length>0){setTimeout(()=>openFoulTLModal("team",action==="ftech"),120);}
-    else{setTimeout(()=>openTeamTLModal("team",action==="ftech"),120);}
+    const isTech=(action==="ftech"||action==="funsport"||action==="fdq");
+    if(_rp.length>0){setTimeout(()=>openFoulTLModal("team",isTech,action),120);}
+    else{setTimeout(()=>openTeamTLModal("team",isTech,action),120);}
   }
-  if(action==="ftech")live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;
   const pL=m.quarters===4?"Q":"P";
   const entry={pid:"team",action,pts,q:live.q,clockAt:live.clockSec,
     desc:_ACTLABELS[action]||(pts>0?"+"+pts+" pts":action)};
@@ -5356,12 +5426,17 @@ function liveTeamAction(action, pts){
 }
 
 // ── Team-level TL modal (when no individual rival players registered) ──
-function openTeamTLModal(foulerPid, isTech){
+function openTeamTLModal(foulerPid, isTech, foulKind){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   const isFoulerTeam=foulerPid==="team";
   const foulerName=isFoulerTeam?"(equipo)":(pl(S.teamId).find(p=>p.id===foulerPid)?.name||"?").split(" ")[0];
   document.getElementById("m-teamtl")?.remove();
-  const defaultTL=isTech?2:2;
+  // v1.6.13 · B-51: defaults según tipo
+  let defaultTL=2;
+  if(foulKind==="ftech")defaultTL=1;
+  else if(foulKind==="funsport"||foulKind==="fdq")defaultTL=2;
+  else if(isTech)defaultTL=1;
+  const foulLabel=foulKind==="ftech"?" (técnica)":foulKind==="funsport"?" (antideportiva)":foulKind==="fdq"?" (descalificante)":isTech?" (técnica)":"";
   const el=document.createElement("div");
   el.id="m-teamtl";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:flex-end;justify-content:center;";
@@ -5370,7 +5445,7 @@ function openTeamTLModal(foulerPid, isTech){
   el.innerHTML=`<div class="modal">
     <div class="mhandle"></div>
     <div class="mtitle">🏀 Tiros libres del rival</div>
-    <div class="msub">Falta de <b style="color:var(--orange)">${foulerName}</b>${isTech?" (técnica)":""}</div>
+    <div class="msub">Falta de <b style="color:var(--orange)">${foulerName}</b>${foulLabel}</div>
     <div style="background:rgba(249,115,22,.07);border:1px dashed rgba(249,115,22,.3);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--td)">
       💡 Sin jugadores del rival registrados — se anotarán como puntos del rival
     </div>

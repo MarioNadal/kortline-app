@@ -9,7 +9,72 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.6.12 — HOY con marca de club y actividades sorpresa _(actual)_
+### v1.6.13 — Reglamento FIBA en el live game _(actual)_
+
+Pasada de QA del seguimiento en vivo contra el reglamento FIBA 2024-25 / FEB sénior amateur. Se simuló un partido completo, se mapeó el código contra las reglas y se priorizaron los hallazgos. Esta versión cierra los **🔴 críticos** y los **🟢 nice-to-have triviales** detectados.
+
+**B-38 + B-53 · El reloj se para con falta (configurable por partido)**
+
+Nuevo toggle **⏱ Reloj se para con falta** en el modal de crear/editar partido. Cuando está activo, registrar una falta personal, técnica, antideportiva o descalificante detiene automáticamente el reloj de juego (regla FIBA 7.4). Default según categoría del equipo:
+
+| Categoría | Default |
+|-----------|---------|
+| Sénior, Junior, Cadete, Infantil, Alevín, Benjamín, Escuela | ON |
+| 3x3, Otro | OFF |
+
+El usuario puede sobreescribir el default por partido. Ideal para amistosos donde el árbitro no para el reloj.
+
+**B-42 · Las faltas de equipo en prórroga continúan del Q4**
+
+Antes, al activar OT, el contador `teamFouls[OT]` se inicializaba en 0, así que la prórroga arrancaba en frío. Ahora se arrastra el valor del Q4 (o del último OT si ya se jugaron prórrogas previas) tal como dicta la regla FIBA 37.2. Misma lógica para `rivalFouls`.
+
+**B-47 · Descalificación correcta por técnicas y antideportivas**
+
+Nueva función `_isDQ(st)` que considera todas las modalidades de falta:
+- 5 faltas personales acumuladas
+- 2 faltas técnicas
+- 2 faltas antideportivas
+- 1 técnica + 1 antideportiva
+- 1 falta descalificante directa
+
+El contador en las cards (●●●●●), el badge "DQ", el toast y el highlight rojo ahora reflejan el estado real. La cuenta total de faltas mostrada al usuario suma personal + técnica + antideportiva + descalificante con el helper `_totalFouls(st)`.
+
+**B-50 · Faltas antideportiva (ANT) y descalificante (DESC)**
+
+Dos nuevas acciones en el ACTPAD del jugador seleccionado, junto a Personal (FALT) y Técnica (TÉC). Layout reorganizado en 2 filas de 4 botones (asistencia/robo/tapón/pérdida arriba; faltas abajo).
+
+- **ANT** Antideportiva — 2 TL + posesión, cuenta para descalificación.
+- **DESC** Descalificante — 2 TL + posesión + expulsión inmediata. Disparada por una sola.
+
+Ambas suman a `teamFouls` y abren el modal de TL como las personales.
+
+**B-48 · Falta técnica de equipo ya no cuenta doble**
+
+Bug en `liveTeamAction` (modo "solo stats del equipo"): una falta técnica incrementaba `teamFouls` dos veces. Eliminada la línea duplicada — ahora suma 1 como cualquier otra falta.
+
+**B-51 · Default de TL para falta técnica = 1 (FIBA 2024-25)**
+
+El modal de tiros libres preselecciona ahora **1 TL** para falta técnica (era 2). Las antideportivas y descalificantes preseleccionan **2 TL**. Las personales en bonus o lanzamiento siguen con default 2. El usuario puede ajustar manualmente si su liga aplica reglas distintas.
+
+**Bugs resueltos v1.6.13**
+
+| ID | Descripción |
+|----|-------------|
+| B-38 | Reloj no se paraba con falta (regla FIBA 7.4). Ahora configurable por partido con default ON en categorías reglamentarias |
+| B-42 | Faltas de equipo en prórroga reseteaban a 0 en lugar de continuar del Q4 (regla FIBA 37.2) |
+| B-47 | 2 técnicas / 2 antideportivas / 1 técnica+1 antideportiva no descalificaban al jugador |
+| B-48 | Falta técnica de equipo en modo team-only contaba doble en `teamFouls` |
+| B-50 | Faltas antideportiva y descalificante no existían como acciones diferenciadas |
+| B-51 | Default de TL para falta técnica era 2; FIBA 2024-25 son 1 + posesión |
+| B-53 | (mejora) Toggle "reloj para con falta" configurable por partido y categoría |
+
+**Pendientes para v1.6.14** (🟡 importantes y 🟢 menores del informe de QA): descansos entre cuartos según FIBA estricto (B-44), display de TM en prórroga (B-46), aviso visual al entrar en bonus (B-49), wording del badge BONUS (B-52).
+
+Informe de QA completo en `QA_LIVEGAME_v1612.md`.
+
+---
+
+### v1.6.12 — HOY con marca de club y actividades sorpresa
 
 **Título de HOY personalizado con el nombre del club**
 
