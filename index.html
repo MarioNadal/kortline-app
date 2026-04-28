@@ -478,6 +478,8 @@ function startClock(){
       const isLastPeriod=curQ>=totalPeriods;
       if(!isLastPeriod){
         m.live.q=curQ+1;
+        // v1.7.9 · R1: trackear el cuarto más alto alcanzado para bloquear futuros
+        m.live.maxQ=Math.max(m.live.maxQ||1,m.live.q);
         m.live.clockSec=(m.live.clockMins||m.qMins||10)*60;
         m.live.clockRunning=false;
         save();render();
@@ -1589,7 +1591,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.7.8",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.7.9",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -2400,6 +2402,9 @@ function hoy(){
     const qs=(live.qScores||[]).map(s=>s||[0,0]);
     const ourTotal=qs.reduce((a,r)=>a+(r[0]||0),0);
     const rivTotal=qs.reduce((a,r)=>a+(r[1]||0),0);
+    // v1.7.9 · R2: 'started' = entró al live al menos una vez (botón "Continuar")
+    // 'inProgress' = realmente en juego (badge EN JUEGO + marcador visible)
+    const started=!!m.live;
     const inProgress=live.q>1||(qs.length>0&&(ourTotal+rivTotal)>0)||live.clockRunning;
     const nQ=m.quarters||4;const pL=nQ===4?"Q":"P";
     const curQ=live.q||1;
@@ -2435,7 +2440,7 @@ function hoy(){
           </div>
         </div>`:""}
         <div style="display:flex;gap:8px">
-          <button onclick="navTo('liveGame',{teamId:'${t.id}',matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${inProgress?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${inProgress?"🔴 Continuar partido":"▶ Empezar partido"}</button>
+          <button onclick="navTo('liveGame',{teamId:'${t.id}',matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${started?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${started?"🔴 Continuar partido":"▶ Empezar partido"}</button>
           <button onclick="S.teamId='${t.id}';navTo('matchDetail',{matchId:'${m.id}'})" style="width:46px;height:46px;border-radius:9px;background:var(--s2);border:1px solid var(--border);cursor:pointer;font-size:18px">📋</button>
           ${inProgress?`<button onclick="confirmFinishMatch('${t.id}','${m.id}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar partido">🏁</button>`:""}
         </div>
@@ -3254,6 +3259,8 @@ function activateOT(){
   m.live.otCount=(m.live.otCount||0)+1;const newQ=(m.quarters||4)+m.live.otCount;
   if(!m.live.qScores)m.live.qScores=[];while(m.live.qScores.length<newQ)m.live.qScores.push([0,0]);
   m.live.q=newQ;m.live.clockSec=5*60;m.live.clockMins=5;m.live.clockRunning=false;
+  // v1.7.9 · R1: la prórroga es ahora el cuarto más alto alcanzado
+  m.live.maxQ=Math.max(m.live.maxQ||1,newQ);
   // v1.6.13 · B-42: las faltas de equipo en OT continúan del Q4 (regla FIBA 37.2).
   // La inicialización de m.live ya pre-alloca quarters+1 slots, así que el slot del
   // primer OT puede existir con valor 0. Sobreescribimos explícitamente con el valor
@@ -3339,7 +3346,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.8 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.7.9 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4371,7 +4378,8 @@ function matchDetail(){
 
   // Result badge
   const resultBadge=sc?`<span id="match-result-badge" class="result-pill ${r}" style="font-size:15px;padding:4px 14px">${r==="W"?"🏆 Victoria":r==="L"?"❌ Derrota":"🤝 Empate"} ${our}–${their}</span>`:`<span id="match-result-badge" class="result-pill P" style="font-size:13px;padding:3px 10px">⏳ Pendiente</span>`;
-  const hasLive=!!(m.live&&(m.live.log||[]).length>0);
+  // v1.7.9 · R2: basta con que se haya entrado al live game una vez (live inicializado)
+  const hasLive=!!m.live;
 
   return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="navBack()">←</button>
@@ -5041,13 +5049,16 @@ function liveGame(){
     const initScores=Array.from({length:nQ},()=>[0,0]);
     const initFouls=Array.from({length:nQ},()=>0);
     const initSec=(m.qMins||10)*60;
-    m.live={q:1,qScores:initScores,teamFouls:initFouls,stats:{},rivalStats:{},log:[],selPid:null,onCourt:[],rivalOnCourt:[],activeTeam:"our",clockSec:initSec,clockMins:m.qMins||10,clockRunning:false,timeouts:{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]},rivalFouls:[0,0,0,0,0,0]};
+    m.live={q:1,maxQ:1,qScores:initScores,teamFouls:initFouls,stats:{},rivalStats:{},log:[],selPid:null,onCourt:[],rivalOnCourt:[],activeTeam:"our",clockSec:initSec,clockMins:m.qMins||10,clockRunning:false,timeouts:{our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]},rivalFouls:[0,0,0,0,0,0]};
     save();
   }
   const live=m.live;
   // Migrate old timeouts array format to object
   if(Array.isArray(live.timeouts)||!live.timeouts)
     live.timeouts={our:[0,0,0,0,0,0],rival:[0,0,0,0,0,0]};
+  // v1.7.9 · R1: migración de partidos viejos sin maxQ. Lo derivamos de live.q
+  // (asumimos que el cuarto actual es el más alto alcanzado).
+  if(live.maxQ==null)live.maxQ=Math.max(1,live.q||1);
   // Init onCourt from titulares or first 5 convocados
   if(!live.onCourt||live.onCourt.length===0){
     const tits=(m.titulares||[]).filter(id=>convIds.includes(id));
@@ -5085,14 +5096,19 @@ function liveGame(){
   const benchP=convP.filter(p=>!onCourt.includes(p.id));
   const courtP=onCourt.map(id=>convP.find(p=>p.id===id)).filter(Boolean);
 
-  // Quarter tabs
+  // Quarter tabs (v1.7.9 · R1: tabs > maxQ deshabilitados)
+  const _maxQ=live.maxQ||1;
   const qTabs=qlabels.map((ql,qi)=>{
-    const active=curQ===qi+1;
+    const qNum=qi+1;
+    const active=curQ===qNum;
+    const future=qNum>_maxQ;
     const qs=qScores[qi]||[0,0];
     const hasD=qs[0]||qs[1];
-    return`<button class="qtab-btn ${active?"active":""}" onclick="setLiveQ(${qi+1})">
+    const onClickAttr=future?"":` onclick="setLiveQ(${qNum})"`;
+    const futureStyle=future?";opacity:.45;cursor:not-allowed":"";
+    return`<button class="qtab-btn ${active?"active":""}" style="${futureStyle}"${onClickAttr}${future?` title="Aún no has llegado a ${ql}" disabled`:""}>
       <div>${ql}</div>
-      <div style="font-size:9px;margin-top:1px;color:${active?"var(--orange)":"var(--tm)"}">${hasD?qs[0]+"–"+qs[1]:"—"}</div>
+      <div style="font-size:9px;margin-top:1px;color:${active?"var(--orange)":"var(--tm)"}">${hasD?qs[0]+"–"+qs[1]:future?"🔒":"—"}</div>
     </button>`;
   }).join("");
 
@@ -6607,6 +6623,15 @@ function openEditQModal(){
 
 function setLiveQ(q){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
+  // v1.7.9 · R1: bloquear salto a cuartos no alcanzados aún
+  const maxQ=m.live.maxQ||1;
+  if(q>maxQ){
+    const nQ=m.quarters||4;
+    const pL=nQ===4?"Q":"P";
+    const label=q<=nQ?pL+q:"OT";
+    toast("⚠️ Aún no has llegado a "+label);
+    return;
+  }
   m.live.q=q;
   if(!m.live.qScores)m.live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
   while(m.live.qScores.length<q)m.live.qScores.push([0,0]);

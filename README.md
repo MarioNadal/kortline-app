@@ -9,7 +9,37 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.8 — Hotfix banner del capitán _(actual)_
+### v1.7.9 — Auditoría regresión: bloqueo de cuartos futuros + "Continuar" desde la 1ª vez _(actual)_
+
+Tras una auditoría completa del README desde v1.6.0 a v1.7.8 se detectaron **dos features de v1.6.0 que se habían caído** entre versiones intermedias. Ambas restauradas en este release.
+
+**R1 · Bloqueo de cuartos futuros (B-11 de v1.6.0)**
+
+Antes los tabs **Q1 · Q2 · Q3 · Q4** del live game eran clicables todos por igual: se podía saltar al Q4 sin haber jugado el Q1, registrando acciones en el cuarto equivocado por descuido.
+
+Ahora:
+
+- `m.live.maxQ` trackea el cuarto más alto alcanzado. Se inicializa a 1 al entrar al live por primera vez.
+- Se incrementa automáticamente al avanzar de cuarto (cuando `clockSec` llega a 0) y al activar prórroga.
+- `setLiveQ(q)` rechaza con toast `⚠️ Aún no has llegado a Qx` si `q > maxQ`.
+- En el render de los tabs, los cuartos `> maxQ` aparecen en **gris al 45% de opacidad**, con `cursor:not-allowed`, atributo `disabled` y un icono **🔒** en lugar del marcador. No reaccionan al click.
+- Los cuartos `≤ maxQ` siguen funcionando como hoy: se puede volver a uno pasado para revisar o añadir acciones.
+- Migración de partidos viejos sin `maxQ`: se deriva de `live.q` (asumimos que el cuarto actual es el más alto alcanzado).
+
+**R2 · "Continuar partido" desde la primera vez (B-12 de v1.6.0)**
+
+Antes el botón sólo decía "Continuar" cuando había acciones registradas o el cuarto era >1. Si entrabas al live y volvías sin tocar nada, decía "Empezar partido" otra vez — perdías la pista de que ya habías entrado.
+
+Ahora se distinguen dos conceptos:
+
+- **`started`** = `!!m.live` (basta con haber entrado al live al menos una vez para que el objeto exista).
+- **`inProgress`** = condiciones reales de juego activo (`q>1` o puntos o reloj corriendo).
+
+El **botón** usa `started` → "🔴 Continuar partido" desde la primera entrada. El **badge "🔴 EN JUEGO"** y el marcador en vivo siguen usando `inProgress` — no se activan hasta que hay actividad real. Aplicado a **HOY** (cards de partidos de hoy) y a **matchDetail** (botón "Continuar en vivo").
+
+---
+
+### v1.7.8 — Hotfix banner del capitán
 
 **Bug encontrado en v1.7.7.** El banner del capitán no se actualizaba al pulsar (C) en un jugador — la función `_convCapitan` refrescaba las filas afectadas pero no llamaba a `_convRefreshCapBanner`. El banner amarillo "Sin capitán designado" se quedaba congelado aunque ya hubieras designado uno.
 
