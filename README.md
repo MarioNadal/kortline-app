@@ -9,7 +9,15 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.7.7 — Validaciones de convocatoria + banner del capitán _(actual)_
+### v1.7.8 — Hotfix banner del capitán _(actual)_
+
+**Bug encontrado en v1.7.7.** El banner del capitán no se actualizaba al pulsar (C) en un jugador — la función `_convCapitan` refrescaba las filas afectadas pero no llamaba a `_convRefreshCapBanner`. El banner amarillo "Sin capitán designado" se quedaba congelado aunque ya hubieras designado uno.
+
+**Fix.** `_convCapitan` ahora llama también a `_convRefreshCapBanner()` tras el refresh de filas. El banner cambia a verde con `© Capitán: #X Nombre` al instante.
+
+---
+
+### v1.7.7 — Validaciones de convocatoria + banner del capitán
 
 **Regresión de v1.6.0 restaurada.** En algún momento entre v1.6.0 y v1.7.6 se perdieron las **validaciones en cadena al cerrar la convocatoria** y el **banner del capitán prominente**. `_convFinish()` se había quedado en un simple `save() + cerrar`. Restaurado:
 
