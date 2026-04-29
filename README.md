@@ -9,7 +9,33 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.0 — Estadísticas avanzadas y pantalla completa por giro _(actual)_
+### v1.8.1 — Compresión adaptativa de fotos en pase de lista _(actual)_
+
+**Bug.** Al subir una foto del entrenamiento desde la cámara del móvil siempre saltaba `⚠️ Foto demasiado grande` y la foto se descartaba. El handler antiguo hacía una **única pasada** con resize a 600 px + JPEG calidad 0.65, y si el resultado no cabía en `localStorage` (porque ya había acumulado otros datos), no volvía a intentarlo con menor calidad.
+
+**Fix.** Compresión adaptativa con varios niveles que se prueban en cascada hasta encontrar uno que quepa:
+
+| Intento | Lado máx | Calidad JPEG |
+|---------|----------|--------------|
+| 1 | 600 px | 0.70 |
+| 2 | 480 px | 0.65 |
+| 3 | 400 px | 0.55 |
+| 4 | 320 px | 0.45 |
+| 5 | 240 px | 0.40 |
+
+El resultado final aparece en el toast con el tamaño aproximado en KB (`📷 Foto guardada (~85 KB)`). Si después de los 5 intentos sigue sin caber, se restaura la foto anterior (si la había) y se muestra:
+
+> ⚠️ Sin espacio. Borra fotos antiguas o exporta backup.
+
+**Otros**
+
+- El handler ahora avisa al usuario que está procesando: toast efímero `⏳ Procesando foto…`.
+- Helper `_compressPhoto(file, maxDim, quality)` async que devuelve la base64 ya redimensionada y comprimida. Limpia el `URL.revokeObjectURL` correctamente para no fugar memoria.
+- Sin upscale: si la foto original es más pequeña que `maxDim`, se mantiene su tamaño en lugar de agrandarla con pérdida de calidad.
+
+---
+
+### v1.8.0 — Estadísticas avanzadas y pantalla completa por giro
 
 Release mayor en estadísticas. Cuatro métricas nuevas (MIN, +/-, EFF, eFG%) y simplificación del modo pantalla completa.
 

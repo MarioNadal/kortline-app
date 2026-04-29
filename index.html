@@ -1702,7 +1702,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.8.0",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.8.1",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3457,7 +3457,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.0 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.1 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -4156,11 +4156,68 @@ function _flashAttSaved(){
 // pagehide funciona en iOS Safari (beforeunload no). visibilitychange cubre el resto.
 window.addEventListener("pagehide",()=>{try{_attFlushDraft();}catch(e){}});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"){try{_attFlushDraft();}catch(e){}}});
+// v1.8.1: comprime una foto a `maxDim` px y `quality` JPEG. Devuelve base64.
+function _compressPhoto(file,maxDim,quality){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      try{
+        const ratio=Math.min(maxDim/img.width,maxDim/img.height,1); // no upscale
+        const w=Math.max(1,Math.round(img.width*ratio));
+        const h=Math.max(1,Math.round(img.height*ratio));
+        const canvas=document.createElement("canvas");
+        canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(img,0,0,w,h);
+        const b64=canvas.toDataURL("image/jpeg",quality);
+        URL.revokeObjectURL(url);
+        resolve(b64);
+      }catch(e){URL.revokeObjectURL(url);reject(e);}
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error("No se pudo leer la imagen"));};
+    img.src=url;
+  });
+}
+
+// v1.8.1: handler con compresión adaptativa — prueba varios niveles hasta que el
+// resultado quepa en localStorage. Resuelve "Foto demasiado grande" con cámara móvil.
 async function handlePhoto(input){
   const file=input.files[0];if(!file)return;
-  const img=new Image();const canvas=document.createElement("canvas");const ctx=canvas.getContext("2d");
-  img.onload=()=>{const max=600;const ratio=Math.min(max/img.width,max/img.height);canvas.width=img.width*ratio;canvas.height=img.height*ratio;ctx.drawImage(img,0,0,canvas.width,canvas.height);const b64=canvas.toDataURL("image/jpeg",0.65);const k=sk(S.teamId,S.date);const sess={...S.sessions[k]||{}};sess._photo=b64;S.sessions[k]=sess;if(!save()){delete sess._photo;toast("⚠️ Foto demasiado grande");}else{render();toast("📷 Foto guardada");}};
-  img.src=URL.createObjectURL(file);
+  toast("⏳ Procesando foto…");
+  const k=sk(S.teamId,S.date);
+  const sess={...S.sessions[k]||{}};
+  const oldPhoto=sess._photo;
+  // Niveles de compresión decrecientes (de mejor a peor calidad/tamaño)
+  const tries=[
+    {max:600,q:0.7},
+    {max:480,q:0.65},
+    {max:400,q:0.55},
+    {max:320,q:0.45},
+    {max:240,q:0.4}
+  ];
+  let saved=false;let finalSize=0;
+  for(const cfg of tries){
+    try{
+      const b64=await _compressPhoto(file,cfg.max,cfg.q);
+      sess._photo=b64;
+      S.sessions[k]=sess;
+      if(save()){
+        saved=true;
+        finalSize=Math.round(b64.length*0.75/1024); // bytes aprox de la imagen base64
+        break;
+      }
+    }catch(e){console.error(e);}
+  }
+  if(!saved){
+    // Restaurar foto previa si la había
+    if(oldPhoto){sess._photo=oldPhoto;}else{delete sess._photo;}
+    S.sessions[k]=sess;save();render();
+    toast("⚠️ Sin espacio. Borra fotos antiguas o exporta backup.");
+    return;
+  }
+  render();
+  toast("📷 Foto guardada (~"+finalSize+" KB)");
 }
 function removePhoto(){const k=sk(S.teamId,S.date);const sess={...S.sessions[k]||{}};delete sess._photo;S.sessions[k]=sess;save();render();}
 
