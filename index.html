@@ -877,14 +877,178 @@ function _classifyShot(xNorm,yNorm){
   return dist>=_ARC3_R?3:2;
 }
 
+/* ═══════════════════════════════════════
+   ZONAS DEL SHOT CHART (v1.8.2)
+   7 zonas para heatmap:
+   - paint    · pintura (rectángulo de la zona)
+   - mid-L    · mid-range izquierda (2pt fuera de pintura, x<625)
+   - mid-C    · mid-range centro (2pt fuera de pintura, codo)
+   - mid-R    · mid-range derecha (2pt fuera de pintura, x>875)
+   - corner-L · esquina izquierda 3pt (x<90)
+   - top      · top + alas 3pt (arco curvo central)
+   - corner-R · esquina derecha 3pt (x>1410)
+═══════════════════════════════════════ */
+const _ZONE_LABELS={
+  "paint":"Pintura",
+  "mid-L":"Media izq.",
+  "mid-C":"Media centro",
+  "mid-R":"Media der.",
+  "corner-L":"Esq. izq. 3pt",
+  "top":"Top + alas 3pt",
+  "corner-R":"Esq. der. 3pt"
+};
+
+function _getShotZone(xNorm,yNorm){
+  const x=xNorm*_COURT_W, y=yNorm*_COURT_H;
+  // Esquinas 3pt (líneas rectas, fuera de las bandas del arco recto)
+  if(x<_CORNER_X_L)return "corner-L";
+  if(x>_CORNER_X_R)return "corner-R";
+  // Pintura (zona FIBA: 4.90m × 5.80m centrada en x=750, desde y=820 a y=1400)
+  if(x>=505&&x<=995&&y>=820)return "paint";
+  // Distancia al aro
+  const dx=x-_ARO_X, dy=y-_ARO_Y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist>=_ARC3_R)return "top"; // 3pt en arco curvo
+  // 2pt fuera de pintura (mid-range)
+  if(x<625)return "mid-L";
+  if(x>875)return "mid-R";
+  return "mid-C";
+}
+
+// Centroides aproximados de cada zona (para colocar el texto del heatmap)
+const _ZONE_CENTROIDS={
+  "paint":     {x:750,  y:1100},
+  "mid-L":     {x:340,  y:1080},
+  "mid-C":     {x:750,  y:780},
+  "mid-R":     {x:1160, y:1080},
+  "corner-L":  {x:45,   y:1300},
+  "top":       {x:750,  y:520},
+  "corner-R":  {x:1455, y:1300}
+};
+
+// Estadísticas por zona: {paint:{made,att,pct,value}, ...}
+function _zoneStats(shots){
+  const out={};
+  Object.keys(_ZONE_LABELS).forEach(z=>{out[z]={made:0,att:0,pct:0,value:0};});
+  (shots||[]).forEach(s=>{
+    if(s.x==null||s.y==null)return;
+    const z=_getShotZone(s.x,s.y);
+    if(!out[z])return;
+    out[z].att++;
+    if(s.made){out[z].made++;out[z].value+=(s.value||2);}
+  });
+  Object.values(out).forEach(o=>{o.pct=o.att>0?Math.round(100*o.made/o.att):0;});
+  return out;
+}
+
+// Color de zona según % (rojo→amarillo→verde)
+function _zoneColor(pct,att){
+  if(att===0)return "rgba(120,120,140,.10)"; // sin tiros: gris translúcido
+  if(pct>=50)return "rgba(34,197,94,.42)";
+  if(pct>=40)return "rgba(132,204,22,.40)";
+  if(pct>=30)return "rgba(245,158,11,.40)";
+  if(pct>=20)return "rgba(249,115,22,.40)";
+  return "rgba(239,68,68,.40)";
+}
+
+// v1.8.2: exportar el shot map actual como PNG. Usa el SVG ya renderizado y lo dibuja en canvas.
+async function _exportShotMapPNG(){
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const m=mById(S.teamId,S.matchId);
+  if(!t)return;
+  const filterPid=S.shotMapPid||"all";
+  const filterQ=S.shotMapQ||"all";
+  const filterMade=S.shotMapMade||"all";
+  const mode=S.shotMapMode||"shots";
+  const source=S.shotMapSource||"match";
+  // Recolectar shots con la misma lógica que shotMap()
+  let allShots=[];
+  if(source==="season"){
+    (S.matches[S.teamId]||[]).forEach(mm=>(mm.live?.shots||[]).forEach(s=>allShots.push({...s})));
+  } else if(m&&m.live){
+    allShots=(m.live.shots||[]).map(s=>({...s}));
+  }
+  let shots=allShots;
+  if(filterPid!=="all")shots=shots.filter(s=>s.pid===filterPid);
+  if(source==="match"&&filterQ!=="all")shots=shots.filter(s=>String(s.q)===String(filterQ));
+  if(filterMade==="made")shots=shots.filter(s=>s.made);
+  else if(filterMade==="miss")shots=shots.filter(s=>!s.made);
+  if(shots.length===0){toast("⚠️ No hay tiros para exportar");return;}
+
+  // SVG con fondo sólido para el PNG
+  const svg=_courtSVG({width:_COURT_W,shots,showShots:mode==="shots",heatmap:mode==="heatmap",exportMode:true});
+
+  // Cabecera con nombre, fecha y resumen
+  const players=pl(S.teamId);
+  const pname=filterPid==="all"?"Todos":(_shortName(players.find(p=>p.id===filterPid)?.name||"?"));
+  const made=shots.filter(s=>s.made).length;
+  const att=shots.length;
+  const pct=att>0?Math.round(100*made/att):0;
+  const dateStr=new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric"});
+  const subtitleText=source==="season"?"Toda la temporada":(m?`vs ${m.rival||"Rival"}`:"");
+  const headerH=240;
+  const fullW=_COURT_W;
+  const fullH=_COURT_H+headerH+60;
+  const headerSVG=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fullW} ${fullH}" width="${fullW}">
+    <rect x="0" y="0" width="${fullW}" height="${fullH}" fill="#070f1e"/>
+    <text x="40" y="80" fill="#F06318" font-family="system-ui,sans-serif" font-weight="900" font-size="62">${esc(t.name)}</text>
+    <text x="40" y="140" fill="white" font-family="system-ui,sans-serif" font-weight="700" font-size="42">📍 Mapa de tiros · ${esc(pname)}</text>
+    <text x="40" y="190" fill="#6b8aaf" font-family="system-ui,sans-serif" font-weight="500" font-size="34">${esc(subtitleText)} · ${dateStr}</text>
+    <text x="${fullW-40}" y="80" text-anchor="end" fill="#22c55e" font-family="system-ui,sans-serif" font-weight="900" font-size="62">${made}/${att}</text>
+    <text x="${fullW-40}" y="140" text-anchor="end" fill="white" font-family="system-ui,sans-serif" font-weight="700" font-size="48">${pct}%</text>
+    <text x="${fullW-40}" y="${fullH-20}" text-anchor="end" fill="#6b8aaf" font-family="system-ui,sans-serif" font-weight="500" font-size="26">Generado con Kortline · CB Jaca</text>
+    <g transform="translate(0,${headerH})">${svg.replace(/<\?xml[^>]+\?>/g,"").replace(/^<svg[^>]+>|<\/svg>$/g,"")}</g>
+  </svg>`;
+
+  try{
+    const blob=new Blob([headerSVG],{type:"image/svg+xml;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=()=>rej(new Error("svg load failed"));img.src=url;});
+    const scale=2; // resolución mejorada
+    const canvas=document.createElement("canvas");
+    canvas.width=fullW*scale/3; // base ya es 1500, scale/3 da ~1000px que es razonable
+    canvas.height=fullH*scale/3;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#070f1e";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    URL.revokeObjectURL(url);
+    const pngUrl=canvas.toDataURL("image/png");
+    const safeName=t.name.replace(/[^a-zA-Z0-9]+/g,"-").toLowerCase();
+    const fname=`kortline-tiros-${safeName}-${new Date().toISOString().slice(0,10)}.png`;
+    // Si Web Share API soporta archivos, intentarlo (móvil)
+    if(navigator.canShare){
+      try{
+        const blobPng=await new Promise(r=>canvas.toBlob(r,"image/png"));
+        const file=new File([blobPng],fname,{type:"image/png"});
+        if(navigator.canShare({files:[file]})){
+          await navigator.share({files:[file],title:"Mapa de tiros · Kortline"});
+          toast("📤 Compartido");
+          return;
+        }
+      }catch(e){console.log("share fail, fallback download",e);}
+    }
+    // Fallback: descargar
+    const a=document.createElement("a");a.href=pngUrl;a.download=fname;a.click();
+    toast("📥 PNG descargado");
+  }catch(e){
+    console.error(e);
+    toast("⚠️ No se pudo exportar el PNG");
+  }
+}
+
 // Genera el SVG de la cancha. opts = {width, shots, interactive, ariaLabel}
 function _courtSVG(opts={}){
   const w=opts.width||300;
   const shots=opts.shots||[];
   const showShots=opts.showShots!==false;
+  const heatmap=!!opts.heatmap;
   const interactive=!!opts.interactive;
+  const exportMode=!!opts.exportMode; // fondo sólido para PNG
   const tapHandler=interactive?` style="cursor:crosshair;touch-action:manipulation" onclick="_courtSVGTap(event,this)" id="${opts.id||'court-svg'}"`:` style="display:block"`;
-  const shotMarkers=showShots?shots.map(s=>{
+
+  const shotMarkers=(!heatmap&&showShots)?shots.map(s=>{
     const cx=(s.x||0)*_COURT_W, cy=(s.y||0)*_COURT_H;
     if(s.made){
       const fill=s.value===3?"#3b82f6":"#22c55e";
@@ -893,13 +1057,42 @@ function _courtSVG(opts={}){
       return `<g opacity=".75"><line x1="${cx-18}" y1="${cy-18}" x2="${cx+18}" y2="${cy+18}" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/><line x1="${cx-18}" y1="${cy+18}" x2="${cx+18}" y2="${cy-18}" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/></g>`;
     }
   }).join(""):"";
+
+  // Heatmap: zonas coloreadas con texto X/Y · pct%
+  let zoneOverlay="";
+  if(heatmap){
+    const zs=_zoneStats(shots);
+    // Polígonos aproximados por zona (en coords del viewBox 0 0 1500 1400)
+    const polys={
+      "corner-L":  `M 0 1400 L 90 1400 L 90 1101 L 0 1101 Z`,
+      "corner-R":  `M 1410 1400 L 1500 1400 L 1500 1101 L 1410 1101 Z`,
+      "paint":     `M 505 820 L 995 820 L 995 1400 L 505 1400 Z`,
+      "mid-L":     `M 90 1101 L 90 1400 L 505 1400 L 505 820 L 425 820 A ${_ARC3_R} ${_ARC3_R} 0 0 0 90 1101 Z`,
+      "mid-R":     `M 1410 1101 L 1410 1400 L 995 1400 L 995 820 L 1075 820 A ${_ARC3_R} ${_ARC3_R} 0 0 1 1410 1101 Z`,
+      "mid-C":     `M 505 820 L 425 820 A ${_ARC3_R} ${_ARC3_R} 0 0 1 1075 820 L 995 820 Z`,
+      "top":       `M 90 1101 A ${_ARC3_R} ${_ARC3_R} 0 0 1 1410 1101 L 1410 0 L 90 0 Z`
+    };
+    zoneOverlay=Object.keys(polys).map(z=>{
+      const st=zs[z]||{made:0,att:0,pct:0};
+      const fill=_zoneColor(st.pct,st.att);
+      const c=_ZONE_CENTROIDS[z]||{x:_COURT_W/2,y:_COURT_H/2};
+      const lbl=st.att>0
+        ? `<text x="${c.x}" y="${c.y}" text-anchor="middle" fill="white" stroke="rgba(0,0,0,.55)" stroke-width="2" paint-order="stroke" font-family="system-ui,sans-serif" font-weight="900" font-size="58">${st.made}/${st.att}</text>
+           <text x="${c.x}" y="${c.y+62}" text-anchor="middle" fill="white" stroke="rgba(0,0,0,.55)" stroke-width="2" paint-order="stroke" font-family="system-ui,sans-serif" font-weight="700" font-size="44">${st.pct}%</text>`
+        : `<text x="${c.x}" y="${c.y}" text-anchor="middle" fill="rgba(255,255,255,.35)" font-family="system-ui,sans-serif" font-weight="700" font-size="40">—</text>`;
+      return `<path d="${polys[z]}" fill="${fill}" stroke="rgba(255,255,255,.18)" stroke-width="2"/>${lbl}`;
+    }).join("");
+  }
+
+  const bg=exportMode?"#070f1e":"rgba(240,99,24,.04)";
   return `<svg viewBox="0 0 ${_COURT_W} ${_COURT_H}" width="${w}"${tapHandler} xmlns="http://www.w3.org/2000/svg">
     <!-- Suelo de la cancha -->
-    <rect x="0" y="0" width="${_COURT_W}" height="${_COURT_H}" fill="rgba(240,99,24,.04)" stroke="rgba(255,255,255,.55)" stroke-width="6"/>
+    <rect x="0" y="0" width="${_COURT_W}" height="${_COURT_H}" fill="${bg}" stroke="rgba(255,255,255,.55)" stroke-width="6"/>
+    ${zoneOverlay}
     <!-- Semicírculo del medio campo -->
     <path d="M 575 0 A 175 175 0 0 1 925 0" stroke="rgba(255,255,255,.55)" stroke-width="4" fill="none"/>
     <!-- Zona (pintura) -->
-    <rect x="505" y="820" width="490" height="580" stroke="rgba(255,255,255,.55)" stroke-width="4" fill="rgba(240,99,24,.08)"/>
+    <rect x="505" y="820" width="490" height="580" stroke="rgba(255,255,255,.55)" stroke-width="4" fill="${heatmap?"none":"rgba(240,99,24,.08)"}"/>
     <!-- Semicírculo del tiro libre (arriba de la zona) -->
     <path d="M 570 820 A 180 180 0 0 1 930 820" stroke="rgba(255,255,255,.55)" stroke-width="4" fill="none"/>
     <!-- Línea del tiro libre (parte inferior del semicírculo, punteada) -->
@@ -1702,7 +1895,7 @@ function autoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.8.1",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.8.2",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3457,7 +3650,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.1 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.2 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -6072,16 +6265,27 @@ window._pickReboundRival=function(){
 function shotMap(){
   const t=S.teams.find(x=>x.id===S.teamId);
   const m=mById(S.teamId,S.matchId);
-  if(!t||!m||!m.live){S.screen="liveGame";render();return"";}
-  const allShots=m.live.shots||[];
+  if(!t){S.screen="equipos";render();return"";}
   const players=pl(S.teamId);
   const filterPid=S.shotMapPid||"all";
   const filterQ=S.shotMapQ||"all";
-  const filterMade=S.shotMapMade||"all"; // "all" | "made" | "miss"
+  const filterMade=S.shotMapMade||"all";
+  const mode=S.shotMapMode||"shots"; // "shots" | "heatmap"
+  const source=S.shotMapSource||"match"; // "match" | "season"
+
+  // v1.8.2: agregar shots según fuente (este partido o toda la temporada)
+  let allShots=[];
+  if(source==="season"){
+    (S.matches[S.teamId]||[]).forEach(mm=>{
+      (mm.live?.shots||[]).forEach(s=>{allShots.push({...s,_matchId:mm.id,_date:mm.date});});
+    });
+  } else if(m&&m.live){
+    allShots=(m.live.shots||[]).map(s=>({...s,_matchId:m.id,_date:m.date}));
+  }
 
   let shots=allShots;
   if(filterPid!=="all")shots=shots.filter(s=>s.pid===filterPid);
-  if(filterQ!=="all")shots=shots.filter(s=>String(s.q)===String(filterQ));
+  if(source==="match"&&filterQ!=="all")shots=shots.filter(s=>String(s.q)===String(filterQ));
   if(filterMade==="made")shots=shots.filter(s=>s.made);
   else if(filterMade==="miss")shots=shots.filter(s=>!s.made);
 
@@ -6095,17 +6299,43 @@ function shotMap(){
   const totMade=made2+made3, totAtt=made2+made3+miss2+miss3;
   const pctAll=totAtt>0?Math.round(100*totMade/totAtt):0;
 
-  const nQ=m.quarters||4;
-  const otCount=m.live.otCount||0;
+  const nQ=m?.quarters||4;
+  const otCount=m?.live?.otCount||0;
   const qLabels=[...Array.from({length:nQ},(_,i)=>(nQ===4?"Q":"P")+(i+1)),...Array.from({length:otCount},(_,i)=>otCount===1?"OT":"OT"+(i+1))];
 
-  const playerOpts=players.filter(p=>(m.convocados||[]).includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+  // Para temporada: jugadores convocados en cualquier partido
+  const playerIdsInMatches=new Set();
+  if(source==="season"){
+    (S.matches[S.teamId]||[]).forEach(mm=>(mm.convocados||[]).forEach(id=>playerIdsInMatches.add(id)));
+  } else if(m){
+    (m.convocados||[]).forEach(id=>playerIdsInMatches.add(id));
+  }
+  const playerOpts=players.filter(p=>playerIdsInMatches.has(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+
+  const subtitle=source==="season"
+    ?`Temporada · ${(S.matches[S.teamId]||[]).filter(mm=>mm.live?.shots?.length).length} partidos`
+    :(m?`${esc(t.name)} vs ${esc(m.rival||"Rival")}`:"");
+
+  // Header del filtro de fuente — habilitado solo si hay partido actual con shots o si hay matches
+  const hasMatch=!!m&&!!m.live;
+  const seasonHasShots=(S.matches[S.teamId]||[]).some(mm=>mm.live?.shots?.length);
 
   return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="navBack()">←</button>
-    <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📍 Mapa de tiros</div><div style="font-size:11px;color:var(--orange)">${esc(t.name)} vs ${esc(m.rival||"Rival")}</div></div>
+    <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📍 Mapa de tiros</div><div style="font-size:11px;color:var(--orange);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${subtitle}</div></div>
+    ${shots.length>0?`<button onclick="_exportShotMapPNG()" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#22c55e;width:36px;height:36px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0" title="Exportar PNG para WhatsApp">📤</button>`:""}
   </div></header>
   <div class="content" style="padding-bottom:90px">
+    <!-- Toggle modo: Puntos / Heatmap -->
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button onclick="S.shotMapMode='shots';render()" style="flex:1;padding:9px;border-radius:9px;border:${mode==="shots"?"2px solid var(--orange)":"1px solid var(--border)"};background:${mode==="shots"?"rgba(240,99,24,.15)":"var(--s)"};color:${mode==="shots"?"var(--orange)":"var(--td)"};cursor:pointer;font-size:13px;font-weight:800">🎯 Puntos</button>
+      <button onclick="S.shotMapMode='heatmap';render()" style="flex:1;padding:9px;border-radius:9px;border:${mode==="heatmap"?"2px solid var(--orange)":"1px solid var(--border)"};background:${mode==="heatmap"?"rgba(240,99,24,.15)":"var(--s)"};color:${mode==="heatmap"?"var(--orange)":"var(--td)"};cursor:pointer;font-size:13px;font-weight:800">🔥 Heatmap zonas</button>
+    </div>
+    <!-- Toggle fuente: Este partido / Toda la temporada -->
+    ${hasMatch||seasonHasShots?`<div style="display:flex;gap:6px;margin-bottom:10px">
+      ${hasMatch?`<button onclick="S.shotMapSource='match';render()" style="flex:1;padding:8px;border-radius:9px;border:${source==="match"?"2px solid #06b6d4":"1px solid var(--border)"};background:${source==="match"?"rgba(6,182,212,.12)":"var(--s)"};color:${source==="match"?"#06b6d4":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">📅 Este partido</button>`:""}
+      ${seasonHasShots?`<button onclick="S.shotMapSource='season';render()" style="flex:1;padding:8px;border-radius:9px;border:${source==="season"?"2px solid #06b6d4":"1px solid var(--border)"};background:${source==="season"?"rgba(6,182,212,.12)":"var(--s)"};color:${source==="season"?"#06b6d4":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">🗓 Toda la temporada</button>`:""}
+    </div>`:""}
     <!-- Filtros -->
     <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:12px">
       <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:6px">JUGADOR</div>
@@ -6113,10 +6343,10 @@ function shotMap(){
         <option value="all" ${filterPid==="all"?"selected":""}>Todos los jugadores</option>
         ${playerOpts.map(p=>`<option value="${p.id}" ${filterPid===p.id?"selected":""}>#${p.number||"?"} ${esc(p.name)}</option>`).join("")}
       </select>
-      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      ${source==="match"?`<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
         <button onclick="S.shotMapQ='all';render()" style="padding:6px 10px;border-radius:7px;border:${filterQ==="all"?"2px solid var(--orange)":"1px solid var(--border)"};background:${filterQ==="all"?"rgba(240,99,24,.15)":"var(--s)"};color:${filterQ==="all"?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">Todos</button>
         ${qLabels.map((ql,i)=>`<button onclick="S.shotMapQ='${i+1}';render()" style="padding:6px 10px;border-radius:7px;border:${filterQ===String(i+1)?"2px solid var(--orange)":"1px solid var(--border)"};background:${filterQ===String(i+1)?"rgba(240,99,24,.15)":"var(--s)"};color:${filterQ===String(i+1)?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">${ql}</button>`).join("")}
-      </div>
+      </div>`:""}
       <div style="display:flex;gap:6px">
         <button onclick="S.shotMapMade='all';render()" style="flex:1;padding:6px 10px;border-radius:7px;border:${filterMade==="all"?"2px solid var(--orange)":"1px solid var(--border)"};background:${filterMade==="all"?"rgba(240,99,24,.15)":"var(--s)"};color:${filterMade==="all"?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">Todos</button>
         <button onclick="S.shotMapMade='made';render()" style="flex:1;padding:6px 10px;border-radius:7px;border:${filterMade==="made"?"2px solid #22c55e":"1px solid var(--border)"};background:${filterMade==="made"?"rgba(34,197,94,.15)":"var(--s)"};color:${filterMade==="made"?"#22c55e":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">✓ Anotados</button>
@@ -6138,16 +6368,24 @@ function shotMap(){
         <div style="font-size:10px;color:var(--td);font-weight:700">TOTAL · ${pctAll}%</div>
       </div>
     </div>`:""}
-    <!-- Cancha con tiros -->
-    <div style="background:rgba(0,0,0,.3);border-radius:14px;padding:12px;border:1px solid var(--border);text-align:center">
-      ${shots.length>0?_courtSVG({width:340,shots,showShots:true}):`<div style="padding:30px 10px;color:var(--tm);font-size:13px">Sin tiros con el filtro actual.</div>`+_courtSVG({width:340,shots:[],showShots:false})}
+    <!-- Cancha -->
+    <div id="shot-map-court" style="background:rgba(0,0,0,.3);border-radius:14px;padding:12px;border:1px solid var(--border);text-align:center">
+      ${shots.length>0
+        ? _courtSVG({width:340,shots,showShots:mode==="shots",heatmap:mode==="heatmap"})
+        : `<div style="padding:30px 10px;color:var(--tm);font-size:13px">Sin tiros con el filtro actual.</div>`+_courtSVG({width:340,shots:[],showShots:false})}
     </div>
     <!-- Leyenda -->
-    <div style="display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--td);font-weight:700">
+    ${mode==="shots"?`<div style="display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--td);font-weight:700;flex-wrap:wrap">
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#22c55e;border:2px solid white;vertical-align:middle"></span> 2pt anotado</span>
       <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;border:2px solid white;vertical-align:middle"></span> 3pt anotado</span>
       <span><span style="color:#ef4444;font-weight:900;font-size:14px">✗</span> Fallado</span>
-    </div>
+    </div>`:`<div style="display:flex;gap:8px;justify-content:center;margin-top:12px;font-size:11px;color:var(--td);font-weight:700;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:14px;height:10px;background:rgba(239,68,68,.42);border:1px solid white;vertical-align:middle"></span> &lt;20%</span>
+      <span><span style="display:inline-block;width:14px;height:10px;background:rgba(249,115,22,.42);border:1px solid white;vertical-align:middle"></span> 20-29%</span>
+      <span><span style="display:inline-block;width:14px;height:10px;background:rgba(245,158,11,.42);border:1px solid white;vertical-align:middle"></span> 30-39%</span>
+      <span><span style="display:inline-block;width:14px;height:10px;background:rgba(132,204,22,.42);border:1px solid white;vertical-align:middle"></span> 40-49%</span>
+      <span><span style="display:inline-block;width:14px;height:10px;background:rgba(34,197,94,.42);border:1px solid white;vertical-align:middle"></span> ≥50%</span>
+    </div>`}
   </div>
   ${navBar()}`;
 }

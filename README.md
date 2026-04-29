@@ -9,7 +9,67 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.1 — Compresión adaptativa de fotos en pase de lista _(actual)_
+### v1.8.2 — Shot Chart heatmap, agregado de temporada y exportar PNG _(actual)_
+
+Iteración 2 del Modo Pro Shot Chart (v1.7.0). Tres cambios mayores en la pantalla **📍 Mapa de tiros**:
+
+**🔥 Heatmap por zonas con %**
+
+Nuevo modo de visualización que clasifica cada tiro en una de **7 zonas** y colorea cada zona según el % de acierto. Helpers nuevos:
+
+- `_getShotZone(x, y)` — clasifica un tiro en `paint`, `mid-L`, `mid-C`, `mid-R`, `corner-L`, `top` o `corner-R`. Las divisiones siguen las líneas FIBA reales (pintura 4.90×5.80, arco de 3 a 6.75m, corner three a 0.90m).
+- `_zoneStats(shots)` — agrega made/att/pct por zona.
+- `_zoneColor(pct, att)` — gradiente del color de la zona:
+
+| % | Color |
+|---|---|
+| <20% | rojo |
+| 20–29% | naranja |
+| 30–39% | amarillo |
+| 40–49% | verde claro |
+| ≥50% | verde |
+| sin tiros | gris translúcido |
+
+En cada zona se imprime el conteo `X/Y` y el `%` con texto blanco trazado. El SVG renderiza los polígonos por debajo de las líneas de la cancha para no taparlas.
+
+**🎯 Toggle Puntos / Heatmap**
+
+Dos botones grandes encima de los filtros:
+
+- **🎯 Puntos** — vista clásica: cada tiro como punto individual (verde 2pt, azul triple, ✗ rojo fallado).
+- **🔥 Heatmap zonas** — vista agregada: zonas coloreadas con %.
+
+Cada modo tiene su propia leyenda al pie.
+
+**🗓 Agregado de toda la temporada**
+
+Toggle de fuente de datos:
+
+- **📅 Este partido** — solo `m.live.shots` del partido actual.
+- **🗓 Toda la temporada** — recorre todos `S.matches[teamId][*].live.shots` y los junta. El picker de jugadores se amplía con cualquiera convocado en cualquier partido. El filtro por cuarto desaparece (no aplica a temporada).
+
+Disponible automáticamente en cuanto haya al menos un partido con tiros registrados.
+
+**📤 Exportar PNG para WhatsApp**
+
+Botón verde 📤 en el header del mapa. Al pulsarlo:
+
+1. Recolecta los shots con los filtros actuales aplicados.
+2. Genera un SVG con cabecera (nombre del club, jugador filtrado, fecha, ratio `made/att` y %).
+3. Convierte el SVG a PNG vía `<canvas>` + `toDataURL("image/png")`.
+4. **Si el dispositivo soporta `navigator.canShare({files})`** (iOS Safari, Android Chrome modernos) → abre el menú nativo de compartir con WhatsApp/etc.
+5. Si no → descarga el PNG con nombre `kortline-tiros-{equipo}-{fecha}.png`.
+
+El PNG resultante mide ~1000×1000 px con fondo navy `#070f1e`, mantiene la paleta del club y es directamente publicable sin retoque.
+
+**Otros**
+
+- `_courtSVG` admite ahora dos opciones nuevas: `heatmap` (renderiza polígonos por zona) y `exportMode` (fondo sólido para el PNG).
+- En la cancha se mantiene en modo Heatmap el resto de líneas (pintura, arco, aro, etc.) por encima del overlay de zonas para que la perspectiva sea legible.
+
+---
+
+### v1.8.1 — Compresión adaptativa de fotos en pase de lista
 
 **Bug.** Al subir una foto del entrenamiento desde la cámara del móvil siempre saltaba `⚠️ Foto demasiado grande` y la foto se descartaba. El handler antiguo hacía una **única pasada** con resize a 600 px + JPEG calidad 0.65, y si el resultado no cabía en `localStorage` (porque ya había acumulado otros datos), no volvía a intentarlo con menor calidad.
 
