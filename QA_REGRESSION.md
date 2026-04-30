@@ -8,7 +8,7 @@ Checklist de features críticas que **no pueden romperse** entre versiones. Se e
 - Si hay fallos, anotar bug ID y arreglar antes de release.
 - Después de release, repetir 1 vez más en producción.
 
-**Versión última auditada**: v1.8.4 · 2026-04-30 (auditoría inicial detectó SW/manifest faltantes en v1.8.3 → arreglados en v1.8.4)
+**Versión última auditada**: v1.8.5 · 2026-04-30
 
 ---
 
@@ -81,6 +81,10 @@ Checklist de features críticas que **no pueden romperse** entre versiones. Se e
 | 7.10 | **Tap en jugador en pista → modal sustitución** | Tap card en pista → opciones de cambio (no "ENTRA"). | ☐ |
 | 7.11 | **ACTPAD: 8 botones en filas de 4** (v1.7.x) | AST/ROB/TAP/PER + FALT/TÉC/ANT/DESC visibles. | ☐ |
 | 7.12 | **Score, faltas y reloj se sincronizan** | Anotar canasta → marcador sube → persiste al recargar. | ☐ |
+| 7.13 | **Confirmación al cambiar a cuarto pasado (v1.8.5)** | En Q3, tocar pestaña Q1 → modal "¿Editar Q1?" → Cancelar mantiene Q3. | ☐ |
+| 7.14 | **Toast al cruzar 5ª falta equipo (v1.8.5)** | Hacer 5 faltas equipo en un cuarto → toast "🚨 BONUS activo" una sola vez. | ☐ |
+| 7.15 | **Modo rápido omite chainings (v1.8.5)** | Activar toggle en Ajustes → anotar canasta → NO pregunta asistencia. | ☐ |
+| 7.16 | **Selector equipo con dot color + abreviatura (v1.8.5)** | Live con rival → toggle muestra punto de color y abreviatura/_teamShort. | ☐ |
 
 ## 8. Shot Chart Pro
 

@@ -615,6 +615,19 @@ function _totalFouls(st){
   return (st.foul||0)+(st.ftech||0)+(st.funsport||0)+(st.fdq||0);
 }
 
+// v1.8.5 · F4d: dispara toast UNA SOLA VEZ por cuarto al cruzar a bonus (5ª falta).
+// Llamar después de incrementar teamFouls. El flag bonusToastFired[qi] evita repetir
+// si la falta nº 6, 7, etc. también suceden en el mismo cuarto.
+function _checkBonusEnter(m,qi){
+  const live=m?.live;if(!live)return;
+  const fouls=live.teamFouls?.[qi]||0;
+  if(fouls<5)return;
+  if(!live.bonusToastFired)live.bonusToastFired=[];
+  if(live.bonusToastFired[qi])return;
+  live.bonusToastFired[qi]=true;
+  toast("🚨 BONUS activo · próxima falta = 2 TL");
+}
+
 /* ═══════════════════════════════════════
    STATS AVANZADAS DEL LIVE GAME (v1.8.0)
    - Minutos jugados (MIN)
@@ -1254,6 +1267,19 @@ function _shortName(full){
   if(isInitial && parts[1])return parts[1];
   return first;
 }
+// v1.8.5 · F4c: nombre corto de equipo para el selector on-court y otros sitios
+// estrechos. Prioriza la primera palabra significativa antes de truncar con "…".
+// "Casademont Zaragoza" (max=14) → "Casademont" (cabe la primera palabra)
+// "Surne Bilbao"        (max=14) → "Surne Bilbao" (todo cabe)
+// "I.A.U.D Tarazona"    (max=14) → "I.A.U.D"
+function _teamShort(name,max){
+  max=max||14;
+  if(!name)return "?";
+  if(name.length<=max)return name;
+  const firstWord=name.split(/[\s·,\-]/)[0];
+  if(firstWord && firstWord.length>=3 && firstWord.length<=max)return firstWord;
+  return name.slice(0,max-1)+"…";
+}
 let _alertTimer=null;
 function _clockAlert(msg,dur=2000){
   document.querySelectorAll(".clock-alert").forEach(e=>e.remove());
@@ -1311,7 +1337,7 @@ function _endPeriodAction(pid,action,pts,qIdx,isRival){
     if(!m.live.stats[pid])m.live.stats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0};
     m.live.stats[pid][action]=(m.live.stats[pid][action]||0)+1;
     if(pts>0&&m.live.qScores?.[qIdx])m.live.qScores[qIdx][0]+=pts;
-    if(action==="foul"&&m.live.teamFouls?.[qIdx]!==undefined)m.live.teamFouls[qIdx]++;
+    if(action==="foul"&&m.live.teamFouls?.[qIdx]!==undefined){m.live.teamFouls[qIdx]++;_checkBonusEnter(m,qIdx);}
     m.live.log.push({pid,action,pts,q:qIdx+1,ts:Date.now()});
   }
   _syncLiveQ(m);save();
@@ -1661,7 +1687,7 @@ const POSITIONS=["Base","Escolta","Alero","Ala-Pívot","Pívot"];
 const ASTS=["present","absent","late","excused"];
 const AV={present:{l:"Presente",c:"#22c55e",bg:"rgba(34,197,94,.15)",i:"✓"},absent:{l:"Ausente",c:"#ef4444",bg:"rgba(239,68,68,.15)",i:"✗"},late:{l:"Tarde",c:"#f59e0b",bg:"rgba(245,158,11,.15)",i:"⏱"},excused:{l:"Justif.",c:"#6b7280",bg:"rgba(107,114,128,.15)",i:"◎"}};
 const JUST_REASONS=[{id:"sick",label:"Enfermo/a",icon:"🤒"},{id:"injury",label:"Lesionado/a",icon:"🤕"},{id:"study",label:"Examen/Estudio",icon:"📚"},{id:"vacation",label:"Vacaciones",icon:"🏖️"},{id:"travel",label:"Viaje",icon:"✈️"},{id:"family",label:"Familia",icon:"👪"},{id:"punishment",label:"Castigado/a",icon:"😤"},{id:"other",label:"Otro",icon:"📝"}];
-const DEFAULT_CFG={riskThreshold:75,features:{teamScore:false,playerScore:false,photos:false,exercises:false}};
+const DEFAULT_CFG={riskThreshold:75,features:{teamScore:false,playerScore:false,photos:false,exercises:false,quickMode:false}};
 
 /* ═══════════════════════════════════════
    STATE
@@ -1924,7 +1950,7 @@ function _clearAutoBackup(){
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.8.4",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.8.5",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3658,6 +3684,11 @@ function openClubSettings(){
       ${toggleHtml("playerScore","👤 Valoración individual","Puntúa a cada jugador presente con 1-10 ★. Requiere más tiempo por sesión")}
     </div>
     <div class="stg-sec">
+      <div class="stg-sec-title">🚀 Modo rápido (live game)</div>
+      <div style="font-size:12px;color:var(--tm);margin:-4px 0 12px;line-height:1.5">Pensado para anotadores que quieren mantener el ritmo del partido sin distraerse con preguntas extra.</div>
+      ${toggleHtml("quickMode","🚀 Sin preguntas de cadena","Tras anotar canasta o fallo, NO preguntará por asistencia/rebote. Más rápido si solo registras lo esencial.")}
+    </div>
+    <div class="stg-sec">
       <div class="stg-sec-title">📊 Estadísticas y exportación</div>
       <div class="fg"><label class="fl">Umbral de riesgo FEB</label>
         <select class="fi" id="cfg-risk">${[60,65,70,75,80,85].map(v=>`<option value="${v}" ${S.cfg.riskThreshold==v?"selected":""}>${v}% — ${v===75?"Estándar FEB":v<75?"Más permisivo":"Más exigente"}</option>`).join("")}</select>
@@ -3691,7 +3722,7 @@ function openClubSettings(){
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.4 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.5 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
@@ -6077,11 +6108,17 @@ function liveGame(){
     <!-- Scoreboard integrado -->
     ${scoreboardHtml}
 
-    <!-- Team toggle (only when rival stats enabled) -->
+    <!-- Team toggle (only when rival stats enabled) · v1.8.5 · F4c: dot de color + _teamShort -->
     ${rivalEnabled?`
     <div style="display:flex;gap:4px;margin-bottom:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:4px">
-      <button onclick="setActiveTeam('our')" style="flex:1;padding:8px 6px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:800;transition:all .15s;background:${live.activeTeam!=='rival'?t.color:'transparent'};color:${live.activeTeam!=='rival'?'white':'var(--td)'}">${esc(t.name.length>14?t.name.slice(0,13)+"…":t.name)}</button>
-      <button onclick="setActiveTeam('rival')" style="flex:1;padding:8px 6px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:800;transition:all .15s;background:${live.activeTeam==='rival'?'#ef4444':'transparent'};color:${live.activeTeam==='rival'?'white':'var(--td)'}">${esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+"…":(m.rival||'Rival'))}</button>
+      <button onclick="setActiveTeam('our')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 6px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:800;transition:all .15s;background:${live.activeTeam!=='rival'?t.color:'transparent'};color:${live.activeTeam!=='rival'?'white':'var(--td)'};min-width:0">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${t.color};box-shadow:0 0 0 1.5px ${live.activeTeam!=='rival'?'rgba(255,255,255,.6)':'transparent'};flex-shrink:0"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${esc(_teamShort(S.clubAbrev||t.name,14))}</span>
+      </button>
+      <button onclick="setActiveTeam('rival')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 6px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:800;transition:all .15s;background:${live.activeTeam==='rival'?'#ef4444':'transparent'};color:${live.activeTeam==='rival'?'white':'var(--td)'};min-width:0">
+        <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 1.5px ${live.activeTeam==='rival'?'rgba(255,255,255,.6)':'transparent'};flex-shrink:0"></span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${esc(_teamShort(m.rivalAbrev||m.rival||'Rival',14))}</span>
+      </button>
     </div>`:""}
 
     <!-- On Court -->
@@ -6198,6 +6235,9 @@ window._pickActionFor=function(pid,action,pts){
   document.getElementById("m-actpicker")?.remove();
   // Registrar la acción base. liveAction se encarga del shot chart, faltas → TL, etc.
   liveAction(pid,action,pts);
+  // v1.8.5 · F3: Modo rápido omite los encadenamientos (¿asistencia?/¿rebote?)
+  // para registrar acciones más rápido cuando solo te interesan los puntos.
+  if(S.cfg?.features?.quickMode)return;
   // Encadenamientos automáticos (tras un breve delay para no chocar con otros modales)
   if(action==="p2m"||action==="p3m"){
     setTimeout(()=>_chainAssist(pid,action),250);
@@ -6468,7 +6508,7 @@ function liveAction(pid,action,pts){
   const qi=(live.q||1)-1;
   _ensureQSlot(live,qi);
   if(pts>0)live.qScores[qi][0]=(live.qScores[qi][0]||0)+pts;
-  if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;}
+  if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;_checkBonusEnter(m,qi);}
   }
   // v1.7.5: pname soporta jugador rival también
   const pname=isRivalPid
@@ -6701,6 +6741,7 @@ function liveTeamAction(action, pts){
   if(action==="foul"||action==="ftech"||action==="funsport"||action==="fdq"){
     if(!live.teamFouls)live.teamFouls=[0,0,0,0,0];
     live.teamFouls[qi]=(live.teamFouls[qi]||0)+1;
+    _checkBonusEnter(m,qi);
     // Parada de reloj con falta (v1.6.13 · B-38) si el partido lo tiene activado
     if(m.stopOnFoul&&live.clockRunning){
       live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;
@@ -7086,6 +7127,24 @@ function setLiveQ(q){
     toast("⚠️ Aún no has llegado a "+label);
     return;
   }
+  // v1.8.5 · F4b: confirmación al cambiar a cuarto pasado (no actual)
+  // Evita registrar acciones en el cuarto equivocado por toques accidentales en las pestañas Q1/Q2/...
+  const cur=m.live.q||1;
+  if(q!==cur && q<maxQ){
+    const nQ=m.quarters||4;
+    const pL=nQ===4?"Q":"P";
+    const labelTo=q<=nQ?pL+q:"OT";
+    const labelCur=cur<=nQ?pL+cur:"OT";
+    _confirm(
+      `Estás en <b style="color:var(--orange)">${labelCur}</b>. ¿Editar <b style="color:var(--orange)">${labelTo}</b>?<br><span style='font-size:12px;color:var(--td)'>Las acciones que registres se guardarán en ${labelTo}.</span>`,
+      `Editar ${labelTo}`,
+      ()=>{ _doSetLiveQ(m,q); }
+    );
+    return;
+  }
+  _doSetLiveQ(m,q);
+}
+function _doSetLiveQ(m,q){
   m.live.q=q;
   if(!m.live.qScores)m.live.qScores=[[0,0],[0,0],[0,0],[0,0],[0,0]];
   while(m.live.qScores.length<q)m.live.qScores.push([0,0]);

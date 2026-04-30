@@ -532,6 +532,45 @@ ELIGE SUSTITUTO DEL BANQUILLO
 
 Los tabs **Q2 / Q3 / Q4** aparecen **en gris al 45% de opacidad** con icono **🔒** mientras no hayas llegado a ellos. No reaccionan al click — toast `⚠️ Aún no has llegado a Qx`.
 
+#### 7.3.9 Confirmación al editar un cuarto pasado (v1.8.5)
+
+Si tocas la pestaña de un cuarto distinto al actual (típico al hacer scroll en las pestañas Q1/Q2/...), aparece confirmación:
+
+> ⚠️ Estás en **Q3**. ¿Editar **Q1**?
+> Las acciones que registres se guardarán en Q1.
+>
+> [Editar Q1] · [Cancelar]
+
+Solo afecta a cuartos **ya jugados** (los bloqueados con 🔒 siguen sin reaccionar). Cambiar al cuarto actual no necesita confirmación.
+
+#### 7.3.10 Toast al entrar en bonus (v1.8.5)
+
+Al cruzar la 5ª falta de equipo en un cuarto se dispara una sola vez:
+
+> 🚨 BONUS activo · próxima falta = 2 TL
+
+La sección 🤚 Faltas mantiene el badge "BONUS" estático mientras el cuarto siga en bonus; el toast es solo el aviso del **momento exacto del cruce**.
+
+#### 7.3.11 🚀 Modo rápido (v1.8.5)
+
+Toggle nuevo en ⚙️ Ajustes → "Modo rápido (live game)":
+
+> **🚀 Sin preguntas de cadena**
+> Tras anotar canasta o fallo, NO preguntará por asistencia/rebote. Más rápido si solo registras lo esencial.
+
+Default OFF. Útil cuando el ritmo del partido va alto y solo te interesa el marcador + stats básicas. Las stats de asistencias y rebotes se siguen pudiendo registrar manualmente desde el banner.
+
+#### 7.3.12 Selector de equipo on-court mejorado (v1.8.5)
+
+El toggle "Nosotros / Rival" del live game ahora muestra:
+
+- **Punto de color** del equipo (con borde blanco si está activo).
+- **Abreviatura** si la has configurado (ej. `JAC` en lugar de `CB Jaca Sénior`).
+- **Truncado inteligente** que prefiere la primera palabra significativa antes de cortar con "…":
+  - `Casademont Zaragoza` → `Casademont`
+  - `Surne Bilbao` → `Surne Bilbao` (cabe entero)
+  - `I.A.U.D Tarazona` → `I.A.U.D`
+
 Cuando el reloj llega a 0 al final del Q1, se desbloquea Q2; etc. Puedes volver a un cuarto pasado para revisar o añadir acciones.
 
 #### 7.3.9 Descansos entre cuartos
@@ -846,5 +885,5 @@ Con dos botones:
 
 ---
 
-_Kortline · Hecho con 🧡 para CB Jaca · v1.8.4_
+_Kortline · Hecho con 🧡 para CB Jaca · v1.8.5_
 _Desarrollado por Mario Nadal Ara_

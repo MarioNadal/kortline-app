@@ -9,7 +9,57 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.4 — PWA real: `sw.js` + `manifest.json` (instalable y offline) _(actual)_
+### v1.8.5 — Pulido UX live game: confirmación cuarto, bonus toast, modo rápido, selector equipo _(actual)_
+
+Cierre del informe `QA_LIVE_UX_v1614.md`. Cuatro mejoras que reducen fricción del anotador en partido real, todas activadas tras la auditoría regresión de v1.8.4.
+
+**F4b · Confirmación al cambiar a un cuarto pasado**
+
+`setLiveQ()` ahora pregunta antes de cambiar a un cuarto distinto al actual. Si estás en Q3 y tocas Q1 sin querer (típico al hacer scroll en las pestañas), aparece:
+
+> ⚠️ Estás en **Q3**. ¿Editar **Q1**?
+> Las acciones que registres se guardarán en Q1.
+
+[Editar Q1] · [Cancelar]
+
+Solo se pide confirmación si el cuarto destino existe (ya jugado) y es diferente al actual. Cambiar al cuarto actual o avanzar al siguiente no necesita confirmación.
+
+**F4d · Toast puntual al cruzar la 5ª falta de equipo**
+
+Helper nuevo `_checkBonusEnter(m, qi)` que se llama después de incrementar `teamFouls[qi]` en `liveAction`, `liveTeamAction` y `_confirmShot`. Cuando se cruza al bonus (faltas equipo ≥ 5 por primera vez en ese cuarto), dispara un toast 🚨 una sola vez:
+
+> 🚨 BONUS activo · próxima falta = 2 TL
+
+El flag `live.bonusToastFired[qi]` evita repetir si la 6ª, 7ª... falta también suceden en el mismo cuarto. La sección de faltas del ACTPAD ya mostraba el badge "BONUS" estático (v1.6.15); este toast añade el aviso del **momento exacto** del cruce, que es cuando importa.
+
+**F3 · Toggle "🚀 Modo rápido" en Ajustes**
+
+Nueva preferencia en ⚙️ Ajustes → "Modo rápido (live game)":
+
+> **🚀 Sin preguntas de cadena**
+> Tras anotar canasta o fallo, NO preguntará por asistencia/rebote. Más rápido si solo registras lo esencial.
+
+Cuando está ON, `_pickActionFor` salta los modales `_chainAssist` y `_chainRebound`. Quita 2 toques por canasta/fallo si no estás trackeando asistencias/rebotes en detalle. Default OFF (mantiene flujo cómodo de v1.7.2).
+
+**Nota.** El informe v1.6.14 originalmente proponía F3 como "no auto-deselección del jugador tras acción". El flujo cambió en v1.7.2 a "modo banco" (ACT → picker jugador), donde ya no hay deselección automática persistente. F3 se reinterpretó al equivalente moderno: omitir los encadenamientos ¿asistencia?/¿rebote?, que es la fricción real ahora en partidos rápidos.
+
+**F4c · Selector de equipo on-court mejorado**
+
+Helper nuevo `_teamShort(name, max)` que prioriza la primera palabra significativa antes de truncar con "…":
+
+| Nombre | max=14 | Antes | Ahora |
+|---|---|---|---|
+| `Casademont Zaragoza` | 14 | `Casademont Z…` | `Casademont` |
+| `Surne Bilbao` | 14 | `Surne Bilbao` | `Surne Bilbao` |
+| `I.A.U.D Tarazona` | 14 | `I.A.U.D Taraz…` | `I.A.U.D` |
+
+El selector también añade un **dot circular** del color del equipo (3px borde blanco al activo) para reforzar visualmente cuál está seleccionado. Si el equipo o el rival tienen abreviatura (`S.clubAbrev`, `m.rivalAbrev`), se prefiere esa sobre el nombre largo.
+
+**Service Worker bump.** `CACHE_VERSION = "kortline-v1.8.5"` para invalidar caché vieja en clientes ya instalados.
+
+---
+
+### v1.8.4 — PWA real: `sw.js` + `manifest.json` (instalable y offline)
 
 **Por qué.** Auditando la regresión de v1.8.3 con `QA_REGRESSION.md` se detectó que la PWA no funcionaba realmente: `index.html` referenciaba dos archivos que **no existían en el repo**:
 
