@@ -9,7 +9,39 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.2 — Shot Chart heatmap, agregado de temporada y exportar PNG _(actual)_
+### v1.8.3 — Fin del autoBackup duplicador (libera ~50% del espacio) _(actual)_
+
+**Diagnóstico.** Con localStorage casi nuevo, `cbj:autobackup` ya pesaba **74 KB** mientras que toda la app real (`cbj:m`, `cbj:p`, `cbj:s`, `cbj:t`...) sumaba apenas 73 KB. Es decir, **el autobackup duplicaba todo el almacenamiento en cada `save()`**. Con varios partidos + fotos + shots, eso hacía explotar el límite del navegador (5–10 MB) muy rápido. Mario reportó que ni la primera foto cabía: el localStorage estaba al borde porque el autobackup ya ocupaba la mitad.
+
+El propio README de v1.x ya reconocía la falsa seguridad de este sistema:
+
+> "El autobackup en localStorage ofrece una falsa seguridad (vive en el mismo almacenamiento que los datos principales); el sistema honesto es recordatorio + exportación/importación manual."
+
+**Cambios:**
+
+- **`save()` ya no llama a `autoBackup()`.** Sigue persistiendo los datos reales (equipos, jugadores, sesiones, matches, etc.) pero deja de duplicar en `cbj:autobackup`. Resultado inmediato: ~50% más de espacio libre para fotos, shots, partidos.
+- **`save()` ahora devuelve `boolean`** (true si todo cupo, false si algún `lsSet` falló). Útil para que `handlePhoto` y demás puedan revertir.
+- **`lsSet(k, v, silent)`** acepta tercer parámetro para no toastear "Almacenamiento lleno" cuando se llama desde flujos que ya manejan el fallo (como la cascada de compresión de fotos).
+- **Mensaje de toast mejorado**: `⚠️ Almacenamiento lleno · Exporta backup y limpia datos antiguos` en lugar del genérico anterior.
+
+**Limpieza guiada para usuarios afectados.**
+
+En **⚙️ Ajustes → 💾 Copia de seguridad** se detecta automáticamente si hay un `cbj:autobackup` antiguo (residuo de versiones anteriores) y aparece un banner amarillo:
+
+> 🔄 Autobackup antiguo: XX KB
+>
+> v1.8.3 ya no genera autobackup duplicado (causaba "Almacenamiento lleno"). Si tu app va lenta o no caben fotos, bórralo aquí — solo afecta al backup automático, no a tus datos reales.
+
+Con dos botones:
+
+- **🔄 Restaurar** — usa el autobackup como antes (por si querías recuperar algo).
+- **🗑 Borrar (libera XX KB)** — confirma con `_confirm()` y elimina el autobackup. Tras pulsar, el espacio queda libre inmediatamente para fotos nuevas, shots y demás.
+
+**Nota.** Si tenías el backup exportado manualmente como JSON desde Ajustes (recomendación habitual), no pierdes nada al borrar el autobackup interno: ese JSON sigue siendo el respaldo real ante limpieza del navegador o cambio de dispositivo.
+
+---
+
+### v1.8.2 — Shot Chart heatmap, agregado de temporada y exportar PNG
 
 Iteración 2 del Modo Pro Shot Chart (v1.7.0). Tres cambios mayores en la pantalla **📍 Mapa de tiros**:
 

@@ -1699,9 +1699,27 @@ function load(){
   // Asegurar que riskThreshold sea numérico (fix: a veces se guardaba como string)
   S.cfg.riskThreshold=parseInt(S.cfg.riskThreshold)||75;
 }
-function save(){lsSet("cbj:t",S.teams);lsSet("cbj:p",S.players);lsSet("cbj:s",S.sessions);lsSet("cbj:m",S.matches);lsSet("cbj:ev",S.events);lsSet("cbj:logo",S.clubLogo);lsSet("cbj:name",S.clubName);lsSet("cbj:cabrev",S.clubAbrev);lsSet("cbj:clema",S.clubLema);lsSet("cbj:cfg",S.cfg);autoBackup();}
+function save(){
+  // v1.8.3: cada lsSet devuelve true/false. save() devuelve false si algún
+  // dato real no cupo (para que handlePhoto y otros sepan revertir).
+  // YA NO se llama a autoBackup() aquí — duplicaba todo el espacio sin ofrecer
+  // seguridad real (vive en el mismo localStorage que los datos primarios).
+  // El sistema honesto es export/import manual desde Ajustes.
+  let ok=true;
+  if(!lsSet("cbj:t",S.teams))ok=false;
+  if(!lsSet("cbj:p",S.players))ok=false;
+  if(!lsSet("cbj:s",S.sessions))ok=false;
+  if(!lsSet("cbj:m",S.matches))ok=false;
+  if(!lsSet("cbj:ev",S.events))ok=false;
+  if(!lsSet("cbj:logo",S.clubLogo))ok=false;
+  if(!lsSet("cbj:name",S.clubName))ok=false;
+  if(!lsSet("cbj:cabrev",S.clubAbrev))ok=false;
+  if(!lsSet("cbj:clema",S.clubLema))ok=false;
+  if(!lsSet("cbj:cfg",S.cfg))ok=false;
+  return ok;
+}
 function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}}
-function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch{toast("⚠️ Almacenamiento lleno");return false;}}
+function lsSet(k,v,silent){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){if(!silent)toast("⚠️ Almacenamiento lleno · Exporta backup y limpia datos antiguos");return false;}}
 let _tt=null;
 
 /* ═══════════════════════════════════════
@@ -1887,15 +1905,26 @@ function showFebRiskInfo(){
    BACKUP & RESTORE
 ═══════════════════════════════════════ */
 function autoBackup(){
+  // v1.8.3: ya no se llama desde save(). Mantenida por retrocompat — solo se
+  // ejecuta manualmente si alguien la invoca. Usa silent=true para no spamear.
   try{
     const data={ts:Date.now(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
-    lsSet("cbj:autobackup",data);
+    lsSet("cbj:autobackup",data,true);
   }catch(e){}
+}
+
+// v1.8.3: borrar el autobackup viejo desde Ajustes para liberar espacio
+function _clearAutoBackup(){
+  _confirm("¿Borrar el autobackup automático?<br><span style='font-size:12px;color:var(--td)'>Solo elimina la copia interna. Tus datos reales no se tocan. Si tienes el backup exportado a JSON, no pierdes nada.</span>","🗑 Borrar autobackup",()=>{
+    localStorage.removeItem("cbj:autobackup");
+    toast("✅ Autobackup borrado · espacio liberado");
+    const m=document.getElementById("m-club-settings");if(m){m.remove();openClubSettings();}
+  });
 }
 
 function exportBackup(){
   const filename=`kortline-backup-${td()}.json`;
-  const data={version:"1.8.2",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
+  const data={version:"1.8.3",app:"Kortline",exported:new Date().toISOString(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubLogo:S.clubLogo,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
   const json=JSON.stringify(data,null,2);
   const blob=new Blob([json],{type:"application/json"});
   // Descarga directa
@@ -3644,13 +3673,25 @@ function openClubSettings(){
         <button class="btn-s" style="flex:1;margin:0" onclick="document.getElementById('import-input').click()">⬆️ Importar</button>
         <input type="file" id="import-input" accept=".json" style="display:none" onchange="importBackup(this)"/>
       </div>
-      ${lsGet("cbj:autobackup")?`<button onclick="restoreAutoBackup()" style="width:100%;margin-top:8px;padding:9px;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--td);font-size:12px;font-weight:700;cursor:pointer">🔄 Restaurar último autobackup</button>`:""}
+      ${(()=>{
+        const ab=localStorage.getItem("cbj:autobackup");
+        if(!ab)return "";
+        const kb=Math.round(ab.length*2/1024);
+        return `<div style="margin-top:10px;padding:10px;background:rgba(245,158,11,.08);border:1px dashed rgba(245,158,11,.35);border-radius:9px;font-size:12px;color:var(--td);line-height:1.5">
+          <b style="color:#f59e0b">🔄 Autobackup antiguo: ${kb} KB</b><br/>
+          v1.8.3 ya no genera autobackup duplicado (causaba "Almacenamiento lleno"). Si tu app va lenta o no caben fotos, bórralo aquí — solo afecta al backup automático, no a tus datos reales.
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="restoreAutoBackup()" style="flex:1;padding:9px;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--td);font-size:12px;font-weight:700;cursor:pointer">🔄 Restaurar</button>
+          <button onclick="_clearAutoBackup()" style="flex:1;padding:9px;border-radius:9px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-size:12px;font-weight:700;cursor:pointer">🗑 Borrar (libera ${kb} KB)</button>
+        </div>`;
+      })()}
     </div>
     <div class="stg-sec" style="margin-top:4px">
       <div class="stg-sec-title">ℹ️ Acerca de</div>
       <div style="text-align:center;padding:18px 0 6px">
         <img src="${_FULL_SVG_URL}" style="height:36px;max-width:100%;opacity:0.9;margin-bottom:10px"/>
-        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.2 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
+        <div style="font-size:11px;color:var(--tm);line-height:1.7">Versión 1.8.3 · Desarrollada por <b style="color:var(--td)">Mario Nadal Ara</b></div>
       </div>
     </div>
     <button class="btn-p" onclick="saveClubSettings()">Guardar configuración</button>
