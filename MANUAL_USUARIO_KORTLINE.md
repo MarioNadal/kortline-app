@@ -1,448 +1,556 @@
 # Kortline — Manual de Usuario
 
-**Versión 1.6.10**
-_Kortline — De la Pista al Dato_
+**Versión 1.8.3** · _De la pista al dato_
+
+> 🏀 Kortline es la PWA del **CB Jaca** para gestionar asistencia, partidos y estadísticas avanzadas desde el banquillo. Funciona offline en cualquier móvil, no necesita servidor y todos los datos viven en tu navegador. Diseño dark, mobile-first, paleta naranja `#F06318` y navy `#070f1e`.
 
 ---
 
-## Primeros pasos
+## Tabla de contenidos
 
-### Instalación como app
-
-Kortline funciona desde el navegador, pero puedes instalarla como app nativa:
-- **iOS (Safari):** Compartir → Añadir a pantalla de inicio
-- **Android (Chrome):** Menú ⋮ → Añadir a pantalla de inicio
-
-### Configuración inicial del club
-
-Antes de empezar, pulsa el **logo** en la esquina superior izquierda para entrar en ⚙️ Configuración:
-
-- **Logo** — imagen personalizada del club
-- **Nombre del club** — aparece en mensajes y encabezados
-- **Abreviatura** — versión corta para los mensajes WhatsApp (ej. `CB JACA`)
-- **Lema / cierre** — texto opcional al final de todas las convocatorias (ej. `¡Vamos FamiliaCBJaca! 🏀`). Si se deja vacío no aparece nada.
-
-### Seguimiento avanzado (opcional)
-
-Dentro de ⚙️ Configuración encontrarás la sección **🎯 Seguimiento avanzado del entrenamiento** con 4 interruptores. Actívalos solo si los vas a usar — cuantas menos opciones, más rápido el pase de lista:
-
-- 📋 **Ejercicios de la sesión** — campo libre para anotar qué has trabajado
-- 📷 **Foto del entrenamiento** — guarda una foto por sesión
-- ⭐ **Valoración colectiva** — puntúa del 1 al 10 el entrenamiento global
-- 👤 **Valoración individual** — puntúa a cada jugador presente con 1-10 ★
+1. [Bienvenida y filosofía](#1-bienvenida-y-filosofía)
+2. [Primeros pasos](#2-primeros-pasos)
+3. [Pantalla HOY](#3-pantalla-hoy)
+4. [Gestión de equipos y plantilla](#4-gestión-de-equipos-y-plantilla)
+5. [Lesiones 🚑](#5-lesiones-)
+6. [Pase de lista (entrenamiento)](#6-pase-de-lista-entrenamiento)
+7. [Día de partido](#7-día-de-partido)
+8. [Modo Pro Shot Chart 🎯](#8-modo-pro-shot-chart-)
+9. [Estadísticas](#9-estadísticas)
+10. [Backup y datos](#10-backup-y-datos)
+11. [Tips Pro](#11-tips-pro)
+12. [Resolución de problemas](#12-resolución-de-problemas)
 
 ---
 
-## Gestión de equipos
+## 1. Bienvenida y filosofía
 
-### Crear un equipo
+Kortline cubre el ciclo completo de un equipo de baloncesto amateur:
 
-Pantalla **Equipos** → **＋**. Configura nombre, categoría, entrenador/es, días y horarios, y color identificativo.
+- **Diario**: pase de lista, valoraciones, ejercicios.
+- **Semanal**: convocatorias, calendario.
+- **Partido**: live game con marcador, faltas, TM, sustituciones, shot chart.
+- **Temporada**: stats agregadas, riesgo FEB, mapa de tiros agregado.
+- **Compartir**: WhatsApp, exportar PDF/Excel/PNG, JSON de backup.
 
-> 💡 **Horarios rápidos:** escribe directamente la hora y la casilla del día se marca sola. No hace falta pulsar antes el check.
-
-> 🔠 **Nombres en mayúsculas:** desde v1.6.9, el nombre del equipo se guarda siempre en MAYÚSCULAS aunque lo escribas en minúsculas. Los equipos antiguos conservan su formato hasta que los edites.
-
-### Añadir jugadores
-
-Dentro del equipo → sección **Plantilla** → **＋ Añadir jugador**.
-
-Cada jugador tiene:
-- **Foto / avatar** (opcional) — se muestra junto al dorsal en la plantilla y en el pase de lista
-- **Nombre**
-- **Dorsal** — con botones `−/+` para ajustar con el pulgar y sugerencia automática del próximo libre
-- **Posición**
-- **Notas** opcionales
-
-Los jugadores se ordenan automáticamente por dorsal ascendente (los que no tienen número van al final).
-
-> 💡 Las **lesiones** ya no se marcan desde esta ficha. Cada jugador tiene un botón **🚑** propio en la fila de la plantilla (ver apartado **🚑 Gestión de lesiones**).
+Todo en un **único archivo HTML** que vive en tu móvil. Sin servidor. Sin cuentas. Tus datos son tuyos.
 
 ---
 
-## 🚑 Gestión de lesiones
+## 2. Primeros pasos
 
-Kortline tiene un flujo dedicado para gestionar lesiones. El objetivo es que el % de asistencia no castigue a un jugador lesionado y que el historial del club quede completo.
+### 2.1 Instalación como app
 
-### Dar de baja (marcar como lesionado)
+Kortline funciona desde el navegador, pero te recomendamos instalarla como PWA para acceso rápido y modo offline:
 
-En la plantilla, junto al botón ✏️ (editar) y 🗑 (eliminar) de cada jugador, hay un botón **🚑**:
-- **Gris** → el jugador no tiene lesión activa
-- **Rojo** → el jugador está lesionado (y aparece un punto rojo sobre el dorsal)
+| Sistema | Cómo |
+|---------|------|
+| **iOS** (Safari) | Compartir → **Añadir a pantalla de inicio** |
+| **Android** (Chrome) | Menú ⋮ → **Añadir a pantalla de inicio** o **Instalar aplicación** |
 
-Al pulsar **🚑** en un jugador sano se abre el modal **Nueva lesión**:
+La primera vez que abras Kortline en cada plataforma verás un pop-up con el paso a paso.
 
-1. **Fecha de inicio** — por defecto hoy; se puede retroceder
-2. **Origen** — cuatro chips rápidos:
-   - 🏀 **Entreno**
-   - 🏆 **Partido**
-   - 🌐 **Fuera** (fuera del baloncesto)
-   - ❔ **Desconocido**
-3. **Detalle del origen** — desplegable opcional (selector de partido concreto, etc.)
-4. **Explicación** — texto libre (tipo de lesión, parte del cuerpo, estimación del tiempo de recuperación, parte médico…)
+### 2.2 Configuración del club
 
-Al guardar, Kortline hace **tres cosas automáticamente**:
+Pulsa el **logo** arriba a la izquierda para abrir ⚙️ **Ajustes del club**.
 
-1. **Backfill de asistencia** — todas las sesiones entre la fecha de inicio y hoy pasan a **◎ Justificado · Lesionado/a**, con la explicación como nota
-2. **Snapshot FEB** — se guarda el % de asistencia del jugador en ese momento. Si ya estaba en riesgo, seguirá apareciendo en el panel ⚠️ **Riesgo FEB** mientras dure la lesión (no desaparece solo porque el porcentaje "mejore" durante la baja)
-3. **Badge visible** — se muestra 🚑 sobre el dorsal en plantilla, pase de lista, convocatorias y partidos, pero solo en las fechas **iguales o posteriores** a la fecha de inicio
+| Campo | Para qué |
+|-------|----------|
+| **Logo** | Imagen personalizada del club (recomendado: cuadrado, fondo transparente) |
+| **Nombre del club** | Aparece en encabezados, mensajes, exports y como **título de HOY** (v1.6.12) |
+| **Abreviatura** | Versión corta para WhatsApp (`CB JACA`) |
+| **Lema / cierre** | Texto opcional al final de las convocatorias (`¡Vamos FamiliaCBJaca! 🏀`) |
+| **Umbral riesgo FEB** | % de asistencia mínimo (estándar 75%) |
 
-### Fila del jugador lesionado
+### 2.3 Seguimiento avanzado del entrenamiento
 
-En la plantilla aparece una línea corta bajo el nombre:
+Sección **🎯 Seguimiento avanzado** con 4 toggles. Activa solo lo que vas a usar — cuanto menos, más rápido el pase de lista:
+
+| Toggle | Para qué |
+|--------|----------|
+| 📋 **Ejercicios de la sesión** | Campo libre para anotar el plan del día |
+| 📷 **Foto del entrenamiento** | Una foto por sesión (con compresión adaptativa, v1.8.1) |
+| ⭐ **Valoración colectiva** | Puntúa 1-10 cómo ha entrenado el equipo |
+| 👤 **Valoración individual** | Puntúa 1-10 ★ a cada jugador presente |
+
+> 💡 Si activas las dos valoraciones, la colectiva se calcula **automáticamente** como media de las individuales (v1.6.8). Mantén pulsado ✏️ ~1s para editar manual.
+
+---
+
+## 3. Pantalla HOY
+
+La pantalla de inicio. Muestra solo lo del día actual.
 
 ```
-🚑 10/04 (6d)
+┌─────────────────────────────────────┐
+│ [logo]  CB JACA          [N HOY]    │   ← v1.6.12
+│         Hoy · sábado, 25 abril       │
+├─────────────────────────────────────┤
+│                                     │
+│  🏀 PARTIDOS                        │
+│  ┌─────────────────────────────┐    │
+│  │ Sénior  vs  Bilbao          │    │
+│  │ 20:00 · 🟢 Casa             │    │
+│  │ [▶ Empezar/Continuar] [📋]  │    │
+│  └─────────────────────────────┘    │
+│                                     │
+│  🏋️ ENTRENAMIENTOS                  │
+│  ┌─────────────────────────────┐    │
+│  │ Sub-16 · 19:30      Pasada  │    │
+│  │ 92% · 12 PRES · 0 AUSE      │    │
+│  │ [✏️ Editar lista]    [📤]   │    │
+│  └─────────────────────────────┘    │
+│                                     │
+│                            ┌─────┐  │   ← FAB v1.6.12
+│                            │  +  │  │
+│  [🏠 HOY] [👥 EQ] [📊 STATS] └─────┘  │
+└─────────────────────────────────────┘
 ```
 
-Es decir: **lesionado desde el 10 de abril, lleva 6 días**. El contador se actualiza solo cada día.
+### 3.1 Título con el nombre del club
 
-### Dar de alta (recuperación)
+Si tu club no es "Kortline" en Ajustes, el título grande del header pasa a ser **el nombre del club** y la fecha queda en sub-línea. Si no, "Hoy · fecha".
 
-Al pulsar **🚑** en un jugador que ya está lesionado, se abre el modal **Recuperación**:
+### 3.2 Botón ➕ flotante (FAB) — actividad sorpresa
 
-- Muestra un resumen rápido: fecha de inicio, días acumulados, origen y explicación
-- **✅ Dar de alta médica** — un solo toque. Hoy queda como fecha de alta, el jugador vuelve a estar sano y la lesión pasa al historial
-- **✏️🚑 Editar datos de la lesión** — abre el modal completo para corregir fecha, origen o explicación (no es el editor del jugador)
-- **Cerrar** — salir sin cambios
+Esquina inferior derecha. Para crear actividades **fuera del horario habitual** del equipo:
 
-Si necesitas fijar la fecha de alta en un día pasado (porque te has acordado tarde), usa primero **✏️🚑 Editar** para retroceder la fecha de alta; el backfill se ajusta solo.
+- 🏋️ **Entrenamiento sorpresa** — refuerzos, sesiones extra, recuperaciones. Lleva al pase de lista de hoy.
+- 🏆 **Partido sorpresa** — amistosos, copa, calendario fuera de liga. Abre el modal de crear partido con fecha = hoy.
 
-### Historial de lesiones
-
-Cada alta se guarda con fecha de inicio, fecha de alta, días totales, origen y explicación. Queda disponible en la ficha del jugador como historial médico del club.
-
-### Detalles útiles
-
-- La **palabra "lesionado" escrita en las notas** del jugador sigue reconociéndose como lesión activa (compatibilidad con datos antiguos). Si quieres migrar, da de baja al jugador desde el botón 🚑 y elimina la palabra de las notas.
-- Si cambias la fecha de inicio hacia atrás, las sesiones entre la nueva fecha y la anterior también se rellenan automáticamente. Si la adelantas, las sesiones que queden fuera del rango se limpian.
-- El % de asistencia se recalcula al instante: las sesiones en rango dejan de contar como ausencia.
+Si tienes un solo equipo, salta directo. Si tienes varios, picker con flecha ← para volver al menú principal.
 
 ---
 
-## Pantalla HOY
+## 4. Gestión de equipos y plantilla
 
-### Qué muestra
+### 4.1 Crear un equipo
 
-La pantalla **HOY** es la pantalla de inicio de Kortline. Muestra de un vistazo todo lo que tienes programado para el día actual:
+**Equipos** → **＋**:
 
-- 🏀 **Partidos de hoy** — cualquier partido cuya fecha sea hoy y no esté finalizado. Muestra estado (Pendiente / 🔴 EN JUEGO), hora, ubicación, marcador en vivo si está en curso, y botones para empezar/continuar partido o ver detalles.
-- 🏋️ **Entrenamientos de hoy** — equipos cuyo horario semanal incluye el día de la semana actual. Muestra estado (Pendiente / ✓ Pasada), %, contadores de asistencia y botón para pasar lista.
+- **Nombre** — se guarda siempre en MAYÚSCULAS aunque escribas en minúsculas (v1.6.9).
+- **Categoría** — afecta a defaults: nº de cuartos, duración, "reloj se para con falta" (sénior/junior/cadete = ON, 3x3 = OFF).
+- **Entrenador/es** — uno o varios.
+- **Días + horarios** — escribe la hora y el día se marca solo (v1.6.1).
+- **Color** — paleta oficial Kortline para el equipo.
 
-### Título con el nombre del club (v1.6.12)
+### 4.2 Plantilla de jugadores
 
-El título principal del header muestra el **nombre del club** que hayas configurado en ⚙️ Ajustes del club (toca el logo arriba a la izquierda para abrirlos). Si no has personalizado el nombre, mantiene el genérico `Hoy`. La fecha aparece en una sub-línea debajo.
+Dentro del equipo → **＋ Añadir jugador**.
 
-### Botón ➕ flotante — actividad sorpresa (v1.6.12)
+| Campo | Notas |
+|-------|-------|
+| **Foto/avatar** | Opcional; aparece junto al dorsal en plantilla y pase de lista |
+| **Nombre** | Si empieza con inicial (`I. Javier Rodríguez`), el cortado en cards muestra "Javier" no "I." (v1.6.15) |
+| **Dorsal** | Botones `−/+` para ajustar con el pulgar; sugerencia automática del próximo libre |
+| **Posición** | Texto libre |
+| **Notas** | Texto libre |
 
-En la esquina inferior derecha hay un **botón ➕ naranja** flotante (sobre la navbar). Sirve para crear actividades **fuera del horario habitual** del equipo:
+Los jugadores se ordenan por **dorsal ascendente**; los sin número van al final.
 
-- 🏋️ **Entrenamiento sorpresa** — útil para refuerzos, recuperaciones o cualquier sesión extra que no estaba en el calendario semanal del equipo. Te lleva directamente al pase de lista de hoy.
-- 🏆 **Partido sorpresa** — abre el modal de crear partido con la fecha pre-rellenada a hoy. Útil para amistosos, copa o cualquier partido fuera del calendario habitual.
+### 4.3 Acciones por fila de jugador
 
-Si tienes **un solo equipo**, la acción salta directamente. Si tienes **varios equipos**, te pide elegir antes; usa el botón ← del bottom sheet para volver al menú principal.
+Cada fila tiene tres botones:
 
-> 💡 Tras crear el entrenamiento o partido sorpresa, aparecerá automáticamente en HOY hasta que finalice el día (o, en el caso del partido, hasta que lo marques como finalizado).
-
----
-
-## Pase de lista
-
-### Pasar lista hoy
-
-Desde **Hoy** → **📋 Pasar lista** en el equipo correspondiente.
-
-### Estados de asistencia
-
-Toca el botón derecho de cada jugador para ciclar entre:
-- ✓ **Presente** · ✗ **Ausente** · ⏱ **Tarde** · ◎ **Justificado**
-
-Para justificados, pulsa `+ Motivo` para añadir la razón (enfermedad, lesión, examen, etc.).
-
-### Contadores clicables (filtro rápido)
-
-Las 4 cajas **PRES / AUSE / TARD / JUST** de la parte superior son clicables:
-
-- Pulsa una caja para **filtrar** la lista y ver solo jugadores en ese estado
-- La caja activa se resalta con un ✓ y borde naranja
-- Aparece un banner con el nombre del filtro y botón **✕ Todos** para quitarlo
-- El filtro es efímero — se limpia al cambiar de fecha o salir de la pantalla
-- Las cajas con valor 0 no son clicables
-
-### Reset rápido
-
-Si has modificado asistencias y quieres volver a empezar, aparece un enlace discreto **↺ Resetear a presentes** arriba a la derecha de la lista (solo si hay cambios). Pide confirmación antes de aplicar para evitar resets accidentales.
-
-### Autoguardado del pase de lista (v1.6.11)
-
-**Todo el pase de lista se autoguarda.** No hay botón 💾 Guardar.
-
-- Asistencia, justificaciones, valoración colectiva, valoración individual y foto se guardan **al instante** al tocarlos.
-- Notas del entrenador y ejercicios se autoguardan **~0,8 segundos** después de dejar de escribir.
-
-En la parte inferior, donde antes estaba el botón Guardar, ahora hay una caja verde con el mensaje **💾 Autoguardado activo**. Cada vez que Kortline persiste los cambios parpadea a **✓ Guardado** durante un segundo y medio. A su derecha sigue el botón circular verde 📤 para compartir la sesión por WhatsApp.
-
-Si sales de la pantalla antes de que se complete el autoguardado (← atrás, botón HOY, cambio de fecha, 📤 compartir, navbar), Kortline vuelca el borrador al instante antes de cambiar de pantalla — no pierdes nada.
-
-> El aviso de "cambios sin guardar" (💾 Guardar y salir · 🗑 Descartar · ✏️ Seguir editando) se mantiene en **notas del partido** y en los modales de **equipo**, **jugador**, **lesión**, **partido** y **ajustes del club**. Ahí sí tiene sentido porque hay un concepto de "cancelar sin crear el registro".
-
-### Funciones opcionales (activadas en ⚙️ Configuración)
-
-Si has activado alguna función en **🎯 Seguimiento avanzado**, aparecerán bajo la lista:
-- ⭐ Valoración colectiva del entrenamiento (1–10)
-- 👤 Valoración individual — toca las estrellas junto a cada jugador presente o con retraso
-- 📋 Campo de ejercicios del día
-- 📷 Foto de la sesión
-
-### Valoración colectiva inteligente
-
-Cuando **ambas valoraciones** están activas (⭐ colectiva + 👤 individual), la colectiva se calcula **automáticamente** como la media de las individuales. Verás un badge verde `🔗 Auto` y las estrellas reflejan la nota media.
-
-Si quieres poner una nota manualmente (por ejemplo, el equipo ha trabajado mejor de lo que sugieren las notas individuales), **mantén pulsado** el botón ✏️ durante ~1 segundo. Un anillo naranja se va llenando mientras pulsas — al completarse, las estrellas se desbloquean y puedes tocarlas. Aparece un badge naranja `✏️ Manual`.
-
-Para volver al modo automático, pulsa el botón verde `🔗 Volver a modo automático` que aparece debajo.
-
-> 💡 Si solo tienes activada la colectiva (sin individual), las estrellas son siempre libres — no hace falta desbloquear nada.
+- ✏️ **Editar** — datos básicos (foto, nombre, dorsal, posición, notas).
+- 🚑 **Lesión** — gris si sano, rojo si lesionado (ver sección 5).
+- 🗑 **Eliminar** — pide confirmación.
 
 ---
 
-## Estadísticas
+## 5. Lesiones 🚑
 
-### Vista tabla
+Flujo dedicado para que el % de asistencia no penalice al lesionado y el historial quede completo.
 
-Muestra el % de asistencia de cada jugador con semáforo:
-- 🟢 ≥90% · 🟡 ≥umbral FEB · 🔴 <umbral (riesgo)
+### 5.1 Dar de baja
 
-El umbral FEB es configurable en ⚙️ Configuración (por defecto 75%).
+Pulsa **🚑** en un jugador sano. Modal **Nueva lesión**:
 
-También detecta **rachas de ausencias consecutivas** y **valoración media** si está activada.
+1. **Fecha de inicio** — por defecto hoy.
+2. **Origen** — chips rápidos: 🏀 Entreno · 🏆 Partido · 🌐 Fuera · ❔ Desconocido. Si entreno o partido, dropdown con las 24 sesiones más recientes.
+3. **Notas** — tipo, zona, semanas estimadas.
 
-### Indicador Riesgo FEB
+Al guardar:
+- Punto rojo animado sobre el dorsal en plantilla y pase de lista.
+- Badge `🚑 10/04 (6d)` en la fila (formato compacto, v1.6.7).
+- **Backfill automático**: las sesiones desde la fecha de inicio quedan auto-justificadas con motivo `🤕 Lesión` y etiqueta `AUTO`.
+- **Snapshot FEB**: se congela el % de asistencia previo. Si ya estaba en riesgo, sigue apareciendo en alertas con su % congelado.
 
-En la parte superior de las estadísticas hay tres cajas: **Media**, **Sesiones** y **Riesgo FEB**. La caja de riesgo es **clickable** (tiene un icono ⓘ) — al pulsarla se abre un panel explicativo con la definición según la FEB, tu umbral actual, y la leyenda completa de colores.
+### 5.2 Estado lesionado en el pase de lista
 
-### Cerrar paneles arrastrando
+- Junto al nombre aparece 🚑.
+- El estado se marca como `Excused` con motivo `🤕 Lesionado/a` y etiqueta gris `AUTO`.
+- Solo se muestra como lesionado en fechas **iguales o posteriores** a la fecha de inicio (v1.6.7 · `isInjuredOn`).
 
-Todos los paneles inferiores (configuración, modales, etc.) se pueden cerrar **arrastrando la barrita gris** de la parte superior hacia abajo. Si arrastras lo suficiente (unos 120px), el panel se cierra con una animación suave.
+### 5.3 Dar de alta
 
-### Vista gráfica
+Pulsa **🚑** en un lesionado. Mini-modal con resumen (días, origen, nota) y tres acciones:
 
-Accede desde el botón 📊 del equipo. Incluye tendencia de asistencia, barras por jugador, distribución y evolución mensual.
+- ✅ **Dar de alta médica** — un solo toque. Hoy queda como fecha de alta.
+- ✏️🚑 **Editar datos de la lesión**.
+- **Cerrar**.
 
----
+Tras el alta:
+- Backfill final hasta la fecha del alta.
+- Lesión archivada en `injuryHistory[]` con start, end, días, origen, etc.
+- El jugador vuelve a estar sano y entra de nuevo en el cómputo normal de asistencia.
 
-## Compartir por WhatsApp
+### 5.4 Historial de lesiones
 
-### Asistencia del día
-
-Desde el pase de lista → botón **📤** (esquina superior derecha). Genera dos versiones:
-- **Para padres/grupo** — solo nombres y asistencia
-- **Uso interno** — con motivos de justificación, notas y valoraciones
-
-### Resumen semanal
-
-Disponible en la misma pantalla, con los últimos 7 entrenamientos.
-
----
-
-## Partidos
-
-### Crear un partido
-
-Equipo → **🏟️ PARTIDOS** → **＋**. Configura rival, fecha, hora, lugar, formato de cuartos y opciones de estadísticas.
-
-### Introducir marcador
-
-En el detalle del partido aparece la cuadrícula de cuartos. Al escribir cualquier puntuación:
-- El **marcador total** se actualiza instantáneamente
-- El **badge de resultado** (🏆 Victoria / ❌ Derrota / 🤝 Empate) se actualiza al momento
-- El guardado se produce **automáticamente** al saltar al siguiente campo — no hay botón de guardar
-
-Los cuartos usan botones `+/−` (steppers) para ajustes rápidos con el pulgar. Toca el número para escribir directamente.
-
-### Prórroga manual
-
-Si el partido termina en empate y no usaste el seguimiento en vivo, pulsa **＋ Añadir prórroga** debajo de la cuadrícula. Se añade la columna OT. Si necesitas OT2 o OT3, vuelve a pulsarlo. Para quitar una OT añadida por error, pulsa la **✕** que aparece en la esquina de la última OT.
-
-**Etiquetas:**
-- 1 prórroga → `OT`
-- 2 prórrogas → `OT1`, `OT2`
-- 3 prórrogas → `OT1`, `OT2`, `OT3`
-
-### Convocatoria y capitán (FIBA)
-
-En el detalle del partido → sección **👥 Convocatoria** → **✏️ Editar**.
-
-El wizard sigue este orden:
-1. **Convocados** — selecciona hasta 12 (límite FIBA)
-2. **Titulares** — marca los 5 del quinteto inicial
-3. **Capitán** — designa uno (dirige el equipo si el entrenador es expulsado)
-
-El banner del capitán siempre está visible: verde si está designado, amarillo si no.
-
-Al pulsar **Listo** la app valida en cadena:
-- Sin convocados → aviso
-- Menos de 5 convocados → aviso
-- Menos de 5 titulares → aviso
-- Sin capitán → aviso
-
-Cada aviso te permite corregir o continuar si lo decides conscientemente.
-
-**Compartir convocatoria:** botón **📤 Lista** junto a la sección de convocatoria.
-
-### Compartir resultado
-
-Botón **📤** junto al marcador. Genera un mensaje con resultado, marcador, diferencia (+/− pts) y desglose por cuartos.
+Dentro del modal de jugador, un panel desplegable muestra el histórico (cuántas, días totales, orígenes). Útil para detectar patrones.
 
 ---
 
-## Marcador en vivo
+## 6. Pase de lista (entrenamiento)
 
-### Iniciar seguimiento
+Pantalla a la que vas desde HOY → **📋 Pasar lista** o desde un equipo.
 
-Equipo → Partidos → partido → **▶ Empezar partido** (o **🔴 Continuar partido** si ya había empezado). El botón "Continuar" aparece desde la primera vez que entras, sin esperar a que haya acciones registradas.
+```
+┌─────────────────────────────────────┐
+│ ←  Pase de Lista          [📤]      │
+│    SÉNIOR TEST                       │
+├─────────────────────────────────────┤
+│  ‹  lun, 27 abr  ›    [HOY]          │
+├─────────────────────────────────────┤
+│  ┌─PRES─┐ ┌─AUSE─┐ ┌─TARD─┐ ┌─JUST─┐ │   ← contadores
+│  │  10  │ │   1  │ │   1  │ │   2  │ │     clicables (filtro)
+│  └──────┘ └──────┘ └──────┘ └──────┘ │
+│                                     │
+│  ↺ Resetear a presentes  (si hay cambios)
+│                                     │
+│  ┌─#4 Carlos    ✓ Presente    [✓] ─┐│
+│  │ #5 Diego     ✗ Ausente     [✗] ││
+│  │ #6 Eva 🚑    ◎ Justificado [◎] ││
+│  │ ...                             ││
+│  └─────────────────────────────────┘│
+│                                     │
+│  📋 Ejercicios del entrenamiento     │
+│  📝 Notas del entrenador             │
+│                                     │
+│  ┌────────────────────────┐ ┌─────┐ │
+│  │ 💾 Autoguardado activo │ │ 📤  │ │
+│  └────────────────────────┘ └─────┘ │
+└─────────────────────────────────────┘
+```
 
-### Picker de quinteto bloqueante
+### 6.1 Estados de asistencia
 
-Si intentas empezar con menos de 5 jugadores en pista, aparece un picker de 5 slots. Cada slot vacío tiene un botón **＋** para elegir entre los convocados. El botón **▶ Empezar partido** se activa solo cuando los 5 están rellenos. Sin 5 titulares **no se puede entrar**.
+Toca el botón derecho de cada jugador para ciclar:
 
-### Registrar acciones (v1.7.2)
+| Estado | Icono | Color |
+|--------|-------|-------|
+| **Presente** | ✓ | Verde |
+| **Ausente** | ✗ | Rojo |
+| **Tarde** | ⏱ | Amarillo |
+| **Justificado** | ◎ | Gris |
 
-El flujo cambió en v1.7.2: ahora vas de la **acción** al **jugador**, no al revés.
+Para justificados, pulsa `+ Motivo` para añadir la razón (enfermedad, lesión, examen, etc.) — quedan reflejados en exports y stats.
 
-1. **Toca la acción** en el banner siempre visible (ej: **+3 Triple**).
-2. La app pregunta **"¿Quién?"** con 5 botones grandes del quinteto en pista.
+### 6.2 Contadores clicables (filtro rápido)
+
+Las 4 cajas **PRES / AUSE / TARD / JUST** son botones. Pulsa para filtrar la lista a solo ese estado. La caja activa se resalta con ✓ y un banner indica el filtro. **✕ Todos** lo quita. Los contadores con valor 0 no son clicables. El filtro es **efímero** — se borra al cambiar de fecha o salir.
+
+### 6.3 Reset rápido
+
+Si has tocado por error, aparece un enlace discreto **↺ Resetear a presentes** arriba a la derecha (solo si hay cambios). Pide confirmación antes de aplicar.
+
+### 6.4 Autoguardado del pase de lista (v1.6.11)
+
+**No hay botón Guardar.** Todo se autoguarda al instante:
+
+- Asistencia, justificaciones, valoración colectiva e individual, foto → guardado al toque.
+- Notas y ejercicios → debounce de **0,8 segundos** después de dejar de escribir.
+
+Donde antes estaba el botón Guardar, ahora hay una caja verde con **💾 Autoguardado activo**. Cada vez que persiste cambios parpadea a **✓ Guardado** durante 1,5 s. A su lado el botón circular verde 📤 para compartir por WhatsApp.
+
+Si sales de la pantalla antes de que se complete el debounce (← atrás, HOY, cambio de fecha, navbar, 📤 compartir), Kortline vuelca el borrador al instante. **No pierdes nada.**
+
+### 6.5 Foto del entrenamiento (v1.8.1)
+
+Pulsa la caja **📷 Añadir foto** y elige desde cámara o galería del móvil. Kortline aplica **compresión adaptativa**:
+
+| Intento | Lado máx | Calidad JPEG | Tamaño aprox |
+|---------|----------|--------------|--------------|
+| 1 | 600 px | 0.70 | ~80–120 KB |
+| 2 | 480 px | 0.65 | ~50–80 KB |
+| 3 | 400 px | 0.55 | ~30–50 KB |
+| 4 | 320 px | 0.45 | ~20–30 KB |
+| 5 | 240 px | 0.40 | ~10–15 KB |
+
+Toast `⏳ Procesando foto…` mientras comprime y al final `📷 Foto guardada (~85 KB)` indicando el nivel real. Si no cabe ni con el nivel 5: toast `⚠️ Sin espacio. Borra fotos antiguas o exporta backup` y se mantiene la foto anterior.
+
+### 6.6 Valoración colectiva inteligente (v1.6.8)
+
+Si tienes activadas **ambas** valoraciones (colectiva + individual), la colectiva se calcula como **media de las individuales**. Badge verde `🔗 Auto`.
+
+Para editar manual: **mantén pulsado** el botón ✏️ ~1 s. Anillo naranja se va llenando. Estrellas desbloqueadas → tocas. Badge naranja `✏️ Manual` + botón verde `🔗 Volver a modo automático`.
+
+### 6.7 Aviso de cambios sin guardar (v1.6.10)
+
+El sistema de **dirty tracking** se mantiene en notas del partido y modales CRUD (equipo, jugador, lesión, partido, ajustes). Si intentas salir con cambios sin guardar:
+
+> ⚠️ Cambios sin guardar
+>
+> [💾 Guardar y salir]
+> [🗑 Descartar y salir]
+> [✏️ Seguir editando]
+
+> El pase de lista NO usa este aviso desde v1.6.11 — está autoguardado.
+
+---
+
+## 7. Día de partido
+
+### 7.1 Crear un partido
+
+Equipo → **Partidos** → **＋ Añadir partido**:
+
+- **Rival** (obligatorio).
+- **Fecha** y **hora**.
+- **Campo**: 🏠 Casa / ✈️ Fuera / ⚖️ Neutral.
+- **Pabellón** (opcional).
+- **Formato del partido** — nº de cuartos y minutos por cuarto. Default según categoría.
+- **Toggles** — varios:
+
+| Toggle | Defecto | Para qué |
+|--------|---------|----------|
+| 📊 Estadísticas del rival | OFF | Anota stats jugador a jugador del rival (requiere registrar sus jugadores) |
+| 👥 Solo stats del equipo | OFF | No registra stats individuales, solo totales |
+| ⏱ Reloj se para con falta | ON en sénior/junior/cadete/infantil/alevín, OFF en 3x3/otro | FIBA estricto: cualquier falta detiene el reloj (v1.6.13) |
+| 🎯 Modo Shot Chart [PRO] | OFF | Captura coordenadas de cada tiro de campo en cancha SVG (v1.7.0, ver sección 8) |
+
+### 7.2 Convocatoria
+
+Tras crear partido o pulsando **✏️ Editar** sobre la convocatoria existente, se abre el wizard de **CONVOCATORIA · Equipo + Rival**. Dos pasos (rival opcional).
+
+#### Paso 1 — Nuestro equipo
+
+```
+┌─────────────────────────────────────┐
+│  CONVOCATORIA            [1/2]       │
+│  Bilbao · sábado, 25 abr             │
+│  [👥 CASADEMONT TEST] [🔴 Bilbao]    │
+├─────────────────────────────────────┤
+│  👥 Nuestro equipo                   │
+│  6 convocados · 5 titulares          │
+│  Toca para convocar · ⭐ titular · (C)│
+│                                     │
+│  ┌─────────────────────────────────┐ │   ← Banner v1.7.7
+│  │ © Capitán: #4 Carlos Uno        │ │
+│  │ Dirige al equipo si te expulsan  │ │
+│  └─────────────────────────────────┘ │
+│                                     │
+│  ┌─[✓] #4 Carlos    [⭐] [(C)] ────┐│
+│  │  [✓] #5 Diego    [⭐] [(C)]    ││
+│  │  [ ] #11 Eva                     ││
+│  │  ...                             ││
+│  └─────────────────────────────────┘│
+│                                     │
+│  [Siguiente: Bilbao →]               │
+│  [✅ Listo — ir al partido]           │
+└─────────────────────────────────────┘
+```
+
+**Botones laterales en cada fila:**
+
+- **⭐ Titular** — solo si el jugador está convocado. Máximo 5.
+- **(C) Capitán** — solo si convocado. Máximo 1 (al pulsar otro, el anterior pierde la C).
+
+**Banner del capitán prominente (v1.7.7):**
+
+- 🟢 Verde si designado: `© Capitán: #X Nombre · Dirige al equipo si el entrenador es expulsado`.
+- 🟡 Amarillo si no: `⚠️ Sin capitán designado · FIBA: pulsa (C) junto a un convocado`.
+
+**Convocatoria fluida (v1.7.6):** al tocar jugadores, **el scroll se mantiene** donde estaba (refresh in-place de cada fila, no redibujado del modal completo).
+
+#### Validaciones al pulsar "✅ Listo"
+
+Se comprueba en cadena (v1.7.7):
+
+| Caso | Tipo | Mensaje |
+|------|------|---------|
+| 0 convocados | 🔒 Bloqueante | "Sin convocados — no puedes empezar el partido" |
+| < 5 convocados | 🔒 Bloqueante | "Solo X convocados — FIBA exige 5 en pista" |
+| < 5 titulares | ⚠️ Aviso | "Faltan titulares (X/5)" + opción "Continuar igual (no recomendado)" |
+| Sin capitán | ⚠️ Aviso | "Sin capitán designado · FIBA: dirige si te expulsan" + "Continuar igual" |
+
+Los **bloqueantes** no permiten seguir. Los **avisos** sí — puedes ignorarlos conscientemente con el botón gris.
+
+#### Paso 2 — Rival (opcional)
+
+Si activaste 📊 Estadísticas del rival, añade aquí los dorsales y nombres del rival. Es lo que permite asignar TLs y faltas a jugadores rivales concretos en el live.
+
+### 7.3 Live game — Modo Banco (v1.7.2)
+
+Cambio de paradigma desde v1.7.2: el flujo es **acción → jugador**, no al revés.
+
+```
+┌─────────────────────────────────────┐
+│  ←  🔴 EN VIVO · Q1   [BONUS] [F:5/4] [📍] [📤] [🏁]
+│     CASADEMONT vs BILBAO             │
+│  ┌──────────────────────────────────┐│
+│  │ 10:00 ✏️    [▶ play] [↺] [T.M] ││   ← Reloj
+│  └──────────────────────────────────┘│
+├─────────────────────────────────────┤
+│  CASADEMONT [12]:[8] BILBAO          │   ← Marcador
+│  FALTAS ●●○○○        FALTAS ●●●○○    │
+│  T.M.   ●○                ○○ T.M.    │
+│  ┌─Q1─┐ ┌─Q2─┐ ┌─Q3─┐ ┌─Q4─┐         │   ← Cuartos
+│  │ 12 │ │  🔒│ │  🔒│ │  🔒│         │     v1.7.9
+│  └────┘ └────┘ └────┘ └────┘         │
+├─────────────────────────────────────┤
+│  ▶ EN PISTA (5/5)  Toca para sustituir
+│  ┌─#4─┐┌─#5─┐┌─#11┐┌─#7─┐┌─#10┐      │
+│  │ 8  ││ 4  ││ 0  ││ 2  ││ 6  │      │
+│  │Carl││Dieg││Eva ││Feli││Javi│      │
+│  └────┘└────┘└────┘└────┘└────┘      │
+├─────────────────────────────────────┤
+│  ⚡ ACCIONES                         │
+│  ⚡ PUNTOS                           │
+│  [+2] [+3] [+1 TL]                  │
+│  [✗2] [✗3] [✗ TL]                   │
+│  📦 REBOTES                          │
+│  [OF] [DEF]                         │
+│  🎯 OTROS                            │
+│  [AST] [ROB] [TAP] [PER]            │
+│  🤚 FALTAS                F:5/4 BONUS│   ← Badge dinámico
+│  [FALT] [TÉC] [ANT] [DESC]          │     v1.6.15
+└─────────────────────────────────────┘
+```
+
+#### 7.3.1 Cómo registrar acciones
+
+1. **Toca la acción** en el banner (por ejemplo +3 Triple).
+2. Modal **¿Quién?** con 5 botones grandes del quinteto.
 3. Tocas el jugador.
-4. (Si Shot Chart está activo) → tocar la zona de la cancha.
-5. **Encadenamientos automáticos opcionales:**
-   - Tras canasta → "¿Asistencia?" con los demás del quinteto + botón Saltar.
-   - Tras fallo → "¿Rebote?" con todos + opción "Rebote del rival" + Saltar.
+4. (Si shot chart está ON) → tocar zona de la cancha (sección 8).
+5. **Encadenamientos automáticos** opcionales:
+   - Tras canasta → modal **🎁 ¿Asistencia?** con los otros 4 + Saltar.
+   - Tras fallo (✗2/✗3/✗TL) → modal **📦 ¿Rebote?** con los 5 + 🔴 Rebote del rival + Saltar.
 
-> 💡 **Las cards del quinteto son para sustituir, no para registrar acciones.** Si tocas una card del quinteto, se abre el modal de sustitución.
+> 💡 **Las cards del quinteto NO registran acciones.** Tocarlas abre el modal de sustitución (ver 7.3.2).
 
-### Sección de faltas (v1.6.15)
+#### 7.3.2 Sustituciones
 
-El ACTPAD del jugador seleccionado tiene una **caja propia 🤚 FALTAS** al final, separada de las acciones genéricas (asistencia, robo, tapón, pérdida). Los 4 tipos de falta:
+Al tocar una card del quinteto:
 
-- **FALT** Personal — la falta de toda la vida. Suma 1 al contador del jugador y al de equipo.
-- **TÉC** Técnica — protesta, demora, banquillo. Default **1 TL + posesión** (FIBA 2024-25).
-- **ANT** Antideportiva — contacto excesivo, intencional. 2 TL + posesión.
-- **DESC** Descalificante — agresión, segunda antideportiva, expulsión inmediata. 2 TL + posesión.
+```
+↔ Sustitución
+SALE: #4 Carlos Uno
 
-**Badge dinámico** a la derecha del título de la sección:
+¿Quién entra?
+  #6 Hugo
+  #33 Helena
+  ...
+```
 
-- `F:0/4` (gris) → no hay bonus, todavía.
-- `F:4/4 · PRÓX BONUS` (amarillo) → la siguiente falta tirará TL.
-- `F:5 · BONUS` (verde) → estamos en bonus, las faltas defensivas tiran TL.
+Lista del banquillo válido (los descalificados aparecen en gris y no son seleccionables). Si hay descalificación forzosa, el modal lo abre la app sin que toques nada (sección 7.3.5).
 
-### Faltas del rival con tiros libres (v1.7.1)
+> Para llevar al rival a otro jugador (si hay rivalPlayers), toca el toggle CASADEMONT/BILBAO arriba.
 
-Cuando el rival comete falta —tanto si sumas el contador con el `+` de **FALTAS rival** del header como si tienes jugadores rivales registrados y le asignas la falta a uno— Kortline abre un modal nuevo:
+#### 7.3.3 Sección 🤚 Faltas (v1.6.15)
 
-1. **Picker de tirador nuestro** — lista con dos secciones: **EN PISTA** (los 5 actuales, resaltados) y **BANQUILLO** (los demás convocados). Útil para corregir si te equivocaste de jugador o si hubo sustitución rápida.
-2. **Nº de tiros libres** con default según contexto:
-   - Falta personal sin bonus rival → `Sin TL`.
-   - Falta personal con bonus rival (rivalFouls ≥5 en el cuarto) → `2 TL` + banner verde **⚠️ BONUS rival · esta falta tira 2 TL**.
-   - Técnica → `1 TL`. Antideportiva/Descalificante → `2 TL`.
-3. **Continuar — marcar tiros** abre el modal granular tiro a tiro.
+Caja propia del banner con cuatro botones:
 
-### Modal de tiros libres tiro a tiro (v1.7.1)
+| Acción | Default TL | Cuándo |
+|--------|------------|--------|
+| **FALT** Personal | Sin TL si no bonus / 2 TL si bonus | Falta normal |
+| **TÉC** Técnica | 1 TL + posesión (FIBA 2024-25) | Protesta, demora, banquillo |
+| **ANT** Antideportiva | 2 TL + posesión | Contacto excesivo, intencional |
+| **DESC** Descalificante | 2 TL + posesión + expulsión | Agresión, segunda antideportiva |
 
-Todos los modales granulares de TL arrancan con todos los tiros marcados como **✗ fallado** por defecto. **Toca solo los que entran** (cambian a ✓). Otro toque vuelve a ✗.
+**Badge dinámico** a la derecha del título:
 
-El botón Guardar muestra el conteo en tiempo real: "Guardar (2/3 entran)". Siempre habilitado — si no tocas ninguno, se registra `0/3 entran` (los 3 fallaron).
+- `F:0/4` (gris) — sin bonus aún.
+- `F:4/4 · PRÓX BONUS` (amarillo) — la siguiente falta tirará TL.
+- `F:5 · BONUS` (verde) — ya en bonus.
 
-### Modal de tiros libres inteligente (v1.6.15)
+#### 7.3.4 Modal de tiros libres inteligente (v1.6.15)
 
-Cuando registras una falta, el modal de TL se abre con un **default según el contexto**:
+El modal calcula default según contexto:
 
-- Falta personal sin bonus → **Sin TL** preseleccionado (lo más común).
-- Falta personal en bonus → **2 TL** + banner verde **⚠️ BONUS · esta falta tira 2 TL**.
-- Falta técnica → **1 TL**.
+- Personal sin bonus → **Sin TL** preseleccionado.
+- Personal en bonus → **2 TL** + banner verde `⚠️ BONUS · esta falta tira 2 TL`.
+- Técnica → **1 TL**.
 - Antideportiva / Descalificante → **2 TL**.
 
-Tras elegir el nº de TL > 0, el flujo es **granular tiro a tiro**: aparece un botón `?` por cada tiro libre. Tócalo una vez para marcarlo ✓ entra, otra vez ✗ falla. Cuando todos están marcados, "Confirmar" registra los puntos al rival.
+Tras elegir nº TL > 0 → modal granular **tiro a tiro** (v1.7.1):
 
-> Si el partido es con jugadores del rival registrados, el modal te pide primero seleccionar al jugador rival al que se le tiran. Si no, los TL se anotan como puntos genéricos del rival.
+```
+🎯 Tiros libres
+3 tiros — toca los que entran
+[✗] [✗] [✗]   ← arrancan todos en fallado
+[Guardar (0/3 entran)]   ← se actualiza al tocar
+```
 
-**Descalificación automática.** Kortline marca al jugador como ⛔ DQ cuando:
+Cada toque cambia ✗ → ✓. Otro toque vuelve a ✗. Por defecto **todos fallados** (la mayoría suelen fallar) — solo tocas los que entran. Botón final con conteo en tiempo real.
 
-- Acumula **5 faltas personales**, o
-- Acumula **2 técnicas**, o
-- Acumula **2 antideportivas**, o
-- Acumula **1 técnica + 1 antideportiva**, o
-- Recibe **1 descalificante** directa.
+#### 7.3.5 Faltas del rival → tiros libres NUESTROS (v1.7.1)
 
-El contador (●●●) y el color de su tarjeta avisan: gris (0–3), amarillo (4), rojo (descalificado).
+Cuando el rival comete falta — tocando el `+` de FALTAS rival en el header o asignándola a un jugador rival concreto — Kortline abre automáticamente:
 
-### 🎯 Modo Shot Chart (v1.7.0)
+1. Picker del **tirador nuestro**: lista con dos secciones **EN PISTA** (los 5 actuales, resaltados) y **BANQUILLO** (los demás convocados).
+2. Nº de TL con default según bonus rival y banner verde si aplica.
+3. Modal granular ✗ default tras elegir nº.
 
-**Activación.** En el modal de **Crear/Editar partido**, activa el toggle **🎯 Modo Shot Chart [PRO]**. Solo afecta al partido en curso — puedes tener unos partidos con shot chart y otros sin.
+Si entra el TL, los puntos suman a nuestro marcador y a `stats[pid].p1m` del jugador. Si fallan, suman a `p1a`.
 
-**Cómo funciona.** Cuando está ON, cada vez que pulses **+2 / +3 / ✗2 / ✗3** en el ACTPAD del jugador, la app abre la cancha de baloncesto a pantalla completa. Toca la zona donde se hizo el tiro y queda registrado.
+#### 7.3.6 Sustitución forzosa tras descalificación (v1.7.5)
 
-- Si tocas **dentro del arco** y has pulsado **+2** → registra +2.
-- Si tocas **fuera del arco** y has pulsado **+3** → registra +3.
-- Si hay **discrepancia** (pulsaste +2 pero tocaste fuera del arco) → la app te avisa y te deja elegir: **Sí, registrar como 3p** o **Mantener como 2p**.
+Cuando una falta descalifica al jugador (5 personales, 2 técnicas, 2 antideportivas, 1 técnica + 1 antideportiva, o 1 descalificante directa) y está en pista, se abre automáticamente:
 
-**Mapa de tiros 📍.** Mientras el partido está activo, en el header del live game tienes un botón **📍** que abre el **Mapa de tiros** del partido. Tras finalizar el partido, el botón también está en el detalle.
+```
+⛔ Descalificado
+2 faltas técnicas
 
-El mapa muestra:
+⬇️ SALE: #5 Diego Dos
 
-- **3 cards** con 2pt, triples y total (intentados/anotados con %).
-- **La cancha grande** con todos los tiros: 🟢 verde para 2pt anotado, 🔵 azul para triple, ✗ rojo para fallado.
-- **Filtros**: por jugador, por cuarto, anotados/fallados/todos.
+ELIGE SUSTITUTO DEL BANQUILLO
+[#7 Felipe (0 faltas)]
+[#33 Helena (2 faltas)]
+...
+```
 
-**Notas.** Los tiros libres no usan shot chart (siempre se tiran desde la misma línea). Si un partido se creó antes de v1.7.0, no tiene shot chart — puedes activarlo editando el partido.
+**Sin botón Cancelar.** Tienes que elegir un sustituto sí o sí. Excepción única: si todo el banquillo está descalificado, aparece aviso `⚠️ Banquillo agotado · continuarás con menos jugadores en pista` + botón único `OK, sacar sin sustituir`.
 
----
+#### 7.3.7 Reloj y tiempos muertos
 
-### Reloj se para con falta (v1.6.13)
+**Reloj** — botón ▶/⏸ para iniciar/pausar, ↺ para resetear, toca el tiempo para editarlo manualmente. Avisos visuales a 2:00, 1:00, 30s y 10s.
 
-Toggle en el modal de **Crear/Editar partido**: **⏱ Reloj se para con falta**.
+**Reloj se para con falta (v1.6.13).** Si el toggle del partido está ON, registrar una falta para automáticamente el reloj y muestra toast `⏱ Reloj parado por falta`.
 
-- **ON** (default en sénior, junior, cadete, infantil, alevín, benjamín, escuela): cualquier falta detiene automáticamente el reloj de juego. Esta es la regla FIBA estricta.
-- **OFF** (default en 3x3 y "otro"): el reloj sigue corriendo con la falta.
+**Tiempos muertos** — botón **T.M** abre overlay pantalla completa con:
+- Cuenta atrás 1:00.
+- Reloj de juego pausado.
+- Dots por equipo y mitad (2 en H1, 3 en H2, regla FEB amateur).
+- Sustituciones del quinteto durante el TM.
+- Botón ▶ Reanudar para terminar antes.
 
-Útil para diferenciar partidos oficiales (donde el árbitro siempre para) de amistosos o entrenamientos donde el reloj puede seguir.
+#### 7.3.8 Cuartos bloqueados (v1.7.9)
 
-### Bloqueo de cuartos futuros
+Los tabs **Q2 / Q3 / Q4** aparecen **en gris al 45% de opacidad** con icono **🔒** mientras no hayas llegado a ellos. No reaccionan al click — toast `⚠️ Aún no has llegado a Qx`.
 
-Los tabs Q2 / Q3 / Q4 aparecen en gris y desactivados hasta que el reloj avanza. Puedes volver a cuartos pasados para revisar o añadir acciones, pero no saltar a uno que aún no ha empezado.
+Cuando el reloj llega a 0 al final del Q1, se desbloquea Q2; etc. Puedes volver a un cuarto pasado para revisar o añadir acciones.
 
-### Marcador del rival
+#### 7.3.9 Descansos entre cuartos
 
-Si no tienes estadísticas del rival activadas, usa los botones **＋** y **−** bajo el marcador rival.
+| Cuándo | Duración |
+|--------|----------|
+| Entre cuartos (Q1↔Q2, Q3↔Q4) | 1 minuto fijo |
+| Medio tiempo (Q2↔Q3) | 10 min por defecto, **configurable en el momento** |
 
-### Reloj
+**Selector de medio tiempo (v1.6.14).** Al terminar el Q2, encima del botón **▶ Iniciar Medio tiempo** aparece:
 
-El reloj cuenta hacia atrás (tiempo que queda). Toca el tiempo para editarlo manualmente con botones `+/−`. Botón **▶/⏸** para iniciar/pausar, **↺** para resetear.
+```
+DURACIÓN DEL MEDIO TIEMPO
+[1'] [3'] [5'] [10'] [15'] [⚙ Otro]
+```
 
-**Aviso de 10 segundos:** cuando queden menos de 10s, se activa un aviso visual.
+Toca la pildora que quieras (10' por defecto). **⚙ Otro** abre prompt para 1–30 min. La elección solo afecta a este descanso.
 
-### Tiempo muerto
+Durante el descanso aparece overlay con cuenta atrás y mensaje "Próximo: Q3". Botón **▶ Iniciar Q3** para terminar antes.
 
-Pulsa el botón **T.M** (esquina superior derecha del reloj) y selecciona qué equipo lo pide:
-
-- Aparece un **overlay a pantalla completa** con cuenta atrás de 1:00
-- El **reloj se detiene automáticamente**
-- Dots por equipo y mitad (2 en la primera mitad, 3 en la segunda, regla FEB amateur)
-- Durante el TM puedes hacer sustituciones del quinteto en pista
-- Pulsa **▶ Reanudar** para terminar antes de tiempo
-- Al llegar a 0 se cierra solo con un aviso "¡Fin del T.M.! Reanudamos"
-
-### Descansos entre cuartos
-
-Al terminar cada cuarto aparece un overlay centrado a pantalla completa con las acciones del último segundo antes del descanso:
-
-- Q1↔Q2 y Q3↔Q4 → **1 minuto** (fijo)
-- Medio tiempo (Q2↔Q3) → **10 minutos por defecto**, configurable en el momento (v1.6.14)
-
-**Selector de duración del medio tiempo (v1.6.14).** Encima del botón **▶ Iniciar Medio tiempo** hay un selector de pildoras: `1' · 3' · 5' · 10' (default) · 15' · ⚙ Otro`. Toca la pildora que quieras y el botón Iniciar se actualiza con esa duración. **⚙ Otro** abre un prompt para meter cualquier valor entre 1 y 30 minutos. Útil cuando el árbitro acorta o alarga el descanso, o en partidos amistosos donde el descanso es más corto.
-
-La elección sólo afecta al descanso del partido en curso: el siguiente partido vuelve al default 10'.
-
-### Prórroga automática
+#### 7.3.10 Prórroga automática
 
 Al llegar a 0 el reloj del último cuarto **en empate**, aparece automáticamente:
 
@@ -450,128 +558,291 @@ Al llegar a 0 el reloj del último cuarto **en empate**, aparece automáticament
 🤝 ¡EMPATE!
 Fin del Q4 · 47 — 47
 ¿Se juega prórroga?
-[ 🏀 Jugar OT ] [ 🏁 Finalizar partido ]
+[🏀 Jugar OT]   [🏁 Finalizar partido]
 ```
 
-Pulsa **Jugar OT** para activar 5 minutos de prórroga. Las pestañas Q1–Q4 no se tocan, se añade una nueva pestaña OT. Si esa OT también termina en empate, se ofrece OT2, y así sucesivamente.
+Cada OT dura **5 minutos**. Las **faltas de equipo en OT continúan del Q4** (regla FIBA 37.2 — no se resetean) (v1.6.13/v1.6.14).
 
-Si necesitas activar la prórroga manualmente (sin que el reloj haya llegado a 0), pulsa **✏️** junto al periodo activo y aparecerá un botón de activación si hay empate.
+#### 7.3.11 "Continuar partido" desde la 1ª vez (v1.7.9)
 
-### Historial de acciones por cuarto
-
-El historial del partido se encuentra al final de la pantalla, agrupado por cuartos:
-- El **cuarto en curso** aparece abierto y con borde naranja y etiqueta **EN CURSO**
-- Los **cuartos anteriores** aparecen cerrados, mostrando en el encabezado el resumen de puntos (`+8 pts 🟢 / -5 🔴`) y el número de acciones
-- Pulsa cualquier encabezado para expandir o colapsar ese cuarto
-- Las acciones muestran reloj, dorsal, nombre, tipo y puntos anotados
-- El botón **✕** de cada fila elimina esa acción y descuenta los puntos del cuarto correspondiente
-- El botón **↩️** (encima de los botones de acción) deshace la última acción registrada
-
-### Compartir marcador en vivo
-
-Botón **📤** (verde) en el header. Genera el mensaje con cuarto actual y tiempo restante: `🔴 EN VIVO · Q3 · 04:23`.
-
-### Estadísticas en pantalla completa
-
-Gira el móvil o pulsa **📊 Pantalla completa** para ver la tabla de estadísticas en landscape. La vista incluye:
-- **Marcador grande** con diferencia de puntos en color (verde/rojo)
-- **Parciales por cuarto** (`Q1 8–6 ✅ · Q2 7–9 ❌ · ...`)
-- **Tabla completa** con fila de totales para ambos equipos
-- Soporte de muesca (safe-area) en iPhones en horizontal
-
-### Finalizar partido
-
-Botón **🏁** en el header → confirma el resultado. El partido pasa a "finalizado".
+Una vez has entrado al live game al menos una vez (aunque no hayas registrado nada), el botón en HOY y matchDetail pasa a **🔴 Continuar partido / Continuar en vivo** (rojo). El badge "🔴 EN JUEGO" y el marcador se mantienen restrictivos: solo aparecen cuando hay actividad real.
 
 ---
 
-## Eventos y Convocatorias
+## 8. Modo Pro Shot Chart 🎯
 
-### Crear un evento
+Iteración Pro de Kortline para clubes que quieren analítica avanzada de tiros.
 
-Equipo → **📅 EVENTOS Y CONVOCATORIAS** → **＋**. Tipos:
-- 🏟️ **Partido** — con campo para el rival
-- 🔧 **Tecnificación** — con nombre/descripción
-- 📌 **Otro** — genérico
+### 8.1 Activar
 
-Rellena fecha, hora, hora de concentración, lugar y mensaje opcional del entrenador.
+En el modal de **Crear/Editar partido**, toggle **🎯 Modo Shot Chart [PRO]**. Solo afecta al partido en curso. Default OFF.
 
-### Convocatoria automática
+### 8.2 Captura de cada tiro
 
-Al crear un evento, la app **pre-selecciona todos los jugadores ordenados por % de asistencia** (los que más vienen aparecen primero). Puedes ajustar manualmente.
+Cuando está ON y pulsas **+2 / +3 / ✗2 / ✗3** en el banner de acciones (tras elegir jugador), se abre la cancha SVG a pantalla completa:
 
-### Gestionar convocados
+```
+┌─────────────────────────────────────┐
+│  🎯 SHOT CHART        [✕ Cancelar]   │
+│  Carlos #4                           │
+│  ┌─────────────────────────────────┐ │
+│  │ +2 Canasta — Pulsa la zona      │ │
+│  └─────────────────────────────────┘ │
+│       ┌────────────────┐             │
+│       │ [cancha SVG]   │             │
+│       │   semi cancha  │             │
+│       │   con líneas   │             │
+│       │   FIBA reales  │             │
+│       └────────────────┘             │
+│  Si tocas fuera del arco con +2,     │
+│  te avisaremos antes de cambiar.     │
+└─────────────────────────────────────┘
+```
 
-- Toca un jugador para incluirlo/excluirlo
-- El badge de % (🟢/🟡/🔴) ayuda a decidir
-- Botones **Todos** / **Ninguno** para selección rápida
+Tocas la zona donde se hizo el tiro → registra coordenadas y cierra. Si hay **discrepancia** entre el botón pulsado y la zona detectada (`+2` pero zona de 3, o viceversa) aparece pre-aviso (v1.7.4):
 
-### Compartir convocatoria de evento
+```
+⚠️ Zona y tipo no coinciden
 
-Botón **📤** en la card del evento. El mensaje incluye tipo, fecha, hora, concentración, lugar, lista numerada de convocados con dorsal, mensaje del entrenador y lema del club.
+Pulsaste Canasta de 2 pero la zona donde
+tocaste está fuera del arco de 3.
+
+[✓ Registrar como Triple anotado]
+[↺ Volver a tocar zona de 2p]
+```
+
+- **✓ Registrar como triple** → cambia el valor según la zona.
+- **↺ Volver a tocar** → reabre la cancha. Tienes que tocar zona consistente con el +2 original.
+
+> Garantía: ningún shot guardado tiene coordenadas inconsistentes con su valor.
+
+### 8.3 Mapa de tiros 📍
+
+Botón **📍** en el header del live game (visible si shotChart=ON) y en el detalle del partido finalizado. También accesible desde HOY si el partido está activo.
+
+```
+┌─────────────────────────────────────┐
+│  ←  📍 Mapa de tiros        [📤]    │
+│     CASADEMONT vs BILBAO             │
+├─────────────────────────────────────┤
+│  [🎯 Puntos]   [🔥 Heatmap zonas]    │   ← v1.8.2
+│  [📅 Este partido]  [🗓 Temporada]   │   ← v1.8.2
+├─────────────────────────────────────┤
+│  JUGADOR  [▼ Todos los jugadores]    │
+│  [Todos] [Q1] [Q2] [Q3] [Q4]         │
+│  [Todos] [✓ Anotados] [✗ Fallados]   │
+│                                     │
+│  ┌──┐  ┌──┐  ┌──┐                   │
+│  │2/3│ │1/2│ │3/5│   ← cards resumen │
+│  │2pt│ │tri│ │tot│                   │
+│  └──┘  └──┘  └──┘                   │
+│                                     │
+│       ┌────────────────┐             │
+│       │ cancha + tiros │             │
+│       │ 🟢 2pt anot     │             │
+│       │ 🔵 3pt anot     │             │
+│       │ ✗  fallado      │             │
+│       └────────────────┘             │
+└─────────────────────────────────────┘
+```
+
+#### Modos de visualización (v1.8.2)
+
+| Modo | Qué muestra |
+|------|-------------|
+| **🎯 Puntos** | Cada tiro como punto individual (verde 2pt, azul triple, ✗ rojo fallado) |
+| **🔥 Heatmap zonas** | Cancha dividida en 7 zonas, cada zona pintada según `%` de acierto. Texto `X/Y · pct%` en cada zona |
+
+Las 7 zonas FIBA son: pintura, mid izquierda/centro/derecha, esquina izquierda 3pt, top + alas 3pt, esquina derecha 3pt.
+
+Gradiente del heatmap:
+
+| % | Color |
+|---|-------|
+| <20% | 🔴 rojo |
+| 20–29% | 🟠 naranja |
+| 30–39% | 🟡 amarillo |
+| 40–49% | 🟢 verde claro |
+| ≥50% | 🟢 verde |
+| sin tiros | gris translúcido |
+
+#### Fuente de datos (v1.8.2)
+
+| Toggle | Qué incluye |
+|--------|-------------|
+| **📅 Este partido** | Solo `m.live.shots` del partido actual |
+| **🗓 Toda la temporada** | Concatena los `shots` de todos los partidos del equipo. El picker de jugadores se amplía con cualquiera convocado en cualquier partido. Filtros por cuarto desaparecen (no aplica) |
+
+### 8.4 Exportar PNG para WhatsApp (v1.8.2)
+
+Botón verde **📤** en el header del mapa. Genera un PNG ~1000×1000 px con:
+- Cabecera: nombre del club + jugador filtrado + fecha + ratio `made/att` + `%`.
+- Cancha completa con la vista actual (puntos o heatmap).
+- Fondo navy oficial del club.
+
+**Si el dispositivo soporta `navigator.canShare({files})`** (iOS Safari, Android Chrome modernos) → abre el menú nativo de compartir con WhatsApp/etc directamente. Si no → descarga `kortline-tiros-{equipo}-{fecha}.png` y lo compartes manualmente.
 
 ---
 
-## Copia de seguridad
+## 9. Estadísticas
 
-### Exportar datos
+### 9.1 Stats avanzadas en el live game (v1.8.0)
 
-⚙️ Configuración → **⬇️ Exportar** → descarga un archivo `.json` con todos los datos (incluye club, equipos, plantilla, sesiones, partidos y eventos).
+En la tabla del live (a pantalla completa girando el móvil):
 
-### Importar datos
+| Columna | Qué es |
+|---------|--------|
+| **MIN** | Minutos jugados — calculado vía log de subs y tiempo absoluto del juego |
+| **PTS** | Puntos totales (1×p1m + 2×p2m + 3×p3m) |
+| **T2 / T3 / TL** | Anotados / Intentos |
+| **eFG%** | Tiro efectivo: `(p2m + 1.5×p3m) / intentos × 100`. Pondera triples |
+| **RO / RD** | Rebotes ofensivos / defensivos |
+| **AST / F / ROB / TAP / PER** | Asistencias / Faltas / Robos / Tapones / Pérdidas |
+| **+/-** | Diferencia de marcador mientras está en pista (verde positivo / rojo negativo) |
+| **EFF** | Eficiencia FEB: `pts + reb + ast + stl + blk − fallados − to − faltas` |
 
-⚙️ Configuración → **⬆️ Importar** → selecciona el archivo. **Sobreescribe todos los datos actuales.**
+La fila de **Totales** muestra los agregados con eFG% y EFF también calculados.
 
-### Autobackup
+### 9.2 Pantalla completa por giro (v1.8.0)
 
-La app guarda automáticamente en cada cambio. Restaurable desde ⚙️ Configuración → **🔄 Restaurar último autobackup**.
+**Gira el móvil a horizontal** estando en el live game → se abre automáticamente el overlay de stats a pantalla completa con todas las columnas. Al volver a vertical se cierra solo. Sin botón manual — más limpio y resuelve el problema del botón "atrás" detrás de la barra de notificaciones.
 
-La sección de copia de seguridad muestra siempre la fecha del último export y del último autobackup.
+### 9.3 Pantalla de estadísticas globales
 
-> 💡 Exporta un backup antes de cambiar de dispositivo o limpiar el navegador.
+**Equipo → 📊 Stats**:
 
----
+- **Tarjetas por jugador** — % asistencia, sesiones jugadas, racha, valoración media.
+- **Riesgo FEB** — jugadores por debajo del umbral (75% por defecto, configurable) marcados con ⚠️. Lesionados aparecen con `🚑 lesionado desde fecha · congelado`.
+- **Filtros**: Todos / ⚠️ Riesgo / 🔥 Racha mala.
+- **Gráficos** — tendencia 24 últimas sesiones.
+- **Exports** — PDF (con marcado de riesgo) y Excel (4 hojas: Resumen, Mensual con media ponderada, Sesiones, Lesiones).
 
-## Preguntas frecuentes
-
-**¿Funciona sin internet?**
-Sí, una vez cargada funciona completamente offline.
-
-**¿Puedo usarla en varios dispositivos?**
-Los datos son locales. Para sincronizar, exporta el backup en un dispositivo e impórtalo en el otro.
-
-**¿Qué pasa si cierro el navegador?**
-Los datos se guardan automáticamente en cada cambio. No se pierde nada.
-
-**¿Cómo cambio el umbral de riesgo FEB?**
-⚙️ Configuración → **📊 Estadísticas y exportación** → selecciona el umbral (60–85%). El estándar FEB es 75%.
-
-**¿Puedo tener varios equipos?**
-Sí, sin límite. Cada equipo tiene su plantilla, historial y configuración independientes.
-
-**¿Cómo marco a un jugador como lesionado?**
-En la plantilla del equipo, pulsa el botón **🚑** de la fila del jugador (junto al lápiz y la papelera). Se abre el modal **Nueva lesión** donde indicas fecha, origen y explicación. Kortline rellena automáticamente las sesiones pasadas como justificadas por lesión para que el % de asistencia no se vea castigado. Ver el apartado **🚑 Gestión de lesiones** para el flujo completo.
-
-**¿Cómo doy de alta a un jugador recuperado?**
-Pulsa otra vez el botón **🚑** (que ahora estará en rojo). Se abre el modal de recuperación con el botón **✅ Dar de alta médica**. Un solo toque y el jugador vuelve a estar sano.
-
-**¿El % de asistencia baja cuando un jugador está lesionado?**
-No. Al marcar la lesión, las sesiones del periodo pasan a ◎ Justificado · Lesionado/a y dejan de contar como ausencias. Además, si el jugador ya estaba en ⚠️ Riesgo FEB al lesionarse, seguirá apareciendo ahí durante la baja (el estado queda congelado).
-
-**¿Puedo añadir foto a los jugadores?**
-Sí, al editar un jugador pulsa el círculo de foto en la parte superior. La foto se muestra como avatar junto al dorsal en la plantilla y en el pase de lista.
+> 💡 El export respeta el filtro activo. Si tienes "⚠️ Riesgo" puesto, el PDF/Excel solo lleva esos jugadores.
 
 ---
 
-**¿La valoración colectiva se calcula sola?**
-Sí, si tienes activadas la colectiva y la individual al mismo tiempo. La nota del equipo será la media de las valoraciones individuales (modo Auto). Puedes editarla manualmente con una pulsación larga en el botón ✏️.
+## 10. Backup y datos
 
-**¿Qué es el indicador "Riesgo FEB" de las estadísticas?**
-Es el número de jugadores cuya asistencia está por debajo del umbral configurado. Pulsa la caja para ver una explicación detallada con la leyenda de colores.
+### 10.1 Filosofía honesta
 
-**¿Cómo cierro los paneles/modales?**
-Puedes pulsar fuera del panel, pulsar "Cancelar", o arrastrar la barrita gris de la parte superior hacia abajo.
+Kortline guarda todo en `localStorage` del navegador. Eso significa que **si limpias la caché del navegador, pierdes todo**. La única forma segura de proteger tus datos es **exportar el JSON manualmente y guardarlo**:
+
+- Drive / Dropbox / iCloud
+- Email a ti mismo
+- Pendrive físico
+
+> 💾 Aviso visible en HOY: si nunca has exportado, aparece banner amarillo `Sin backup reciente`.
+
+### 10.2 Exportar / Importar
+
+⚙️ Ajustes → 💾 Copia de seguridad:
+
+- **⬇️ Exportar** — descarga `kortline-backup-{fecha}.json` con TODO (equipos, jugadores, sesiones, partidos, eventos, fotos, shots, configuración, logo).
+- **⬆️ Importar** — sube un JSON exportado anteriormente. **Sobreescribe** los datos actuales — exporta primero por si acaso.
+
+### 10.3 Fin del autobackup duplicador (v1.8.3)
+
+Hasta v1.8.2, cada `save()` duplicaba todos los datos en `cbj:autobackup` del mismo localStorage. Eso era una falsa seguridad (si limpias caché, también pierdes el autobackup) y consumía la mitad del espacio disponible — la primera foto subida ya no cabía.
+
+**v1.8.3 elimina el autobackup automático.** Si tienes un autobackup viejo (residuo de versiones previas), aparece banner amarillo en Ajustes → Copia de seguridad:
+
+> 🔄 Autobackup antiguo: **74 KB**
+>
+> v1.8.3 ya no genera autobackup duplicado. Si tu app va lenta o no caben fotos, bórralo aquí.
+
+Con dos botones:
+
+- **🔄 Restaurar** — usar el autobackup viejo (por si querías recuperar algo).
+- **🗑 Borrar (libera 74 KB)** — limpia el autobackup. Tus datos reales no se tocan.
+
+> 💡 Antes de borrar, exporta el JSON manualmente — ese es tu backup real.
 
 ---
 
-_Kortline v1.6.10 · Mario Nadal Ara · [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/kortline-app)_
+## 11. Tips Pro
+
+### 11.1 Atajos del live game
+
+- **Tocar jugador en pista** = abrir modal de sustitución (no registra acciones).
+- **Tocar acción en banner** = picker "¿quién?" con los 5 del quinteto.
+- **Tras canasta** → modal asistencia automático con Saltar.
+- **Tras fallo** → modal rebote automático con "Rebote del rival" + Saltar.
+- **Pestaña de cuarto futuro** = bloqueada con 🔒 hasta que llegues.
+- **Girar móvil** = pantalla completa de stats con MIN, +/-, EFF, eFG%.
+
+### 11.2 Convocatoria rápida
+
+- Botones **Todos** / **Ninguno** arriba a la derecha del wizard.
+- El **scroll se mantiene** al tocar jugadores (v1.7.6).
+- Si activas un jugador como **titular** sin querer, vuélvelo a tocar y se desactiva.
+- **Capitán** se cambia tocando (C) en otra fila.
+
+### 11.3 Shot Chart productivo
+
+- **Activa shotChart solo en partidos importantes** — añade 1 toque por tiro, no compensa en amistosos.
+- Tras finalizar el partido, ve a **📍 Mapa de tiros** → pulsa **🔥 Heatmap zonas** para resumen visual de zonas eficientes.
+- Cambia a **🗓 Toda la temporada** + filtra por jugador para análisis acumulado.
+- Comparte por WhatsApp con el botón **📤** — los jugadores reciben mapa visual de su rendimiento.
+
+### 11.4 Stats avanzadas en partido
+
+- **MIN** se acumula con tracking de subs — útil para repartir minutos equitativos.
+- **+/-** ayuda a ver impacto real del jugador en el marcador (alguien sin puntos con +/- alto suele defender bien).
+- **EFF** condensa en un número la productividad — buen indicador para partido individual.
+- **eFG%** = mejor que FG% normal porque pondera triples (1 triple cuenta como 1.5×).
+
+---
+
+## 12. Resolución de problemas
+
+| Problema | Causa probable | Solución |
+|----------|----------------|----------|
+| **Foto da "Almacenamiento lleno"** | autobackup duplicador (pre-v1.8.3) | Ajustes → Copia de seguridad → 🗑 Borrar autobackup antiguo |
+| **No salta a "Continuar partido"** | partido nunca abierto | Entra al live al menos una vez |
+| **Banner del capitán sigue amarillo** | hotfix v1.7.8 no en producción | Actualiza la app / hard refresh |
+| **Stats en horizontal sin botón atrás** | desde v1.8.0 ya no hay botón | Vuelve a vertical y se cierra solo |
+| **Modal TL aparece tras CADA falta** | sin bonus el default es "Sin TL" | Pulsa "Confirmar (sin TL)" o el botón gris "Saltar sin asignar" |
+| **Carlos en card aparece como "I."** | nombre empieza con inicial pre-v1.6.15 | Edita el jugador y reabre el live game (`_shortName` lo arregla) |
+| **No puedo saltar a Q3** | Q3 está bloqueado hasta llegar | Lleva el reloj del Q2 a 0 — Q3 se desbloquea solo |
+| **Convocatoria salta al inicio al tocar jugador** | regresión pre-v1.7.6 | Actualiza la app — hace refresh in-place |
+| **Shot guardado en zona equivocada** | tocaste mal y elegiste "Mantener" pre-v1.7.4 | En v1.7.4+ el botón es "↺ Volver a tocar zona" — fuerza consistencia |
+
+---
+
+## Anexo: glosario de iconos
+
+| Icono | Significado |
+|-------|-------------|
+| 🏀 | Partido o canasta |
+| 🏋️ | Entrenamiento |
+| 🚑 | Lesión (jugador) |
+| 📋 | Pasar lista / convocatoria |
+| 📷 | Foto del entrenamiento |
+| 📤 | Compartir / exportar |
+| 📥 | Descargar |
+| 📍 | Mapa de tiros |
+| 🎯 | Modo Shot Chart |
+| 🔥 | Heatmap |
+| 🗓 | Temporada |
+| 📅 | Este partido |
+| ⏱ | Reloj / TM |
+| ⚡ | Acciones del banner |
+| 📦 | Rebotes |
+| 🤚 | Faltas |
+| ⛔ | Descalificado / DQ |
+| 🔒 | Bloqueado (cuarto futuro) |
+| ⚠️ | Aviso |
+| ✓ ✗ | Anotado / Fallado |
+| ⭐ | Titular |
+| (C) | Capitán |
+| 💾 | Autoguardado |
+| 🔄 | Sincronizar / restaurar |
+| 🗑 | Borrar |
+| ↺ | Reset / volver a tocar |
+| ↔ | Sustitución |
+| ⬇️ ⬆️ | Sale / Entra |
+
+---
+
+_Kortline · Hecho con 🧡 para CB Jaca · v1.8.3_
+_Desarrollado por Mario Nadal Ara_
