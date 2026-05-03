@@ -879,7 +879,7 @@ window._doDQSub=function(inId,outId,isRival){
       const pIn=players.find(p=>p.id===inId);
       const pOut=players.find(p=>p.id===outId);
       const desc="↔ "+_shortName(pIn?.name||"?")+" ← "+_shortName(pOut?.name||"?")+" (DQ)";
-      live.log=[...(live.log||[]),{pid:inId,action:"sub",pts:0,q:live.q,clockAt:live.clockSec,desc}].slice(-80);
+      live.log=[...(live.log||[]),{pid:inId,action:"sub",pts:0,q:live.q,clockAt:live.clockSec,desc}].slice(-300);
       toast("⛔↔ "+desc);
     } else {
       live.onCourt=(live.onCourt||[]).filter(id=>id!==outId);
@@ -6130,9 +6130,12 @@ function liveGame(){
       <button onclick="confirmFinishMatch('${S.teamId}','${S.matchId}')" style="width:32px;height:32px;border-radius:7px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:15px" title="Finalizar partido">🏁</button>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);border:1px solid ${live.clockSec===0?"rgba(239,68,68,.5)":live.clockRunning?"rgba(34,197,94,.3)":"var(--border)"};border-radius:10px;padding:7px 10px">
-    <div id="live-clock" onclick="editClock()" style="font-family:var(--font-d);font-weight:900;font-size:28px;letter-spacing:2px;color:${live.clockSec===0?"#ef4444":live.clockSec<60?"#f59e0b":"var(--tx)"};flex:1;line-height:1;cursor:pointer" title="Toca para editar">${_fmtClock(live.clockSec||0)}<span style="font-size:10px;color:var(--tm);margin-left:4px;vertical-align:middle">✏️</span></div>
-    <button id="live-clock-btn" onclick="toggleClock()" style="width:44px;height:36px;border-radius:9px;border:none;background:${live.clockRunning?"rgba(239,68,68,.2)":"rgba(34,197,94,.2)"};color:${live.clockRunning?"#ef4444":"#22c55e"};cursor:pointer;font-size:20px;font-weight:900">${live.clockRunning?"⏸":"▶"}</button>
+  <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);border:1px solid ${live.clockSec===0?"rgba(239,68,68,.5)":live.clockRunning?"rgba(34,197,94,.3)":"rgba(239,68,68,.3)"};border-radius:10px;padding:7px 10px">
+    <div style="display:flex;flex-direction:column;flex:1">
+      <div id="live-clock" onclick="editClock()" style="font-family:var(--font-d);font-weight:900;font-size:28px;letter-spacing:2px;color:${live.clockSec===0?"#ef4444":live.clockSec<60?"#f59e0b":"var(--tx)"};line-height:1;cursor:pointer" title="Toca para editar">${_fmtClock(live.clockSec||0)}<span style="font-size:10px;color:var(--tm);margin-left:4px;vertical-align:middle">✏️</span></div>
+      <div style="font-size:9px;font-weight:800;letter-spacing:1px;margin-top:3px;color:${live.clockRunning?"#22c55e":"#ef4444"}">${live.clockRunning?"▶ EN JUEGO":"⏸ PARADO"}</div>
+    </div>
+    <button id="live-clock-btn" onclick="toggleClock()" style="min-width:44px;min-height:44px;border-radius:9px;border:none;background:${live.clockRunning?"rgba(239,68,68,.2)":"rgba(34,197,94,.2)"};color:${live.clockRunning?"#ef4444":"#22c55e"};cursor:pointer;font-size:20px;font-weight:900">${live.clockRunning?"⏸":"▶"}</button>
     <button onclick="resetClock()" style="width:36px;height:36px;border-radius:9px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:16px;font-weight:700">↺</button>
 
     <button onclick="openTimeoutModal()" style="width:36px;height:36px;border-radius:9px;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.1);color:#f59e0b;cursor:pointer;font-size:13px;font-weight:900">T.M</button>
@@ -6370,7 +6373,7 @@ window._pickReboundRival=function(){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
   const live=m.live;
   const entry={pid:"rival",action:"rd",pts:0,q:live.q,clockAt:live.clockSec,desc:"Rebote rival"};
-  live.log=[...(live.log||[]),entry].slice(-80);
+  live.log=[...(live.log||[]),entry].slice(-300);
   save();render();
   toast("📦 Rebote del rival");
 };
@@ -6571,7 +6574,7 @@ function liveAction(pid,action,pts){
   }
   const entry={pid,action,pts,q:live.q,clockAt:live.clockSec,desc:`${pname} — ${_ACTLABELS[action]||action}`};
   live.log=[...(live.log||[]),entry];
-  if(live.log.length>80)live.log=live.log.slice(-80);
+  if(live.log.length>300)live.log=live.log.slice(-300);
   // v1.6.13 · B-47: descalificación considera personales + técnicas + antideportivas + descalificantes
   // v1.7.5: tras la falta, comprobar DQ en ambos equipos y encolar sub forzoso si está en pista
   if(isFoulAction){
@@ -6758,7 +6761,7 @@ function saveTLResults(rpid, total, foulerPid){
   const rname=(rp?.name||"Rival").split(" ")[0];
   const entry={pid:rpid,action:"p1",pts:made,q:live.q,clockAt:live.clockSec,
     desc:`TL ${rname}: ${made}/${total}`};
-  live.log=[...(live.log||[]),entry].slice(-80);
+  live.log=[...(live.log||[]),entry].slice(-300);
 
   el.remove();
   save();render();
@@ -6791,7 +6794,7 @@ function liveTeamAction(action, pts){
   const pL=m.quarters===4?"Q":"P";
   const entry={pid:"team",action,pts,q:live.q,clockAt:live.clockSec,
     desc:_ACTLABELS[action]||(pts>0?"+"+pts+" pts":action)};
-  live.log=[...(live.log||[]),entry].slice(-80);
+  live.log=[...(live.log||[]),entry].slice(-300);
   _syncLiveQ(m);save();render();
 }
 
@@ -6908,7 +6911,7 @@ function confirmTeamTLShoot(total){
   live.qScores[qi][1]=(live.qScores[qi][1]||0)+made;
   const entry={pid:"rival",action:"p1",pts:made,q:live.q,clockAt:live.clockSec,
     desc:"TL rival: "+made+"/"+total};
-  live.log=[...(live.log||[]),entry].slice(-80);
+  live.log=[...(live.log||[]),entry].slice(-300);
   el.remove();_syncLiveQ(m);save();render();
   toast("🎯 TL rival: "+made+"/"+total);
 }
@@ -7107,7 +7110,7 @@ function confirmOurTLShoot(pid,total){
   const pname=_shortName(players.find(p=>p.id===pid)?.name||"?");
   const entry={pid,action:"p1m",pts:made,q:live.q,clockAt:live.clockSec,
     desc:`${pname} TL: ${made}/${total}`};
-  live.log=[...(live.log||[]),entry].slice(-80);
+  live.log=[...(live.log||[]),entry].slice(-300);
   el.remove();_syncLiveQ(m);save();render();
   toast(`🎯 ${pname}: ${made}/${total} TL`);
 }
