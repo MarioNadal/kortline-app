@@ -1749,22 +1749,34 @@ function load(){
   S.cfg.riskThreshold=parseInt(S.cfg.riskThreshold)||75;
 }
 function save(){
-  // v1.8.3: cada lsSet devuelve true/false. save() devuelve false si algún
-  // dato real no cupo (para que handlePhoto y otros sepan revertir).
-  // YA NO se llama a autoBackup() aquí — duplicaba todo el espacio sin ofrecer
-  // seguridad real (vive en el mismo localStorage que los datos primarios).
-  // El sistema honesto es export/import manual desde Ajustes.
+  // v1.8.6: pre-flight check — serialize everything FIRST, then write.
+  // If any serialization fails or total size exceeds quota, abort before
+  // writing anything (prevents partial/corrupt state).
+  const entries=[
+    [LS_KEYS.TEAMS,S.teams],[LS_KEYS.PLAYERS,S.players],[LS_KEYS.SESSIONS,S.sessions],
+    [LS_KEYS.MATCHES,S.matches],[LS_KEYS.EVENTS,S.events],[LS_KEYS.LOGO,S.clubLogo],
+    [LS_KEYS.NAME,S.clubName],[LS_KEYS.ABREV,S.clubAbrev],[LS_KEYS.LEMA,S.clubLema],
+    [LS_KEYS.CFG,S.cfg]
+  ];
+  // Phase 1: serialize all values and check total size
+  const serialized=[];
+  let totalBytes=0;
+  try{
+    for(const [k,v] of entries){
+      const json=JSON.stringify(v);
+      totalBytes+=json.length*2; // UTF-16 ≈ 2 bytes per char
+      serialized.push([k,json]);
+    }
+  }catch(e){
+    toast("⚠️ Error al preparar datos · exporta un backup");
+    return false;
+  }
+  // Phase 2: write all at once (if one fails, at least we tried the preflight)
   let ok=true;
-  if(!lsSet(LS_KEYS.TEAMS,S.teams))ok=false;
-  if(!lsSet(LS_KEYS.PLAYERS,S.players))ok=false;
-  if(!lsSet(LS_KEYS.SESSIONS,S.sessions))ok=false;
-  if(!lsSet(LS_KEYS.MATCHES,S.matches))ok=false;
-  if(!lsSet(LS_KEYS.EVENTS,S.events))ok=false;
-  if(!lsSet(LS_KEYS.LOGO,S.clubLogo))ok=false;
-  if(!lsSet(LS_KEYS.NAME,S.clubName))ok=false;
-  if(!lsSet(LS_KEYS.ABREV,S.clubAbrev))ok=false;
-  if(!lsSet(LS_KEYS.LEMA,S.clubLema))ok=false;
-  if(!lsSet(LS_KEYS.CFG,S.cfg))ok=false;
+  for(const [k,json] of serialized){
+    try{localStorage.setItem(k,json);}
+    catch(e){ok=false;toast("⚠️ Almacenamiento lleno · Exporta backup y limpia datos antiguos");break;}
+  }
   return ok;
 }
 function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}}
