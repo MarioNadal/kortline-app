@@ -85,7 +85,7 @@ if("serviceWorker" in navigator){
   --navy:#0d2244;--navy2:#1a3a6b;
   --orange:#F06318;--orange2:#B83808;--orangeG:linear-gradient(135deg,#F06318,#B83808);
   --bg:#070f1e;--s:#0c1828;--s2:#111f34;--s3:#1a3050;--border:#1d3654;
-  --tx:#eef2ff;--td:#7a9cc8;--tm:#3a5a80;
+  --tx:#eef2ff;--td:#94b4d4;--tm:#3a5a80; /* v1.8.6: --td contrast improved from #7a9cc8 for WCAG 4.5:1 */
   --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--gray:#6b7280;
   --font-d:'Barlow Condensed',system-ui,sans-serif;
   --font-b:'DM Sans',system-ui,sans-serif;
@@ -94,10 +94,17 @@ if("serviceWorker" in navigator){
 body{font-family:var(--font-b);background:var(--bg);color:var(--tx);min-height:100vh;min-height:100dvh;background-image:radial-gradient(rgba(29,54,84,0.22) 1px,transparent 1px);background-size:24px 24px;overflow-x:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior-y:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
 #root{max-width:430px;margin:0 auto;position:relative;overflow-x:hidden;}
 
+/* v1.8.6: Accessibility — prevent iOS auto-zoom on inputs */
+input,textarea,select{font-size:16px!important;}
+
+/* v1.8.6: Skip link for keyboard navigation */
+.skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;z-index:9999;}
+.skip-link:focus{position:fixed;top:10px;left:10px;width:auto;height:auto;padding:10px 18px;background:var(--orange);color:white;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;}
+
 /* ── Header ── */
 .header{padding:13px 16px;background:rgba(6,12,24,0.92);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);;padding-top:calc(14px + env(safe-area-inset-top));}
 .hrow{display:flex;align-items:center;gap:10px;}
-.bbtn{background:var(--s2);border:1px solid var(--border);color:var(--tx);width:36px;height:36px;border-radius:9px;cursor:pointer;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.bbtn{background:var(--s2);border:1px solid var(--border);color:var(--tx);min-width:44px;min-height:44px;border-radius:9px;cursor:pointer;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s;} /* v1.8.6: 36→44px touch target */
 .bbtn:hover{background:var(--s3);}
 
 /* ── FAB de añadir actividad sorpresa (HOY · v1.6.12) ── */
@@ -432,7 +439,8 @@ label{-webkit-tap-highlight-color:transparent;}
 </style>
 </head>
 <body>
-<div id="root"></div>
+<a href="#root" class="skip-link">Saltar al contenido</a>
+<div id="root" role="main"></div>
 <script>
 const _ICON_SVG_URL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+CiAgPGRlZnM+CiAgICA8IS0tIEJhY2tncm91bmQgZ3JhZGllbnQgLSByaWNoZXIgb3JhbmdlIC0tPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJiZ0dyYWQiIHgxPSIxMCUiIHkxPSIwJSIgeDI9IjkwJSIgeTI9IjEwMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojRjA2MzE4Ii8+CiAgICAgIDxzdG9wIG9mZnNldD0iNTUlIiBzdHlsZT0ic3RvcC1jb2xvcjojRTA1NTEwIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6I0I4MzgwOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KCiAgICA8IS0tIFN1YnRsZSByYWRpYWwgbGlnaHQgdG9wLWxlZnQgLS0+CiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9InRvcExpZ2h0IiBjeD0iMjUlIiBjeT0iMTglIiByPSI2MCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2JhKDI1NSwyNTUsMjU1LDAuMTgpIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiYSgyNTUsMjU1LDI1NSwwKSIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KCiAgICA8IS0tIEJhY2tib2FyZCBncmFkaWVudCAtLT4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYm9hcmRHcmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZmZmZmZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNkZGU4ZjUiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CgogICAgPCEtLSBQb2xlIGdyYWRpZW50IC0tPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJwb2xlR3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2JhKDI1NSwyNTUsMjU1LDAuNSkiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI1MCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYmEoMjU1LDI1NSwyNTUsMC44NSkiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2JhKDI1NSwyNTUsMjU1LDAuNCkiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CgogICAgPCEtLSBSaW0gZ3JhZGllbnQgLS0+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InJpbUdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I0ZGRDA3MCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3R5bGU9InN0b3AtY29sb3I6I0ZGOTUyMCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNDQzY4MDAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CgogICAgPCEtLSBCYWxsIGdyYWRpZW50IC0tPgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJiYWxsR3JhZCIgY3g9IjM1JSIgY3k9IjMyJSIgcj0iNjUlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiYSgyNTUsMjU1LDI1NSwwLjI4KSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjYwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiYSgyNTUsMjU1LDI1NSwwLjA4KSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYmEoMCwwLDAsMC4xMikiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CgogICAgPCEtLSBTaGFkb3cgZmlsdGVyIGZvciBib2FyZCAtLT4KICAgIDxmaWx0ZXIgaWQ9ImJvYXJkU2hhZG93IiB4PSItMzAlIiB5PSItMjAlIiB3aWR0aD0iMTgwJSIgaGVpZ2h0PSIxNjAlIj4KICAgICAgPGZlRHJvcFNoYWRvdyBkeD0iMiIgZHk9IjMiIHN0ZERldmlhdGlvbj0iMi41IiBmbG9vZC1jb2xvcj0icmdiYSgwLDAsMCwwLjUpIiBmbG9vZC1vcGFjaXR5PSIxIi8+CiAgICA8L2ZpbHRlcj4KCiAgICA8IS0tIFJpbSBnbG93IC0tPgogICAgPGZpbHRlciBpZD0icmltR2xvdyIgeD0iLTQwJSIgeT0iLTEwMCUiIHdpZHRoPSIxODAlIiBoZWlnaHQ9IjM4MCUiPgogICAgICA8ZmVEcm9wU2hhZG93IGR4PSIwIiBkeT0iMCIgc3RkRGV2aWF0aW9uPSIyIiBmbG9vZC1jb2xvcj0icmdiYSgyNTUsMTg1LDUwLDAuOSkiIGZsb29kLW9wYWNpdHk9IjEiLz4KICAgIDwvZmlsdGVyPgoKICAgIDwhLS0gTmV0IHNoYWRvdyAtLT4KICAgIDxmaWx0ZXIgaWQ9Im5ldFNoYWRvdyI+CiAgICAgIDxmZURyb3BTaGFkb3cgZHg9IjAuNSIgZHk9IjEiIHN0ZERldmlhdGlvbj0iMC44IiBmbG9vZC1jb2xvcj0icmdiYSgwLDAsMCwwLjM1KSIvPgogICAgPC9maWx0ZXI+CgogICAgPCEtLSBDbGlwIHJvdW5kZWQgc3F1YXJlIC0tPgogICAgPGNsaXBQYXRoIGlkPSJyb3VuZENsaXAiPgogICAgICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjI2IiByeT0iMjYiLz4KICAgIDwvY2xpcFBhdGg+CiAgPC9kZWZzPgoKICA8IS0tIOKUgOKUgCBCQUNLR1JPVU5EIOKUgOKUgCAtLT4KICA8cmVjdCB4PSIwIiB5PSIwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjI2IiByeT0iMjYiIGZpbGw9InVybCgjYmdHcmFkKSIvPgogIDxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiByeD0iMjYiIHJ5PSIyNiIgZmlsbD0idXJsKCN0b3BMaWdodCkiLz4KICA8cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iMTE4IiBoZWlnaHQ9IjExOCIgcng9IjI1IiByeT0iMjUiCiAgICAgICAgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMikiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIHJ4PSIyNiIgcnk9IjI2IgogICAgICAgIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgwLDAsMCwwLjI1KSIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGxpbmUgeDE9IjE0IiB5MT0iMTAzIiB4Mj0iMTA2IiB5Mj0iMTAzIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4yOCkiIHN0cm9rZS13aWR0aD0iMS44IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iMTQiIHkxPSIxMDUuNSIgeDI9IjEwNiIgeTI9IjEwNS41IiBzdHJva2U9InJnYmEoMCwwLDAsMC4xNSkiIHN0cm9rZS13aWR0aD0iMSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHJlY3QgeD0iODIuNSIgeT0iNzkiIHdpZHRoPSI0IiBoZWlnaHQ9IjI0IiByeD0iMiIgcnk9IjIiIGZpbGw9InVybCgjcG9sZUdyYWQpIi8+CiAgPHJlY3QgeD0iNzkiIHk9IjEwMCIgd2lkdGg9IjExIiBoZWlnaHQ9IjMiIHJ4PSIxLjUiIHJ5PSIxLjUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC41NSkiLz4KICA8cmVjdCB4PSI3Ni41IiB5PSIyNyIgd2lkdGg9IjEzIiBoZWlnaHQ9IjU1IiByeD0iMi41IiByeT0iMi41IiBmaWxsPSJyZ2JhKDAsMCwwLDAuMykiIGZpbHRlcj0idXJsKCNib2FyZFNoYWRvdykiLz4KICA8cmVjdCB4PSI3NiIgeT0iMjYiIHdpZHRoPSIxMyIgaGVpZ2h0PSI1NSIgcng9IjIuNSIgcnk9IjIuNSIgZmlsbD0idXJsKCNib2FyZEdyYWQpIi8+CiAgPHJlY3QgeD0iNzYiIHk9IjI2IiB3aWR0aD0iMi41IiBoZWlnaHQ9IjU1IiByeD0iMiIgcnk9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC42KSIvPgogIDxyZWN0IHg9Ijc2IiB5PSIyNiIgd2lkdGg9IjEzIiBoZWlnaHQ9IjIuNSIgcng9IjIiIHJ5PSIyIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNTUpIi8+CiAgPHJlY3QgeD0iNzguNSIgeT0iNDciIHdpZHRoPSI4IiBoZWlnaHQ9IjExIiByeD0iMS4yIiByeT0iMS4yIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjIwLDc1LDAsMC45KSIgc3Ryb2tlLXdpZHRoPSIxLjgiLz4KICA8bGluZSB4MT0iNzYiIHkxPSI1NiIgeDI9IjY2IiB5Mj0iNTYiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjY1KSIgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxsaW5lIHgxPSI3NiIgeTE9IjU5IiB4Mj0iNzAiIHkyPSI1NiIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMzUpIiBzdHJva2Utd2lkdGg9IjEuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGxpbmUgeDE9IjM3IiB5MT0iNTcuNSIgeDI9IjY2IiB5Mj0iNTcuNSIgc3Ryb2tlPSJyZ2JhKDAsMCwwLDAuMykiIHN0cm9rZS13aWR0aD0iNC41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iMzciIHkxPSI1NiIgeDI9IjY2IiB5Mj0iNTYiIHN0cm9rZT0idXJsKCNyaW1HcmFkKSIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIGZpbHRlcj0idXJsKCNyaW1HbG93KSIvPgogIDxlbGxpcHNlIGN4PSIzNyIgY3k9IjU2IiByeD0iMyIgcnk9IjIuMiIgZmlsbD0iI0ZGOTUyMCIgZmlsdGVyPSJ1cmwoI3JpbUdsb3cpIi8+CiAgPGxpbmUgeDE9IjM5IiB5MT0iNTQuNSIgeDI9IjY1IiB5Mj0iNTQuNSIgc3Ryb2tlPSJyZ2JhKDI1NSwyMzAsMTMwLDAuNikiIHN0cm9rZS13aWR0aD0iMS4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8ZyBmaWx0ZXI9InVybCgjbmV0U2hhZG93KSI+PHBhdGggZD0iTSA0MCA1NiBDIDM5IDYzIDM4IDcwIDQwLjUgNzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjgyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA0NiA1NiBDIDQ1LjUgNjMgNDUgNzAgNDYgNzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjgyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA1MiA1NiBDIDUyIDYzIDUyIDcwIDUxLjUgNzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjgyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA1OCA1NiBDIDU4LjUgNjMgNTkgNzAgNTcuNSA3OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuODIpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNIDY0IDU2IEMgNjUgNjMgNjUuNSA3MCA2MyA3OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuODIpIiBzdHJva2Utd2lkdGg9IjEiLz48cGF0aCBkPSJNIDM5LjUgNjAgUSA1MiA2MS4yIDY0LjUgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjcpIiBzdHJva2Utd2lkdGg9IjAuODUiLz48cGF0aCBkPSJNIDM5IDY1IFEgNTIgNjYuNSA2NSA2NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNykiIHN0cm9rZS13aWR0aD0iMC44NSIvPjxwYXRoIGQ9Ik0gMzkgNzAgUSA1MiA3MS44IDY0LjUgNzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjcpIiBzdHJva2Utd2lkdGg9IjAuODUiLz48cGF0aCBkPSJNIDM5LjUgNzUgUSA1MiA3Ni41IDYzLjUgNzUiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjY1KSIgc3Ryb2tlLXdpZHRoPSIwLjg1Ii8+PHBhdGggZD0iTSA0MC41IDc4IFEgNTIgODEuNSA2MyA3OCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNzUpIiBzdHJva2Utd2lkdGg9IjEuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9nPgogIDxjaXJjbGUgY3g9IjIzIiBjeT0iNDIiIHI9IjExLjUiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNikiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjE1KSIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4KICA8Y2lyY2xlIGN4PSIyMyIgY3k9IjQyIiByPSIxMCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEzKSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNCkiIHN0cm9rZS13aWR0aD0iMS4zIi8+CiAgPGNpcmNsZSBjeD0iMjMiIGN5PSI0MiIgcj0iMTAiIGZpbGw9InVybCgjYmFsbEdyYWQpIi8+CiAgPGcgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNSkiIHN0cm9rZS13aWR0aD0iMSIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj48bGluZSB4MT0iMjMiIHkxPSIzMiIgeDI9IjIzIiB5Mj0iNTIiLz48bGluZSB4MT0iMTMiIHkxPSI0MiIgeDI9IjMzIiB5Mj0iNDIiLz48cGF0aCBkPSJNIDE1IDM2IFEgMjMgNDAuNSAzMSAzNiIvPjxwYXRoIGQ9Ik0gMTUgNDggUSAyMyA0My41IDMxIDQ4Ii8+PC9nPgogIDxlbGxpcHNlIGN4PSIxOSIgY3k9IjM3IiByeD0iMy41IiByeT0iMi4yIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMjgpIiB0cmFuc2Zvcm09InJvdGF0ZSgtMjAsMTksMzcpIi8+CiAgPHBhdGggZD0iTSAzMiA0MCBRIDQ0IDMwIDUyIDM4IFEgNTcgNDMgNTMgNTUiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjMpIiBzdHJva2Utd2lkdGg9IjEuNCIgc3Ryb2tlLWRhc2hhcnJheT0iMywzIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8cGF0aCBkPSJNIDMxIDQzIFEgNDAgMzUgNDcgNDEiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjE1KSIgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0gMzAuNSA0NSBRIDM4IDM4IDQ0IDQzIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4wOSkiIHN0cm9rZS13aWR0aD0iMy41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+";
 const _FULL_SVG_URL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NDAgMTIwIiB3aWR0aD0iODgwIiBoZWlnaHQ9IjI0MCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJnR3JhZCIgeDE9IjEwJSIgeTE9IjAlIiB4Mj0iOTAlIiB5Mj0iMTAwJSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNGMDYzMTgiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSI1NSUiIHN0eWxlPSJzdG9wLWNvbG9yOiNFMDU1MTAiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojQjgzODA4Ii8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJ0b3BMaWdodCIgY3g9IjI1JSIgY3k9IjE4JSIgcj0iNjAlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiYSgyNTUsMjU1LDI1NSwwLjE4KSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYmEoMjU1LDI1NSwyNTUsMCkiLz4KICAgIDwvcmFkaWFsR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJvYXJkR3JhZCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6I2ZmZmZmZiIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6I2RkZThmNSIvPjwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBvbGVHcmFkIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIwJSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6cmdiYSgyNTUsMjU1LDI1NSwwLjUpIi8+PHN0b3Agb2Zmc2V0PSI1MCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYmEoMjU1LDI1NSwyNTUsMC44NSkiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYmEoMjU1LDI1NSwyNTUsMC40KSIvPjwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InJpbUdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojRkZEMDcwIi8+PHN0b3Agb2Zmc2V0PSI1MCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNGRjk1MjAiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiNDQzY4MDAiLz48L2xpbmVhckdyYWRpZW50PgogICAgPHJhZGlhbEdyYWRpZW50IGlkPSJiYWxsR3JhZCIgY3g9IjM1JSIgY3k9IjMyJSIgcj0iNjUlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjpyZ2JhKDI1NSwyNTUsMjU1LDAuMjgpIi8+PHN0b3Agb2Zmc2V0PSI2MCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYmEoMjU1LDI1NSwyNTUsMC4wOCkiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOnJnYmEoMCwwLDAsMC4xMikiLz48L3JhZGlhbEdyYWRpZW50PgogICAgPGZpbHRlciBpZD0iYm9hcmRTaGFkb3ciPjxmZURyb3BTaGFkb3cgZHg9IjIiIGR5PSIzIiBzdGREZXZpYXRpb249IjIuNSIgZmxvb2QtY29sb3I9InJnYmEoMCwwLDAsMC41KSIvPjwvZmlsdGVyPgogICAgPGZpbHRlciBpZD0icmltR2xvdyIgeD0iLTQwJSIgeT0iLTEwMCUiIHdpZHRoPSIxODAlIiBoZWlnaHQ9IjM4MCUiPjxmZURyb3BTaGFkb3cgZHg9IjAiIGR5PSIwIiBzdGREZXZpYXRpb249IjIiIGZsb29kLWNvbG9yPSJyZ2JhKDI1NSwxODUsNTAsMC45KSIvPjwvZmlsdGVyPgogICAgPGZpbHRlciBpZD0ibmV0U2hhZG93Ij48ZmVEcm9wU2hhZG93IGR4PSIwLjUiIGR5PSIxIiBzdGREZXZpYXRpb249IjAuOCIgZmxvb2QtY29sb3I9InJnYmEoMCwwLDAsMC4zNSkiLz48L2ZpbHRlcj4KICAgIDxmaWx0ZXIgaWQ9InRleHRHbG93Ij48ZmVEcm9wU2hhZG93IGR4PSIwIiBkeT0iMSIgc3RkRGV2aWF0aW9uPSIzIiBmbG9vZC1jb2xvcj0icmdiYSgwLDAsMCwwLjIpIi8+PC9maWx0ZXI+CiAgPC9kZWZzPgogIDxyZWN0IHg9IjAiIHk9IjAiIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiByeD0iMjYiIHJ5PSIyNiIgZmlsbD0idXJsKCNiZ0dyYWQpIi8+CiAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIHJ4PSIyNiIgcnk9IjI2IiBmaWxsPSJ1cmwoI3RvcExpZ2h0KSIvPgogIDxyZWN0IHg9IjEiIHk9IjEiIHdpZHRoPSIxMTgiIGhlaWdodD0iMTE4IiByeD0iMjUiIHJ5PSIyNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMikiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEyMCIgaGVpZ2h0PSIxMjAiIHJ4PSIyNiIgcnk9IjI2IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMCwwLDAsMC4yNSkiIHN0cm9rZS13aWR0aD0iMyIvPgogIDxsaW5lIHgxPSIxNCIgeTE9IjEwMyIgeDI9IjEwNiIgeTI9IjEwMyIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMjgpIiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGxpbmUgeDE9IjE0IiB5MT0iMTA1LjUiIHgyPSIxMDYiIHkyPSIxMDUuNSIgc3Ryb2tlPSJyZ2JhKDAsMCwwLDAuMTUpIiBzdHJva2Utd2lkdGg9IjEiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxyZWN0IHg9IjgyLjUiIHk9Ijc5IiB3aWR0aD0iNCIgaGVpZ2h0PSIyNCIgcng9IjIiIHJ5PSIyIiBmaWxsPSJ1cmwoI3BvbGVHcmFkKSIvPgogIDxyZWN0IHg9Ijc5IiB5PSIxMDAiIHdpZHRoPSIxMSIgaGVpZ2h0PSIzIiByeD0iMS41IiByeT0iMS41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNTUpIi8+CiAgPHJlY3QgeD0iNzYuNSIgeT0iMjciIHdpZHRoPSIxMyIgaGVpZ2h0PSI1NSIgcng9IjIuNSIgcnk9IjIuNSIgZmlsbD0icmdiYSgwLDAsMCwwLjMpIiBmaWx0ZXI9InVybCgjYm9hcmRTaGFkb3cpIi8+CiAgPHJlY3QgeD0iNzYiIHk9IjI2IiB3aWR0aD0iMTMiIGhlaWdodD0iNTUiIHJ4PSIyLjUiIHJ5PSIyLjUiIGZpbGw9InVybCgjYm9hcmRHcmFkKSIvPgogIDxyZWN0IHg9Ijc2IiB5PSIyNiIgd2lkdGg9IjIuNSIgaGVpZ2h0PSI1NSIgcng9IjIiIHJ5PSIyIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNikiLz4KICA8cmVjdCB4PSI3NiIgeT0iMjYiIHdpZHRoPSIxMyIgaGVpZ2h0PSIyLjUiIHJ4PSIyIiByeT0iMiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjU1KSIvPgogIDxyZWN0IHg9Ijc4LjUiIHk9IjQ3IiB3aWR0aD0iOCIgaGVpZ2h0PSIxMSIgcng9IjEuMiIgcnk9IjEuMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDIyMCw3NSwwLDAuOSkiIHN0cm9rZS13aWR0aD0iMS44Ii8+CiAgPGxpbmUgeDE9Ijc2IiB5MT0iNTYiIHgyPSI2NiIgeTI9IjU2IiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC42NSkiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iNzYiIHkxPSI1OSIgeDI9IjcwIiB5Mj0iNTYiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjM1KSIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxsaW5lIHgxPSIzNyIgeTE9IjU3LjUiIHgyPSI2NiIgeTI9IjU3LjUiIHN0cm9rZT0icmdiYSgwLDAsMCwwLjMpIiBzdHJva2Utd2lkdGg9IjQuNSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGxpbmUgeDE9IjM3IiB5MT0iNTYiIHgyPSI2NiIgeTI9IjU2IiBzdHJva2U9InVybCgjcmltR3JhZCkiIHN0cm9rZS13aWR0aD0iNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBmaWx0ZXI9InVybCgjcmltR2xvdykiLz4KICA8ZWxsaXBzZSBjeD0iMzciIGN5PSI1NiIgcng9IjMiIHJ5PSIyLjIiIGZpbGw9IiNGRjk1MjAiIGZpbHRlcj0idXJsKCNyaW1HbG93KSIvPgogIDxsaW5lIHgxPSIzOSIgeTE9IjU0LjUiIHgyPSI2NSIgeTI9IjU0LjUiIHN0cm9rZT0icmdiYSgyNTUsMjMwLDEzMCwwLjYpIiBzdHJva2Utd2lkdGg9IjEuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGcgZmlsdGVyPSJ1cmwoI25ldFNoYWRvdykiPjxwYXRoIGQ9Ik0gNDAgNTYgQyAzOSA2MyAzOCA3MCA0MC41IDc4IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC44MikiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0gNDYgNTYgQyA0NS41IDYzIDQ1IDcwIDQ2IDc4IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC44MikiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0gNTIgNTYgQyA1MiA2MyA1MiA3MCA1MS41IDc4IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC44MikiIHN0cm9rZS13aWR0aD0iMSIvPjxwYXRoIGQ9Ik0gNTggNTYgQyA1OC41IDYzIDU5IDcwIDU3LjUgNzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjgyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSA2NCA1NiBDIDY1IDYzIDY1LjUgNzAgNjMgNzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjgyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PHBhdGggZD0iTSAzOS41IDYwIFEgNTIgNjEuMiA2NC41IDYwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC43KSIgc3Ryb2tlLXdpZHRoPSIwLjg1Ii8+PHBhdGggZD0iTSAzOSA2NSBRIDUyIDY2LjUgNjUgNjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjcpIiBzdHJva2Utd2lkdGg9IjAuODUiLz48cGF0aCBkPSJNIDM5IDcwIFEgNTIgNzEuOCA2NC41IDcwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC43KSIgc3Ryb2tlLXdpZHRoPSIwLjg1Ii8+PHBhdGggZD0iTSAzOS41IDc1IFEgNTIgNzYuNSA2My41IDc1IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC42NSkiIHN0cm9rZS13aWR0aD0iMC44NSIvPjxwYXRoIGQ9Ik0gNDAuNSA3OCBRIDUyIDgxLjUgNjMgNzgiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjc1KSIgc3Ryb2tlLXdpZHRoPSIxLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvZz4KICA8Y2lyY2xlIGN4PSIyMyIgY3k9IjQyIiByPSIxMS41IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDYpIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xNSkiIHN0cm9rZS13aWR0aD0iMS41Ii8+CiAgPGNpcmNsZSBjeD0iMjMiIGN5PSI0MiIgcj0iMTAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xMykiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjQpIiBzdHJva2Utd2lkdGg9IjEuMyIvPgogIDxjaXJjbGUgY3g9IjIzIiBjeT0iNDIiIHI9IjEwIiBmaWxsPSJ1cmwoI2JhbGxHcmFkKSIvPgogIDxnIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjUpIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGxpbmUgeDE9IjIzIiB5MT0iMzIiIHgyPSIyMyIgeTI9IjUyIi8+PGxpbmUgeDE9IjEzIiB5MT0iNDIiIHgyPSIzMyIgeTI9IjQyIi8+PHBhdGggZD0iTSAxNSAzNiBRIDIzIDQwLjUgMzEgMzYiLz48cGF0aCBkPSJNIDE1IDQ4IFEgMjMgNDMuNSAzMSA0OCIvPjwvZz4KICA8ZWxsaXBzZSBjeD0iMTkiIGN5PSIzNyIgcng9IjMuNSIgcnk9IjIuMiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjI4KSIgdHJhbnNmb3JtPSJyb3RhdGUoLTIwLDE5LDM3KSIvPgogIDxwYXRoIGQ9Ik0gMzIgNDAgUSA0NCAzMCA1MiAzOCBRIDU3IDQzIDUzIDU1IiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4zKSIgc3Ryb2tlLXdpZHRoPSIxLjQiIHN0cm9rZS1kYXNoYXJyYXk9IjMsMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPHBhdGggZD0iTSAzMSA0MyBRIDQwIDM1IDQ3IDQxIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMjU1LDI1NSwyNTUsMC4xNSkiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8dGV4dCB4PSIxNDQiIHk9IjY4IiBmb250LWZhbWlseT0iJ0FyaWFsIEJsYWNrJywgJ0ltcGFjdCcsIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI5MDAiIGZvbnQtc2l6ZT0iNTAiIGxldHRlci1zcGFjaW5nPSItMC41IiBmaWxsPSJ3aGl0ZSIgZmlsdGVyPSJ1cmwoI3RleHRHbG93KSI+S09SVDwvdGV4dD4KICA8dGV4dCB4PSIyNjgiIHk9IjY4IiBmb250LWZhbWlseT0iJ0FyaWFsIEJsYWNrJywgJ0ltcGFjdCcsIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI5MDAiIGZvbnQtc2l6ZT0iNTAiIGxldHRlci1zcGFjaW5nPSItMC41IiBmaWxsPSIjRjA2MzE4Ij5MSU5FPC90ZXh0PgogIDxsaW5lIHgxPSIxNDQiIHkxPSI3OCIgeDI9IjQwMSIgeTI9Ijc4IiBzdHJva2U9InJnYmEoMjQwLDk5LDI0LDAuNCkiIHN0cm9rZS13aWR0aD0iMS4yIi8+CiAgPHRleHQgeD0iMTQ0IiB5PSI5OCIgZm9udC1mYW1pbHk9IidBcmlhbCcsICdIZWx2ZXRpY2EnLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iNDAwIiBmb250LXNpemU9IjEzIiBsZXR0ZXItc3BhY2luZz0iNCIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjUpIj5ERSBMQSBQSVNUQSBBTCBEQVRPPC90ZXh0Pgo8L3N2Zz4=";
@@ -2702,7 +2710,7 @@ function equiposScreen(){
     <div onclick="openClubSettings()" style="cursor:pointer">${logoHtml(42,10)}</div>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">${esc(S.clubName)}</div>
     <div style="font-size:11px;color:var(--orange);font-weight:700;letter-spacing:2px;text-transform:uppercase">Equipos</div></div>
-    <button class="bbtn" onclick="openTeamModal()">＋</button>
+    <button class="bbtn" onclick="openTeamModal()" aria-label="Añadir equipo">＋</button>
   </div></header>
   <div class="content">${cards}</div>
   ${navBar()}`;
@@ -2746,10 +2754,10 @@ function navBar(){
   const onHoy=sc==="hoy"||sc==="home"||sc==="att"||sc==="share";
   const onEq=sc==="equipos"||sc==="team"||sc==="hist"||sc==="matchList"||sc==="matchDetail"||sc==="liveGame"||sc==="eventos";
   const onStats=sc==="stats"||sc==="statsHome";
-  return`<nav class="nav">
-    <button class="nb ${onHoy?"on":""}" onclick="navRoot('hoy')"><span class="ni">🏠</span><span>Hoy</span></button>
-    <button class="nb ${onEq?"on":""}" onclick="navRoot('equipos')"><span class="ni">👥</span><span>Equipos</span></button>
-    <button class="nb ${onStats?"on":""}" onclick="navRoot('statsHome')"><span class="ni">📊</span><span>Stats</span></button>
+  return`<nav class="nav" role="navigation" aria-label="Navegación principal">
+    <button class="nb ${onHoy?"on":""}" onclick="navRoot('hoy')" aria-label="Hoy" ${onHoy?'aria-current="page"':''}><span class="ni" aria-hidden="true">🏠</span><span>Hoy</span></button>
+    <button class="nb ${onEq?"on":""}" onclick="navRoot('equipos')" aria-label="Equipos" ${onEq?'aria-current="page"':''}><span class="ni" aria-hidden="true">👥</span><span>Equipos</span></button>
+    <button class="nb ${onStats?"on":""}" onclick="navRoot('statsHome')" aria-label="Estadísticas" ${onStats?'aria-current="page"':''}><span class="ni" aria-hidden="true">📊</span><span>Stats</span></button>
   </nav>`;
 }
 
@@ -3007,9 +3015,9 @@ function att(){
     }
   })():"";
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">Pase de Lista</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}</div></div>
-    <button class="bbtn" onclick="navTo('share')">📤</button>
+    <button class="bbtn" onclick="navTo('share')" aria-label="Compartir">📤</button>
   </div></header>
   <div class="content">
     <div class="dsel">
@@ -3046,7 +3054,7 @@ function stats(){
   const view=S.statsView||"table";
 
   if(total===0)return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}</div></div>
   </div></header>
   <div class="content"><div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📊</div><div style="font-size:14px;color:var(--tm);margin-bottom:14px">Sin sesiones aún.<br/>Pasa lista primero.</div><button class="btn-p" style="max-width:240px;margin:0 auto" onclick="navTo('att',{date:td()})">✅ Pasar lista ahora</button></div></div>
@@ -3142,7 +3150,7 @@ function stats(){
   const avgAll=pc(sumPr,sumPs);
 
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1">
       <div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div>
       <div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${total} entrenos · umbral ${thr}%</div>
@@ -3252,9 +3260,9 @@ function hist(){
       </div>`;
     }).join("")}</div>`;
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📋 Historial</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${allEntries.length} sesiones</div></div>
-    <button class="bbtn" onclick="navTo('share',{date:td()})">📤</button>
+    <button class="bbtn" onclick="navTo('share',{date:td()})" aria-label="Compartir">📤</button>
   </div></header>
   <div class="content">${monthSel}${mStats}${rows}</div>
   ${navBar()}`;
@@ -3312,9 +3320,9 @@ function team(){
     </div>
   </div>`:"";
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px;letter-spacing:.3px">${esc(t.name)}</div><div style="font-size:11px;color:var(--orange)">${esc(t.category||"")}</div></div>
-    <button class="bbtn" onclick="openTeamModal(S.teams.find(x=>x.id===S.teamId))">✏️</button>
+    <button class="bbtn" onclick="openTeamModal(S.teams.find(x=>x.id===S.teamId))" aria-label="Editar equipo">✏️</button>
   </div></header>
   <div class="content">
     ${coaches.length?`<div class="section-card" style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:20px">👟</span><div><div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:2px">Entrenador${coaches.length>1?"es":""}</div><div style="font-weight:600;font-size:14px">${coaches.map(esc).join(" · ")}</div></div></div>`:""}
@@ -3402,7 +3410,7 @@ function shareScreen(){
     </div>`;
   }
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📤 Compartir</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${fd(S.date,true)}</div></div>
   </div></header>
   <div class="content">
@@ -3461,9 +3469,9 @@ function eventos(){
     (upcoming.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin-bottom:8px">📌 PRÓXIMOS</div>${upcoming.map(evtCard).join("")}`:"")
     +(past.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin:${upcoming.length>0?"16px":"0"} 0 8px">🕐 PASADOS</div>${past.map(evtCard).join("")}`:"");
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📅 Eventos</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${evts.length} evento${evts.length!==1?"s":""}</div></div>
-    <button class="bbtn" onclick="openEventoModal()">＋</button>
+    <button class="bbtn" onclick="openEventoModal()" aria-label="Añadir evento">＋</button>
   </div></header>
   <div class="content">${content}</div>
   ${navBar()}`;
@@ -4735,9 +4743,9 @@ function matchList(){
     }).join("");
 
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">🏟️ Partidos</div><div style="font-size:11px;color:var(--orange)">${esc(t.name)} · ${matches.length} partidos</div></div>
-    <button class="bbtn" onclick="openMatchModal()">＋</button>
+    <button class="bbtn" onclick="openMatchModal()" aria-label="Añadir partido">＋</button>
   </div></header>
   <div class="content">${seasonBar}${cards}</div>
   ${navBar()}`;
@@ -4830,13 +4838,13 @@ function matchDetail(){
   const hasLive=!!m.live;
 
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1">
       <div style="font-family:var(--font-d);font-weight:900;font-size:17px">${esc(m.rival||"Rival")}</div>
       <div style="font-size:11px;color:var(--orange)">${m.date?fd(m.date,true):"Sin fecha"} · ${locLabel}</div>
     </div>
     ${m.shotChart&&(m.live?.shots||[]).length>0?`<button onclick="navTo('shotMap')" style="background:rgba(240,99,24,.15);border:1px solid rgba(240,99,24,.4);color:var(--orange);width:36px;height:36px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0;margin-right:4px" title="Mapa de tiros">📍</button>`:""}
-    <button class="bbtn" onclick="openMatchModal(mById(S.teamId,S.matchId))">✏️</button>
+    <button class="bbtn" onclick="openMatchModal(mById(S.teamId,S.matchId))" aria-label="Editar partido">✏️</button>
   </div></header>
   <div class="content">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
@@ -6093,7 +6101,7 @@ function liveGame(){
 
   return`<header class="header live-header" style="padding-bottom:10px">
   <div class="hrow" style="margin-bottom:8px">
-    <button class="bbtn" onclick="exitLiveGame()">←</button>
+    <button class="bbtn" onclick="exitLiveGame()" aria-label="Salir del partido en vivo">←</button>
     <div style="flex:1">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 5px #ef4444;flex-shrink:0;animation:spin .8s step-end infinite"></span>
@@ -6417,7 +6425,7 @@ function shotMap(){
   const seasonHasShots=(S.matches[S.teamId]||[]).some(mm=>mm.live?.shots?.length);
 
   return`<header class="header"><div class="hrow">
-    <button class="bbtn" onclick="navBack()">←</button>
+    <button class="bbtn" onclick="navBack()" aria-label="Volver atrás">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📍 Mapa de tiros</div><div style="font-size:11px;color:var(--orange);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${subtitle}</div></div>
     ${shots.length>0?`<button onclick="_exportShotMapPNG()" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#22c55e;width:36px;height:36px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0" title="Exportar PNG para WhatsApp">📤</button>`:""}
   </div></header>
