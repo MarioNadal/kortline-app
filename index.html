@@ -441,6 +441,21 @@ const _FULL_SVG_URL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53M
    CONSTANTS
 ═══════════════════════════════════════ */
 const DAYS=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+// v1.8.6: Centralized localStorage keys — single source of truth
+const LS_KEYS={
+  TEAMS:"cbj:t",PLAYERS:"cbj:p",SESSIONS:"cbj:s",MATCHES:"cbj:m",
+  EVENTS:"cbj:ev",LOGO:"cbj:logo",NAME:"cbj:name",ABREV:"cbj:cabrev",
+  LEMA:"cbj:clema",CFG:"cbj:cfg",AUTOBACKUP:"cbj:autobackup",
+  LAST_EXPORT:"cbj:lastexport"
+};
+
+// Game rules — easy to tweak for different leagues
+const RULES={
+  MAX_FOULS:5,        // Personal fouls for disqualification
+  MAX_STARTERS:5,     // Starting lineup size
+  DEFAULT_QUARTERS:4  // Standard quarters per game
+};
 let _liveTimer=null;
 function startClock(){
   if(_liveTimer)return;
@@ -602,7 +617,7 @@ function _fmtClock(s){const m=Math.floor(s/60),ss=s%60;return m+":"+(ss<10?"0":"
 ═══════════════════════════════════════ */
 function _isDQ(st){
   if(!st)return false;
-  if((st.foul||0)>=5)return true;
+  if((st.foul||0)>=RULES.MAX_FOULS)return true;
   if((st.ftech||0)>=2)return true;
   if((st.funsport||0)>=2)return true;
   if(((st.ftech||0)+(st.funsport||0))>=2)return true;
@@ -791,7 +806,7 @@ function _forceSubAfterDQ(pid,isRival){
   // Motivo
   let motivo="Descalificado";
   if((stOut.fdq||0)>=1)motivo="Falta descalificante";
-  else if((stOut.foul||0)>=5)motivo="5 faltas personales";
+  else if((stOut.foul||0)>=RULES.MAX_FOULS)motivo=RULES.MAX_FOULS+" faltas personales";
   else if((stOut.ftech||0)>=2)motivo="2 faltas técnicas";
   else if((stOut.funsport||0)>=2)motivo="2 antideportivas";
   else if(((stOut.ftech||0)+(stOut.funsport||0))>=2)motivo="1 técnica + 1 antideportiva";
@@ -1718,9 +1733,9 @@ function justShortLabel(sess,pid){const r=getJR(sess,pid),n=getJN(sess,pid);if(r
    STORAGE
 ═══════════════════════════════════════ */
 function load(){
-  S.teams=lsGet("cbj:t")||[];S.players=lsGet("cbj:p")||{};S.sessions=lsGet("cbj:s")||{};S.matches=lsGet("cbj:m")||{};S.events=lsGet("cbj:ev")||{};
-  S.clubLogo=lsGet("cbj:logo")||null;S.clubName=lsGet("cbj:name")||"Kortline";S.clubAbrev=lsGet("cbj:cabrev")||"";S.clubLema=lsGet("cbj:clema")||"";
-  const sc=lsGet("cbj:cfg");
+  S.teams=lsGet(LS_KEYS.TEAMS)||[];S.players=lsGet(LS_KEYS.PLAYERS)||{};S.sessions=lsGet(LS_KEYS.SESSIONS)||{};S.matches=lsGet(LS_KEYS.MATCHES)||{};S.events=lsGet(LS_KEYS.EVENTS)||{};
+  S.clubLogo=lsGet(LS_KEYS.LOGO)||null;S.clubName=lsGet(LS_KEYS.NAME)||"Kortline";S.clubAbrev=lsGet(LS_KEYS.ABREV)||"";S.clubLema=lsGet(LS_KEYS.LEMA)||"";
+  const sc=lsGet(LS_KEYS.CFG);
   S.cfg=sc?{...DEFAULT_CFG,...sc,features:{...DEFAULT_CFG.features,...(sc.features||{})}}:{...DEFAULT_CFG};
   // Asegurar que riskThreshold sea numérico (fix: a veces se guardaba como string)
   S.cfg.riskThreshold=parseInt(S.cfg.riskThreshold)||75;
@@ -1732,16 +1747,16 @@ function save(){
   // seguridad real (vive en el mismo localStorage que los datos primarios).
   // El sistema honesto es export/import manual desde Ajustes.
   let ok=true;
-  if(!lsSet("cbj:t",S.teams))ok=false;
-  if(!lsSet("cbj:p",S.players))ok=false;
-  if(!lsSet("cbj:s",S.sessions))ok=false;
-  if(!lsSet("cbj:m",S.matches))ok=false;
-  if(!lsSet("cbj:ev",S.events))ok=false;
-  if(!lsSet("cbj:logo",S.clubLogo))ok=false;
-  if(!lsSet("cbj:name",S.clubName))ok=false;
-  if(!lsSet("cbj:cabrev",S.clubAbrev))ok=false;
-  if(!lsSet("cbj:clema",S.clubLema))ok=false;
-  if(!lsSet("cbj:cfg",S.cfg))ok=false;
+  if(!lsSet(LS_KEYS.TEAMS,S.teams))ok=false;
+  if(!lsSet(LS_KEYS.PLAYERS,S.players))ok=false;
+  if(!lsSet(LS_KEYS.SESSIONS,S.sessions))ok=false;
+  if(!lsSet(LS_KEYS.MATCHES,S.matches))ok=false;
+  if(!lsSet(LS_KEYS.EVENTS,S.events))ok=false;
+  if(!lsSet(LS_KEYS.LOGO,S.clubLogo))ok=false;
+  if(!lsSet(LS_KEYS.NAME,S.clubName))ok=false;
+  if(!lsSet(LS_KEYS.ABREV,S.clubAbrev))ok=false;
+  if(!lsSet(LS_KEYS.LEMA,S.clubLema))ok=false;
+  if(!lsSet(LS_KEYS.CFG,S.cfg))ok=false;
   return ok;
 }
 function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}}
@@ -1935,14 +1950,14 @@ function autoBackup(){
   // ejecuta manualmente si alguien la invoca. Usa silent=true para no spamear.
   try{
     const data={ts:Date.now(),teams:S.teams,players:S.players,sessions:S.sessions,matches:S.matches,events:S.events,clubName:S.clubName,clubAbrev:S.clubAbrev,clubLema:S.clubLema,cfg:S.cfg};
-    lsSet("cbj:autobackup",data,true);
+    lsSet(LS_KEYS.AUTOBACKUP,data,true);
   }catch(e){}
 }
 
 // v1.8.3: borrar el autobackup viejo desde Ajustes para liberar espacio
 function _clearAutoBackup(){
   _confirm("¿Borrar el autobackup automático?<br><span style='font-size:12px;color:var(--td)'>Solo elimina la copia interna. Tus datos reales no se tocan. Si tienes el backup exportado a JSON, no pierdes nada.</span>","🗑 Borrar autobackup",()=>{
-    localStorage.removeItem("cbj:autobackup");
+    localStorage.removeItem(LS_KEYS.AUTOBACKUP);
     toast("✅ Autobackup borrado · espacio liberado");
     const m=document.getElementById("m-club-settings");if(m){m.remove();openClubSettings();}
   });
@@ -1958,7 +1973,7 @@ function exportBackup(){
   const a=document.createElement("a");a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  lsSet("cbj:lastexport",Date.now());
+  lsSet(LS_KEYS.LAST_EXPORT,Date.now());
   document.getElementById("backup-banner")?.remove();
   const m=document.getElementById("m-club-settings");if(m){m.remove();openClubSettings();}
   // Modal post-export con opción de compartir
@@ -2002,7 +2017,7 @@ function importBackup(input){
 }
 
 function restoreAutoBackup(){
-  const ab=lsGet("cbj:autobackup");
+  const ab=lsGet(LS_KEYS.AUTOBACKUP);
   if(!ab){toast("⚠️ No hay autobackup disponible");return;}
   const fecha=new Date(ab.ts).toLocaleString("es-ES");
   _confirm(`¿Restaurar el autobackup del ${fecha}? Se sobreescribirán los datos actuales.`,"Restaurar",()=>{
@@ -2014,7 +2029,7 @@ function restoreAutoBackup(){
 }
 
 function checkBackupReminder(){
-  const lastExport=lsGet("cbj:lastexport");
+  const lastExport=lsGet(LS_KEYS.LAST_EXPORT);
   if(sessionStorage.getItem("cbj:backup-dismiss"))return;
   const sevenDays=7*24*60*60*1000;
   if(!lastExport||Date.now()-lastExport>sevenDays){
@@ -3698,14 +3713,14 @@ function openClubSettings(){
     <div class="stg-sec">
       <div class="stg-sec-title">💾 Copia de seguridad</div>
       <div style="font-size:12px;color:var(--tm);margin-bottom:12px;line-height:1.6">Protege tus datos ante cambios de dispositivo o limpieza del navegador.</div>
-      ${(()=>{const le=lsGet("cbj:lastexport");const ab=lsGet("cbj:autobackup");return(le?`<div style="font-size:12px;color:var(--td);margin-bottom:6px">📤 Último export: <b>${new Date(le).toLocaleString("es-ES")}</b></div>`:`<div style="font-size:12px;color:#ef4444;margin-bottom:6px">⚠️ Nunca has exportado tus datos</div>`)+(ab?`<div style="font-size:12px;color:var(--td);margin-bottom:10px">🔄 Autobackup: <b>${new Date(ab.ts).toLocaleString("es-ES")}</b></div>`:"");})()}
+      ${(()=>{const le=lsGet(LS_KEYS.LAST_EXPORT);const ab=lsGet(LS_KEYS.AUTOBACKUP);return(le?`<div style="font-size:12px;color:var(--td);margin-bottom:6px">📤 Último export: <b>${new Date(le).toLocaleString("es-ES")}</b></div>`:`<div style="font-size:12px;color:#ef4444;margin-bottom:6px">⚠️ Nunca has exportado tus datos</div>`)+(ab?`<div style="font-size:12px;color:var(--td);margin-bottom:10px">🔄 Autobackup: <b>${new Date(ab.ts).toLocaleString("es-ES")}</b></div>`:"");})()}
       <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn-p" style="flex:1;margin:0" onclick="exportBackup()">⬇️ Exportar</button>
         <button class="btn-s" style="flex:1;margin:0" onclick="document.getElementById('import-input').click()">⬆️ Importar</button>
         <input type="file" id="import-input" accept=".json" style="display:none" onchange="importBackup(this)"/>
       </div>
       ${(()=>{
-        const ab=localStorage.getItem("cbj:autobackup");
+        const ab=localStorage.getItem(LS_KEYS.AUTOBACKUP);
         if(!ab)return "";
         const kb=Math.round(ab.length*2/1024);
         return `<div style="margin-top:10px;padding:10px;background:rgba(245,158,11,.08);border:1px dashed rgba(245,158,11,.35);border-radius:9px;font-size:12px;color:var(--td);line-height:1.5">
@@ -5153,7 +5168,7 @@ function _convTitular(pid){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.titulares)m.titulares=[];
   if(m.titulares.includes(pid)){m.titulares=m.titulares.filter(x=>x!==pid);}
-  else{if(m.titulares.length>=5)return toast("⚠️ Máximo 5 titulares");m.titulares.push(pid);}
+  else{if(m.titulares.length>=RULES.MAX_STARTERS)return toast("⚠️ Máximo "+RULES.MAX_STARTERS+" titulares");m.titulares.push(pid);}
   save();
   _convRefreshRow(pid);
   _convRefreshHeader();
@@ -5430,7 +5445,7 @@ function toggleTitular(pid){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.titulares)m.titulares=[];
   if(m.titulares.includes(pid)){m.titulares=m.titulares.filter(x=>x!==pid);}
-  else{if(m.titulares.length>=5)return toast("⚠️ Máximo 5 titulares");m.titulares.push(pid);}
+  else{if(m.titulares.length>=RULES.MAX_STARTERS)return toast("⚠️ Máximo "+RULES.MAX_STARTERS+" titulares");m.titulares.push(pid);}
   save();render();
 }
 function setCapitan(pid){
