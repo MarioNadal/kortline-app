@@ -828,7 +828,7 @@ function _forceSubAfterDQ(pid,isRival){
         const stP=stats[p.id]||{};
         const f=_totalFouls(stP);
         const fc=f>=4?"#f59e0b":"var(--td)";
-        return `<button onclick="_doDQSub('${p.id}','${pid}',${isRival?'true':'false'})" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--s2);color:var(--tx);cursor:pointer;font-family:inherit;text-align:left;margin-bottom:6px">
+        return `<button onclick="_doDQSub('${esc(p.id)}','${esc(pid)}',${isRival?'true':'false'})" style="display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:10px;background:var(--s2);color:var(--tx);cursor:pointer;font-family:inherit;text-align:left;margin-bottom:6px">
           <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:white">${p.number||"?"}</div>
           <div style="flex:1;min-width:0">
             <div style="font-weight:800;font-size:14px">${esc(p.name)}</div>
@@ -854,7 +854,7 @@ function _forceSubAfterDQ(pid,isRival){
     </div>
     ${benchValid.length>0?`<div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:${accentColor};margin-bottom:8px">Elige sustituto del banquillo</div>`:""}
     ${benchHtml}
-    ${benchValid.length===0?`<button onclick="_doDQSub(null,'${pid}',${isRival?'true':'false'})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;margin-top:8px">OK, sacar sin sustituir</button>`:""}
+    ${benchValid.length===0?`<button onclick="_doDQSub(null,'${esc(pid)}',${isRival?'true':'false'})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;margin-top:8px">OK, sacar sin sustituir</button>`:""}
   </div>`;
   document.body.appendChild(el);
 }
@@ -1233,8 +1233,8 @@ function _previewShotChange(pid,action,pts,xNorm,yNorm,detected){
     <div style="font-size:13px;color:var(--td);margin-bottom:16px;line-height:1.5">
       Pulsaste <b style="color:var(--tx)">${labelOld}</b> pero la zona donde tocaste está <b style="color:var(--orange)">${zoneLabel}</b>.
     </div>
-    <button onclick="_acceptShotChange('${pid}','${newAction}',${newPts},${xNorm},${yNorm})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white;margin-bottom:8px">✓ Registrar como ${labelNew}</button>
-    <button onclick="_retryShotZone('${pid}','${action}',${pts})" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;background:var(--s2);color:var(--td)">↺ Volver a tocar zona de ${wasValue}p</button>
+    <button onclick="_acceptShotChange('${esc(pid)}','${newAction}',${newPts},${xNorm},${yNorm})" style="width:100%;padding:13px;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;background:linear-gradient(135deg,var(--orange),var(--orange2));color:white;margin-bottom:8px">✓ Registrar como ${labelNew}</button>
+    <button onclick="_retryShotZone('${esc(pid)}','${action}',${pts})" style="width:100%;padding:11px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;background:var(--s2);color:var(--td)">↺ Volver a tocar zona de ${wasValue}p</button>
   </div>`;
   document.body.appendChild(el);
 }
@@ -1390,16 +1390,16 @@ function _showEndPeriodOverlay(periodName,nextLabel,prevQ,breakSec,breakLabel){
     return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
       <div style="font-size:11px;font-weight:800;color:var(--orange);margin-bottom:8px">${esc(p.name)} #${p.number||"?"}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <button onclick="_endPeriodAction('${pid}','p2m',2,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+2 Canasta</button>
-        <button onclick="_endPeriodAction('${pid}','p3m',3,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+3 Triple</button>
-        <button onclick="_endPeriodAction('${pid}','p1m',1,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.1);color:#86efac;font-weight:800;font-size:13px;cursor:pointer">+1 TL</button>
-        <button onclick="_endPeriodAction('${pid}','foul',0,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(239,68,68,.12);color:#ef4444;font-weight:800;font-size:13px;cursor:pointer">Falta</button>
+        <button onclick="_endPeriodAction('${esc(pid)}','p2m',2,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+2 Canasta</button>
+        <button onclick="_endPeriodAction('${esc(pid)}','p3m',3,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+3 Triple</button>
+        <button onclick="_endPeriodAction('${esc(pid)}','p1m',1,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.1);color:#86efac;font-weight:800;font-size:13px;cursor:pointer">+1 TL</button>
+        <button onclick="_endPeriodAction('${esc(pid)}','foul',0,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(239,68,68,.12);color:#ef4444;font-weight:800;font-size:13px;cursor:pointer">Falta</button>
       </div>
     </div>`;
   }
 
   const selPid=live.selPid||null;
-  const courtGrid=onCourt.map(p=>`<button onclick="document.getElementById('m-end-period-acts').innerHTML=window._eopPlayerBtns('${p.id}')" style="padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;text-align:center">#${p.number||"?"}<br><span style="font-size:10px;color:var(--td)">${esc((p.name||"").split(" ")[0])}</span></button>`).join("");
+  const courtGrid=onCourt.map(p=>`<button onclick="document.getElementById('m-end-period-acts').innerHTML=window._eopPlayerBtns('${esc(p.id)}')" style="padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;text-align:center">#${p.number||"?"}<br><span style="font-size:10px;color:var(--td)">${esc((p.name||"").split(" ")[0])}</span></button>`).join("");
 
   // Exponer función para usarla desde onclick
   window._eopPlayerBtns=playerBtns;
@@ -1591,7 +1591,7 @@ function _buildTmOverlay(team,who){
   // Generar chips del quinteto
   function courtChips(){
     return courtPlayers.map(p=>`
-      <div onclick="_tmPickOut('${p.id}')" id="tm-p-${p.id}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--s2);cursor:pointer;transition:background .15s">
+      <div onclick="_tmPickOut('${esc(p.id)}')" id="tm-p-${p.id}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--s2);cursor:pointer;transition:background .15s">
         <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,${t?.color||"#F06318"},${t?.color||"#F06318"}88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:white;flex-shrink:0">${p.number||"?"}</div>
         <span style="font-size:13px;font-weight:600;flex:1">${esc((p.name||"").split(" ")[0])}</span>
         <span style="font-size:10px;color:var(--td)">↔</span>
@@ -1600,7 +1600,7 @@ function _buildTmOverlay(team,who){
   function benchChips(){
     if(!benchPlayers.length)return`<div style="font-size:12px;color:var(--tm);padding:6px 0">Sin jugadores en banquillo</div>`;
     return benchPlayers.map(p=>`
-      <div id="tm-b-${p.id}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--s);cursor:pointer" onclick="_tmPickIn('${p.id}')">
+      <div id="tm-b-${p.id}" style="display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--s);cursor:pointer" onclick="_tmPickIn('${esc(p.id)}')">
         <div style="width:28px;height:28px;border-radius:7px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--td)">${p.number||"?"}</div>
         <span style="font-size:13px;color:var(--td);flex:1">${esc((p.name||"").split(" ")[0])}</span>
         <span style="font-size:10px;color:var(--orange)">▶</span>
@@ -2673,7 +2673,7 @@ function equiposScreen(){
       // Matches for this team
       const teamMatches=(S.matches[t.id]||[]);
       const played=teamMatches.filter(m=>m.finished||(m.q&&m.q.some(v=>v!==null))).length;
-      return`<div class="team-card" onclick="go('team','${t.id}')">
+      return`<div class="team-card" onclick="go('team','${esc(t.id)}')">
         <div class="team-accent" style="background:${t.color}"></div>
         <div class="team-body">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
@@ -2733,7 +2733,7 @@ function statsHomeScreen(){
       avgPct=pc(totalPr,totalSess*players.length);
     }
     const col=avgPct>=90?"#22c55e":avgPct>=75?"#f59e0b":"#ef4444";
-    return`<div class="team-card" onclick="S.teamId='${t.id}';S.screen='stats';render()">
+    return`<div class="team-card" onclick="S.teamId='${esc(t.id)}';S.screen='stats';render()">
       <div class="team-accent" style="background:${t.color}"></div>
       <div class="team-body" style="display:flex;align-items:center;gap:12px">
         <div style="flex:1">
@@ -2822,9 +2822,9 @@ function hoy(){
           </div>
         </div>`:""}
         <div style="display:flex;gap:8px">
-          <button onclick="navTo('liveGame',{teamId:'${t.id}',matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${started?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${started?"🔴 Continuar partido":"▶ Empezar partido"}</button>
-          <button onclick="S.teamId='${t.id}';navTo('matchDetail',{matchId:'${m.id}'})" style="width:46px;height:46px;border-radius:9px;background:var(--s2);border:1px solid var(--border);cursor:pointer;font-size:18px">📋</button>
-          ${inProgress?`<button onclick="confirmFinishMatch('${t.id}','${m.id}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar partido">🏁</button>`:""}
+          <button onclick="navTo('liveGame',{teamId:'${esc(t.id)}',matchId:'${esc(m.id)}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${started?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${started?"🔴 Continuar partido":"▶ Empezar partido"}</button>
+          <button onclick="S.teamId='${esc(t.id)}';navTo('matchDetail',{matchId:'${esc(m.id)}'})" style="width:46px;height:46px;border-radius:9px;background:var(--s2);border:1px solid var(--border);cursor:pointer;font-size:18px">📋</button>
+          ${inProgress?`<button onclick="confirmFinishMatch('${esc(t.id)}','${esc(m.id)}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar partido">🏁</button>`:""}
         </div>
       </div>
     </div>`;
@@ -2863,8 +2863,8 @@ function hoy(){
           ${[["✓",pr,"#22c55e","Pres"],["✗",ab,"#ef4444","Aus"],["⏱",la,"#f59e0b","Tard"],["◎",ex,"#6b7280","Just"]].map(([ic,v,col,l])=>`<div style="flex:1;background:var(--s2);border-radius:8px;padding:8px;text-align:center"><div style="font-weight:900;font-size:16px;color:${col}">${v}</div><div style="font-size:10px;color:var(--td)">${l}</div></div>`).join("")}
         </div>`:""}
         <div style="display:flex;gap:8px">
-          <button onclick="navTo('att',{teamId:'${t.id}',date:td()})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${done?"var(--s2)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:${done?"var(--td)":"white"}">${done?"✏️ Editar lista":"📋 Pasar lista"}</button>
-          ${done?`<button onclick="S.teamId='${t.id}';navTo('share',{date:td()})" style="width:46px;height:46px;border-radius:9px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:20px">📤</button>`:""}
+          <button onclick="navTo('att',{teamId:'${esc(t.id)}',date:td()})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${done?"var(--s2)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:${done?"var(--td)":"white"}">${done?"✏️ Editar lista":"📋 Pasar lista"}</button>
+          ${done?`<button onclick="S.teamId='${esc(t.id)}';navTo('share',{date:td()})" style="width:46px;height:46px;border-radius:9px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:20px">📤</button>`:""}
         </div>
       </div>
     </div>`;
@@ -2964,11 +2964,11 @@ function att(){
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:2px">
             <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:5px;font-size:12px;font-weight:700;background:${v.bg};color:${v.c}">${v.i} ${v.l}</span>
             ${autoHint}
-            ${st==="excused"?`<button class="just-pill ${jLabel?"filled":""}" onclick="openJustModal('${p.id}','${esc(p.name)}')">${jLabel?esc(jLabel):"+ Motivo"}</button>`:""}
+            ${st==="excused"?`<button class="just-pill ${jLabel?"filled":""}" onclick="openJustModal('${esc(p.id)}','${esc(p.name)}')">${jLabel?esc(jLabel):"+ Motivo"}</button>`:""}
           </div>
-          ${showScore?`<div class="stars-sm" style="margin-top:4px">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span onclick="setPlayerScore('${p.id}',${i})" style="font-size:13px;cursor:pointer;color:${i<=ps?"#f59e0b":"#2a4060"}">★</span>`).join("")}</div>`:""}
+          ${showScore?`<div class="stars-sm" style="margin-top:4px">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span onclick="setPlayerScore('${esc(p.id)}',${i})" style="font-size:13px;cursor:pointer;color:${i<=ps?"#f59e0b":"#2a4060"}">★</span>`).join("")}</div>`:""}
         </div>
-        <button onclick="cycleAtt('${p.id}')" style="width:40px;height:40px;border-radius:8px;border:1.5px solid ${v.c}55;background:${v.bg};color:${v.c};cursor:pointer;font-size:18px;flex-shrink:0">${v.i}</button>
+        <button onclick="cycleAtt('${esc(p.id)}')" style="width:40px;height:40px;border-radius:8px;border:1.5px solid ${v.c}55;background:${v.bg};color:${v.c};cursor:pointer;font-size:18px;flex-shrink:0">${v.i}</button>
       </div>`;
     }).join("");
   const ts=sess._teamScore||0;
@@ -3293,8 +3293,8 @@ function team(){
       const injBtnStyle=isInj
         ?"background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.45);color:#ef4444"
         :"background:var(--s2);border:1px solid var(--border);color:var(--td)";
-      const injBtn=`<button onclick="openInjuryModal('${p.id}')" title="${isInj?"Dar de alta / editar lesión":"Marcar lesión"}" style="padding:5px 9px;border-radius:6px;cursor:pointer;font-size:13px;margin-right:4px;${injBtnStyle}">🚑</button>`;
-      return `<div class="pr">${pnum}${avatar}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px;display:flex;align-items:center;flex-wrap:wrap">${esc(p.name)}${badge}</div><div style="font-size:12px;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(subLine)}</div></div><button onclick="openPlayerModal(${JSON.stringify({...p,id:p.id}).replace(/"/g,'&quot;')})" title="Editar datos" style="padding:5px 9px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:13px;margin-right:4px">✏️</button>${injBtn}<button onclick="delPlayer('${p.id}','${esc(p.name)}')" title="Eliminar" style="padding:5px 9px;border-radius:6px;border:none;background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:13px">🗑</button></div>`;
+      const injBtn=`<button onclick="openInjuryModal('${esc(p.id)}')" title="${isInj?"Dar de alta / editar lesión":"Marcar lesión"}" style="padding:5px 9px;border-radius:6px;cursor:pointer;font-size:13px;margin-right:4px;${injBtnStyle}">🚑</button>`;
+      return `<div class="pr">${pnum}${avatar}<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px;display:flex;align-items:center;flex-wrap:wrap">${esc(p.name)}${badge}</div><div style="font-size:12px;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(subLine)}</div></div><button onclick="openPlayerModal(${JSON.stringify({...p,id:p.id}).replace(/"/g,'&quot;')})" title="Editar datos" style="padding:5px 9px;border-radius:6px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:13px;margin-right:4px">✏️</button>${injBtn}<button onclick="delPlayer('${esc(p.id)}','${esc(p.name)}')" title="Eliminar" style="padding:5px 9px;border-radius:6px;border:none;background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:13px">🗑</button></div>`;
     }).join("")}</div>`;
   const schedRows=t.schedule&&Object.keys(t.schedule).length?Object.entries(t.schedule).sort((a,b)=>+a[0]-+b[0]).map(([i,time])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:14px">${DAYSF[i]}</div><div style="color:var(--orange);font-family:var(--font-d);font-weight:700;font-size:15px">${time||"—"}</div></div>`).join(""):`<div style="font-size:13px;color:var(--tm);padding:8px 0">Sin horario</div>`;
   // Attendance stats bar
@@ -3399,7 +3399,7 @@ function shareScreen(){
   const wkP=buildWeeklyText(S.teamId,false);
   const wkI=buildWeeklyText(S.teamId,true);
   function mCard(id,icon,title,sub,bg,dayTxt,wkTxt){
-    return`<div class="share-mode-card"><div class="share-mode-header" onclick="toggleSharePanel('${id}')"><div style="width:38px;height:38px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${icon}</div><div style="flex:1"><div style="font-weight:800;font-size:15px">${title}</div><div style="font-size:12px;color:var(--td);margin-top:1px">${sub}</div></div><span id="${id}-icon" style="color:var(--td);font-size:13px">${shareOpen[id]?"▲":"▼"}</span></div>
+    return`<div class="share-mode-card"><div class="share-mode-header" onclick="toggleSharePanel('${esc(id)}')"><div style="width:38px;height:38px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${icon}</div><div style="flex:1"><div style="font-weight:800;font-size:15px">${title}</div><div style="font-size:12px;color:var(--td);margin-top:1px">${sub}</div></div><span id="${id}-icon" style="color:var(--td);font-size:13px">${shareOpen[id]?"▲":"▼"}</span></div>
       <div class="share-mode-body ${shareOpen[id]?"open":""}" id="${id}">
         <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:6px">📅 Asistencia del día</div>
         <div class="share-preview" id="${id}-dp">${esc(dayTxt)}</div>
@@ -3456,10 +3456,10 @@ function eventos(){
           </div>
         </div>
         <div style="display:flex;gap:6px">
-          <button onclick="S.eventId='${e.id}';openEventoConvModal()" style="flex:1;padding:10px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:${convCnt>0?"var(--s2)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:${convCnt>0?"var(--td)":"white"}">${convCnt>0?"✏️ Editar conv.":"👥 Convocar"}</button>
-          ${convCnt>0?`<button onclick="S.eventId='${e.id}';shareEventoConv()" style="padding:10px 13px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:17px" title="Compartir por WhatsApp">📤</button>`:""}
-          <button onclick="openEventoModal(evtById('${S.teamId}','${e.id}'))" style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:15px" title="Editar evento">✏️</button>
-          <button onclick="delEvento('${e.id}')" style="padding:10px 12px;border-radius:8px;border:none;background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:15px" title="Eliminar">🗑</button>
+          <button onclick="S.eventId='${esc(e.id)}';openEventoConvModal()" style="flex:1;padding:10px;border-radius:8px;border:none;font-weight:700;font-size:13px;cursor:pointer;background:${convCnt>0?"var(--s2)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:${convCnt>0?"var(--td)":"white"}">${convCnt>0?"✏️ Editar conv.":"👥 Convocar"}</button>
+          ${convCnt>0?`<button onclick="S.eventId='${esc(e.id)}';shareEventoConv()" style="padding:10px 13px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:17px" title="Compartir por WhatsApp">📤</button>`:""}
+          <button onclick="openEventoModal(evtById('${S.teamId}','${esc(e.id)}'))" style="padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:15px" title="Editar evento">✏️</button>
+          <button onclick="delEvento('${esc(e.id)}')" style="padding:10px 12px;border-radius:8px;border:none;background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:15px" title="Eliminar">🗑</button>
         </div>
       </div>
     </div>`;
@@ -3512,15 +3512,15 @@ function openEventoModal(init){
   el.onclick=ev=>{if(ev.target===el)el.remove();};
   const tipo=init?.tipo||"partido";
   el.innerHTML=`<div class="modal" style="max-height:92vh;overflow-y:auto"><div class="mhandle"></div><div class="mtitle">${init?"Editar evento":"Nuevo evento"}</div>
-    <div class="fg"><label class="fl">Tipo de evento</label><div style="display:flex;gap:8px" id="${id}-tipos">${[["partido","🏟️ Partido"],["tecnificacion","🔧 Tecnificación"],["otro","📌 Otro"]].map(([v,l])=>`<button onclick="evtTipoSel(this,'${id}')" data-tipo="${v}" style="flex:1;padding:9px 4px;border-radius:8px;border:2px solid ${tipo===v?"var(--orange)":"var(--border)"};background:${tipo===v?"rgba(240,99,24,.15)":"var(--s2)"};color:${tipo===v?"var(--orange)":"var(--td)"};cursor:pointer;font-weight:700;font-size:11px;line-height:1.3">${l}</button>`).join("")}</div></div>
+    <div class="fg"><label class="fl">Tipo de evento</label><div style="display:flex;gap:8px" id="${id}-tipos">${[["partido","🏟️ Partido"],["tecnificacion","🔧 Tecnificación"],["otro","📌 Otro"]].map(([v,l])=>`<button onclick="evtTipoSel(this,'${esc(id)}')" data-tipo="${v}" style="flex:1;padding:9px 4px;border-radius:8px;border:2px solid ${tipo===v?"var(--orange)":"var(--border)"};background:${tipo===v?"rgba(240,99,24,.15)":"var(--s2)"};color:${tipo===v?"var(--orange)":"var(--td)"};cursor:pointer;font-weight:700;font-size:11px;line-height:1.3">${l}</button>`).join("")}</div></div>
     <div class="fg" id="${id}-rival-wrap" style="${tipo!=="partido"?"display:none":""}"><label class="fl">Rival</label><input class="fi" id="${id}-rival" value="${esc(init?.rival||"")}" placeholder="Nombre del equipo rival"/></div>
     <div class="fg" id="${id}-tit-wrap" style="${tipo==="partido"?"display:none":""}"><label class="fl">Nombre / descripción</label><input class="fi" id="${id}-tit" value="${esc(init?.titulo||"")}" placeholder="ej. Tecnificación bases"/></div>
     <div class="frow"><div class="fg" style="flex:1.3"><label class="fl">Fecha</label><input class="fi" type="date" id="${id}-fecha" value="${esc(init?.fecha||td())}"/></div><div class="fg" style="flex:1"><label class="fl">Hora</label><input class="fi" type="time" id="${id}-hora" value="${esc(init?.hora||"")}"/></div></div>
     <div class="fg"><label class="fl">⏰ Hora concentración</label><input class="fi" type="time" id="${id}-conc" value="${esc(init?.horaConc||"")}" placeholder="Opcional"/></div>
     <div class="fg"><label class="fl">📍 Lugar</label><input class="fi" id="${id}-lugar" value="${esc(init?.lugar||"")}" placeholder="ej. Pabellón La Nevera"/></div>
     <div class="fg"><label class="fl">💬 Mensaje del entrenador <span style="color:var(--tm)">(opcional)</span></label><textarea class="fi" id="${id}-msg" rows="2" placeholder="Aparecerá al final de la convocatoria..." style="resize:none">${esc(init?.mensaje||"")}</textarea></div>
-    <button class="btn-p" onclick="saveEvento('${id}','${init?.id||""}')">${init?"Guardar cambios":"Crear y convocar →"}</button>
-    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cancelar</button>
+    <button class="btn-p" onclick="saveEvento('${esc(id)}','${init?.id||""}')">${init?"Guardar cambios":"Crear y convocar →"}</button>
+    <button class="btn-s" onclick="document.getElementById('${esc(id)}').remove()">Cancelar</button>
   </div>`;
   document.body.appendChild(el);el._tipo=tipo;
 }
@@ -3558,7 +3558,7 @@ function openEventoConvModal(){
     if(!players.length)return'<div style="padding:20px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores en la plantilla.</div>';
     const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
     return players.map(p=>{const inc=cids.includes(p.id);const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
-      return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')"><div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div><div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}</div>`;
+      return`<div class="conv-row" onclick="evtTogglePlayer('${esc(p.id)}')"><div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div><div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}</div>`;
     }).join("");
   }
   const cids=e.convocados||[];const typeLabel=e.tipo==="partido"?`🏟️ vs ${esc(e.rival||"Rival")}`:e.tipo==="tecnificacion"?"🔧 Tecnificación":esc(e.titulo||"Evento");
@@ -3582,7 +3582,7 @@ function evtTogglePlayer(pid){
   const cids=e.convocados;const allSess=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([,v])=>v);
   const list=document.getElementById("ev-conv-list");
   if(list){list.innerHTML=players.map(p=>{const inc=cids.includes(p.id);const att=allSess.length?pc(allSess.filter(s=>(s[p.id]||"present")==="present"||(s[p.id])==="late").length,allSess.length):null;
-    return`<div class="conv-row" onclick="evtTogglePlayer('${p.id}')"><div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div><div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}</div>`;
+    return`<div class="conv-row" onclick="evtTogglePlayer('${esc(p.id)}')"><div class="conv-cb ${inc?"on":""}">${inc?"✓":""}</div><div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div><div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>${att!==null?`<div style="font-size:12px;font-weight:700;color:${att>=90?"#22c55e":att>=75?"#f59e0b":"#ef4444"}">${att}%</div>`:""}</div>`;
   }).join("");}
   const cnt=document.getElementById("ev-conv-count");if(cnt)cnt.textContent=cids.length+" convocado"+(cids.length!==1?"s":"");
 }
@@ -3778,8 +3778,8 @@ function openTeamModal(init){
     <div class="fg"><label class="fl">👟 Ayudante (opcional)</label><input class="fi" id="${id}-coach2" value="${esc(coaches[1]||"")}" placeholder="Ayudante"/></div>
     <div class="fg"><label class="fl">📅 Días y horarios</label><div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:4px 12px;">${dayScheduleRows(id,init?.schedule)}</div></div>
     <div class="fg"><label class="fl">Color</label><div style="display:flex;gap:8px;flex-wrap:wrap" id="${id}-cols">${COLORS.map(c=>`<div class="cdot ${sc===c?"s":""}" data-col="${c}" style="background:${c}" onclick="togCol(this,'${id}-cols')"></div>`).join("")}</div></div>
-    <button class="btn-p" onclick="saveTeam('${id}','${init?.id||""}')">${init?"Guardar":"Crear Equipo"}</button>
-    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
+    <button class="btn-p" onclick="saveTeam('${esc(id)}','${init?.id||""}')">${init?"Guardar":"Crear Equipo"}</button>
+    <button class="btn-s" onclick="_closeModal('${esc(id)}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
   _attachModalDirtyTracking(id, ()=>saveTeam(id, init?.id||""), init?"Editar equipo":"Nuevo equipo");
@@ -3799,9 +3799,9 @@ function openPlayerModal(init){
       <label class="fl" style="text-align:center;display:block">Foto</label>
       <label class="ppic-box" for="${id}-photo">
         ${photoVal?`<img id="${id}-photo-img" src="${photoVal}" alt=""/>`:`<span id="${id}-photo-ph" class="ppic-ph">📷</span><img id="${id}-photo-img" style="display:none" alt=""/>`}
-        <span id="${id}-photo-clear" class="ppic-clear" style="${photoVal?"":"display:none"}" onclick="event.preventDefault();event.stopPropagation();clearPlayerPhoto('${id}')">✕</span>
+        <span id="${id}-photo-clear" class="ppic-clear" style="${photoVal?"":"display:none"}" onclick="event.preventDefault();event.stopPropagation();clearPlayerPhoto('${esc(id)}')">✕</span>
       </label>
-      <input type="file" id="${id}-photo" accept="image/*" style="display:none" onchange="handlePlayerPhoto(this,'${id}')"/>
+      <input type="file" id="${id}-photo" accept="image/*" style="display:none" onchange="handlePlayerPhoto(this,'${esc(id)}')"/>
     </div>
     <div class="fg"><label class="fl">Nombre</label><input class="fi" id="${id}-n" value="${esc(init?.name||"")}" placeholder="Nombre Apellido"/></div>
     <div class="fg"><label class="fl">Dorsal ${init?"":`<span style="color:var(--tm);font-weight:500;text-transform:none;letter-spacing:0">· sugerido #${sugg}</span>`}</label>
@@ -3816,8 +3816,8 @@ function openPlayerModal(init){
     </div>
     <div class="fg"><label class="fl">Posición</label><select class="fi" id="${id}-p">${["", ...POSITIONS].map(p=>`<option value="${p}" ${(init?.position||"")==p?"selected":""}>${p||"Sin especificar"}</option>`).join("")}</select></div>
     <div class="fg"><label class="fl">Notas</label><input class="fi" id="${id}-o" value="${esc(init?.notes||"")}" placeholder="Capitán, rol, rotación..."/></div>
-    <button class="btn-p" onclick="savePlayer('${id}','${init?.id||""}')">${init?"Guardar":"Añadir"}</button>
-    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
+    <button class="btn-p" onclick="savePlayer('${esc(id)}','${init?.id||""}')">${init?"Guardar":"Añadir"}</button>
+    <button class="btn-s" onclick="_closeModal('${esc(id)}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
   _attachModalDirtyTracking(id, ()=>savePlayer(id, init?.id||""), init?"Editar jugador":"Nuevo jugador");
@@ -3912,14 +3912,14 @@ function openInjuryNewModal(pid){
     <div style="background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--td);line-height:1.5">Auto-justifica el pase de lista desde la fecha de inicio y congela su % FEB.</div>
     <div class="fg"><label class="fl">Fecha de lesión</label><input class="fi" type="date" id="${id}-date" value="${esc(injDate)}"/></div>
     <div class="fg"><label class="fl">Origen</label>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px" id="${id}-origins">${ORIGINS.map(([k,lb])=>`<button type="button" class="inj-origin${injOrigin===k?" sel":""}" data-k="${k}" onclick="setInjOrigin('${id}','${k}')" style="padding:10px 8px;border-radius:8px;border:1px solid ${injOrigin===k?"#ef4444":"var(--border)"};background:${injOrigin===k?"rgba(239,68,68,.12)":"var(--s3)"};color:${injOrigin===k?"#ef4444":"var(--tx)"};font-size:12px;font-weight:700;cursor:pointer">${lb}</button>`).join("")}</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px" id="${id}-origins">${ORIGINS.map(([k,lb])=>`<button type="button" class="inj-origin${injOrigin===k?" sel":""}" data-k="${k}" onclick="setInjOrigin('${esc(id)}','${k}')" style="padding:10px 8px;border-radius:8px;border:1px solid ${injOrigin===k?"#ef4444":"var(--border)"};background:${injOrigin===k?"rgba(239,68,68,.12)":"var(--s3)"};color:${injOrigin===k?"#ef4444":"var(--tx)"};font-size:12px;font-weight:700;cursor:pointer">${lb}</button>`).join("")}</div>
       <select class="fi" id="${id}-src" style="display:none"></select>
     </div>
     <div class="fg"><label class="fl">Explicación (opcional)</label><textarea class="fi" id="${id}-notes" rows="3" style="resize:none" placeholder="Esguince, tendinitis, zona afectada, estimación..."></textarea>
       <div style="font-size:11px;color:var(--tm);margin-top:4px">Se usará como motivo en las justificaciones diarias durante la baja</div>
     </div>
-    <button class="btn-p" onclick="saveInjury('${id}','${pid}')">🚑 Guardar lesión</button>
-    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
+    <button class="btn-p" onclick="saveInjury('${esc(id)}','${esc(pid)}')">🚑 Guardar lesión</button>
+    <button class="btn-s" onclick="_closeModal('${esc(id)}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
   el.dataset.mode="new";
@@ -3947,9 +3947,9 @@ function openInjuryRecoveryModal(pid){
       ${origLbl?`<div style="font-size:12px;color:var(--td);margin-top:2px">Origen: ${esc(origLbl)}</div>`:""}
       ${inj.notes?`<div style="font-size:12px;color:var(--tm);margin-top:4px;font-style:italic">"${esc(inj.notes)}"</div>`:""}
     </div>
-    <button class="btn-p" style="background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="confirmInjuryRecovery('${pid}')">✅ Dar de alta médica</button>
-    <button class="btn-s" onclick="openInjuryEditModal('${pid}')">✏️🚑 Editar datos de la lesión</button>
-    <button class="btn-s" onclick="document.getElementById('${id}').remove()">Cerrar</button>
+    <button class="btn-p" style="background:linear-gradient(135deg,#22c55e,#16a34a)" onclick="confirmInjuryRecovery('${esc(pid)}')">✅ Dar de alta médica</button>
+    <button class="btn-s" onclick="openInjuryEditModal('${esc(pid)}')">✏️🚑 Editar datos de la lesión</button>
+    <button class="btn-s" onclick="document.getElementById('${esc(id)}').remove()">Cerrar</button>
   </div>`;
   document.body.appendChild(el);
 }
@@ -3992,14 +3992,14 @@ function openInjuryEditModal(pid){
     <div class="msub">👤 ${esc(p.name)}${p.number!=null?` · #${p.number}`:""}</div>
     <div class="fg"><label class="fl">Fecha de lesión</label><input class="fi" type="date" id="${id}-date" value="${esc(injDate)}"/></div>
     <div class="fg"><label class="fl">Origen</label>
-      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px" id="${id}-origins">${ORIGINS.map(([k,lb])=>`<button type="button" class="inj-origin${injOrigin===k?" sel":""}" data-k="${k}" onclick="setInjOrigin('${id}','${k}')" style="padding:10px 8px;border-radius:8px;border:1px solid ${injOrigin===k?"#ef4444":"var(--border)"};background:${injOrigin===k?"rgba(239,68,68,.12)":"var(--s3)"};color:${injOrigin===k?"#ef4444":"var(--tx)"};font-size:12px;font-weight:700;cursor:pointer">${lb}</button>`).join("")}</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:8px" id="${id}-origins">${ORIGINS.map(([k,lb])=>`<button type="button" class="inj-origin${injOrigin===k?" sel":""}" data-k="${k}" onclick="setInjOrigin('${esc(id)}','${k}')" style="padding:10px 8px;border-radius:8px;border:1px solid ${injOrigin===k?"#ef4444":"var(--border)"};background:${injOrigin===k?"rgba(239,68,68,.12)":"var(--s3)"};color:${injOrigin===k?"#ef4444":"var(--tx)"};font-size:12px;font-weight:700;cursor:pointer">${lb}</button>`).join("")}</div>
       <select class="fi" id="${id}-src" style="display:${injOrigin==="training"||injOrigin==="match"?"block":"none"}">${buildInjSourceOptions(injOrigin,injOriginId)}</select>
     </div>
     <div class="fg"><label class="fl">Explicación (opcional)</label><textarea class="fi" id="${id}-notes" rows="3" style="resize:none" placeholder="Esguince, tendinitis, zona afectada...">${esc(injNotes)}</textarea>
       <div style="font-size:11px;color:var(--tm);margin-top:4px">Se usará como motivo en las justificaciones diarias durante la baja</div>
     </div>
-    <button class="btn-p" onclick="saveInjury('${id}','${pid}')">Guardar cambios</button>
-    <button class="btn-s" onclick="_closeModal('${id}')">Cancelar</button>
+    <button class="btn-p" onclick="saveInjury('${esc(id)}','${esc(pid)}')">Guardar cambios</button>
+    <button class="btn-s" onclick="_closeModal('${esc(id)}')">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
   el.dataset.mode="edit";
@@ -4570,7 +4570,7 @@ function _hoyAddPick(kind){
       </div>
       <div style="width:32px;flex-shrink:0"></div>
     </div>
-    ${teams.map(t=>`<button onclick="_hoyAddCommit('${t.id}','${kind}')" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--border);background:var(--s2);color:var(--tx);border-radius:10px;cursor:pointer;margin-bottom:8px;text-align:left;font-family:inherit">
+    ${teams.map(t=>`<button onclick="_hoyAddCommit('${esc(t.id)}','${kind}')" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--border);background:var(--s2);color:var(--tx);border-radius:10px;cursor:pointer;margin-bottom:8px;text-align:left;font-family:inherit">
       <div style="width:6px;height:38px;border-radius:3px;background:${t.color};flex-shrink:0"></div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.name)}</div>
@@ -4725,7 +4725,7 @@ function matchList(){
       const cls=r==="W"?"win":r==="L"?"loss":r==="D"?"draw":"pending";
       const locLabel=m.location==="home"?"🏠":m.location==="away"?"✈️":"⚖️";
       const convCnt=(m.convocados||[]).length;
-      return`<div class="match-card ${cls}" onclick="navTo('matchDetail',{matchId:'${m.id}'})">
+      return`<div class="match-card ${cls}" onclick="navTo('matchDetail',{matchId:'${esc(m.id)}'})">
         <div style="padding:12px 14px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
             <div style="flex:1">
@@ -4818,13 +4818,13 @@ function matchDetail(){
     const inConv=convIds.includes(p.id);
     const isTit=titIds.includes(p.id)&&inConv;
     const isCap=m.capitan===p.id&&inConv;
-    return`<div class="conv-player" onclick="toggleConvocado('${p.id}')">
+    return`<div class="conv-player" onclick="toggleConvocado('${esc(p.id)}')">
       <div class="conv-check ${inConv?"on":""}">${inConv?"✓":""}</div>
       <div class="pnum" style="background:linear-gradient(135deg,${t.color},${t.color}88);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
       <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}${isCap?`<span style="background:rgba(234,179,8,.2);color:#eab308;border:1px solid rgba(234,179,8,.3);border-radius:5px;font-size:10px;font-weight:800;padding:1px 5px;margin-left:6px">(C)</span>`:""}</div><div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div></div>
       ${inConv?`<div style="display:flex;gap:6px">
-        <button onclick="event.stopPropagation();toggleTitular('${p.id}')" style="padding:4px 8px;border-radius:6px;border:1px solid ${isTit?"rgba(240,99,24,.4)":"var(--border)"};background:${isTit?"rgba(240,99,24,.15)":"var(--s2)"};color:${isTit?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">⭐</button>
-        <button onclick="event.stopPropagation();setCapitan('${p.id}')" style="padding:4px 8px;border-radius:6px;border:1px solid ${isCap?"rgba(234,179,8,.4)":"var(--border)"};background:${isCap?"rgba(234,179,8,.15)":"var(--s2)"};color:${isCap?"#eab308":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">(C)</button>
+        <button onclick="event.stopPropagation();toggleTitular('${esc(p.id)}')" style="padding:4px 8px;border-radius:6px;border:1px solid ${isTit?"rgba(240,99,24,.4)":"var(--border)"};background:${isTit?"rgba(240,99,24,.15)":"var(--s2)"};color:${isTit?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">⭐</button>
+        <button onclick="event.stopPropagation();setCapitan('${esc(p.id)}')" style="padding:4px 8px;border-radius:6px;border:1px solid ${isCap?"rgba(234,179,8,.4)":"var(--border)"};background:${isCap?"rgba(234,179,8,.15)":"var(--s2)"};color:${isCap?"#eab308":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">(C)</button>
       </div>`:""}
     </div>`;
   }).join("");
@@ -5038,7 +5038,7 @@ function _convSetupHtml(m,t,step){
           const inConv=convIds.includes(p.id);
           const isTit=titIds.includes(p.id)&&inConv;
           const isCap=m.capitan===p.id&&inConv;
-          return`<div class="conv-row" data-pid="${p.id}" onclick="_convToggle('${p.id}')">
+          return`<div class="conv-row" data-pid="${p.id}" onclick="_convToggle('${esc(p.id)}')">
             ${_convRowInner(p,t,inConv,isTit,isCap)}
           </div>`;
         }).join("")}
@@ -5061,7 +5061,7 @@ function _convSetupHtml(m,t,step){
         <div class="riv-row">
           <div style="width:32px;height:32px;border-radius:7px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#ef4444">${p.number||"?"}</div>
           <div style="flex:1;font-size:14px;font-weight:600">${esc(p.name||"Sin nombre")}</div>
-          <button onclick="_rivDel('${p.id}')" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;font-size:13px">🗑</button>
+          <button onclick="_rivDel('${esc(p.id)}')" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:5px 8px;cursor:pointer;color:#ef4444;font-size:13px">🗑</button>
         </div>`).join("")}
     </div>
     <div class="riv-add-row">
@@ -5116,8 +5116,8 @@ function _convRowInner(p,t,inConv,isTit,isCap){
       <div style="font-size:12px;color:var(--td)">${esc(p.position||"—")}</div>
     </div>
     ${inConv?`<div style="display:flex;gap:5px" onclick="event.stopPropagation()">
-      <button onclick="_convTitular('${p.id}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isTit?"rgba(240,99,24,.4)":"var(--border)"};background:${isTit?"rgba(240,99,24,.15)":"var(--s2)"};color:${isTit?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">⭐</button>
-      <button onclick="_convCapitan('${p.id}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isCap?"rgba(234,179,8,.4)":"var(--border)"};background:${isCap?"rgba(234,179,8,.15)":"var(--s2)"};color:${isCap?"#eab308":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">(C)</button>
+      <button onclick="_convTitular('${esc(p.id)}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isTit?"rgba(240,99,24,.4)":"var(--border)"};background:${isTit?"rgba(240,99,24,.15)":"var(--s2)"};color:${isTit?"var(--orange)":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">⭐</button>
+      <button onclick="_convCapitan('${esc(p.id)}')" style="padding:5px 9px;border-radius:6px;border:1px solid ${isCap?"rgba(234,179,8,.4)":"var(--border)"};background:${isCap?"rgba(234,179,8,.15)":"var(--s2)"};color:${isCap?"#eab308":"var(--td)"};cursor:pointer;font-size:12px;font-weight:700">(C)</button>
     </div>`:""}`;
 }
 function _convRefreshRow(pid){
@@ -5601,7 +5601,7 @@ function liveGame(){
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
       const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
-      return`<button class="court-card ${disq?"disq":""}" onclick="openCourtSubModal('${p.id}')" title="Tocar para sustituir">
+      return`<button class="court-card ${disq?"disq":""}" onclick="openCourtSubModal('${esc(p.id)}')" title="Tocar para sustituir">
         <div style="font-size:9px;font-weight:700;color:var(--td);margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:var(--tx)">${pts}</div>
         <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:var(--td)">${esc(_shortName(p.name))}</div>
@@ -5624,7 +5624,7 @@ function liveGame(){
       const isSel=selPid===p.id;
       const foulDots=fouls>0?"●".repeat(Math.min(fouls,5)):"";
       const fc=disq?"#ef4444":fouls>=4?"#f59e0b":"var(--td)";
-      return`<button class="court-card ${disq?"disq":""}" onclick="openCourtRivalSubModal('${p.id}')" title="Tocar para sustituir">${""}
+      return`<button class="court-card ${disq?"disq":""}" onclick="openCourtRivalSubModal('${esc(p.id)}')" title="Tocar para sustituir">${""}
         <div style="font-size:9px;font-weight:700;color:var(--td);margin-bottom:2px">#${p.number||"?"}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:28px;line-height:1;color:var(--tx)">${pts}</div>
         <div style="font-size:11px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70px;margin:3px auto 2px;color:var(--td)">${esc(_shortName(p.name))}</div>
@@ -5778,8 +5778,8 @@ function liveGame(){
             <div style="font-size:11px;color:${fc}">${"●".repeat(Math.min(fouls,5))||"Sin faltas"}</div>
           </div>
           ${onCourt.length<5?
-            `<button onclick="subPlayer('${p.id}',null)" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;padding:4px 7px;flex-shrink:0">→ Pista</button>`:
-            `<button onclick="openSubModal('${p.id}')" style="background:rgba(240,99,24,.12);border:1px solid rgba(240,99,24,.3);border-radius:6px;color:var(--orange);font-size:11px;font-weight:700;cursor:pointer;padding:4px 7px;flex-shrink:0">↔ Sub</button>`
+            `<button onclick="subPlayer('${esc(p.id)}',null)" style="background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:6px;color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;padding:4px 7px;flex-shrink:0">→ Pista</button>`:
+            `<button onclick="openSubModal('${esc(p.id)}')" style="background:rgba(240,99,24,.12);border:1px solid rgba(240,99,24,.3);border-radius:6px;color:var(--orange);font-size:11px;font-weight:700;cursor:pointer;padding:4px 7px;flex-shrink:0">↔ Sub</button>`
           }
         </div>`;
       }).join("")}
@@ -6231,7 +6231,7 @@ function openActionPicker(action,pts){
   const cards=courtP.map(p=>{
     const st=m.live.stats?.[p.id]||{};
     const pts2=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
-    return `<button onclick="_pickActionFor('${p.id}','${action}',${pts||0})" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;border-radius:12px;border:2px solid ${meta.color}55;background:rgba(0,0,0,.25);color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
+    return `<button onclick="_pickActionFor('${esc(p.id)}','${action}',${pts||0})" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 6px;border-radius:12px;border:2px solid ${meta.color}55;background:rgba(0,0,0,.25);color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
       <div style="width:40px;height:40px;border-radius:9px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:white">${p.number||"?"}</div>
       <div style="font-weight:800;font-size:13px;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${esc(_shortName(p.name))}</div>
       <div style="font-size:10px;color:var(--td)">${pts2} pts</div>
@@ -6288,7 +6288,7 @@ function _chainAssist(scorerPid,action){
   el.id="m-chainast";
   el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.96);z-index:9997;display:flex;align-items:center;justify-content:center;padding:20px;";
   el.onclick=e=>{if(e.target===el)el.remove();};
-  const cards=courtP.map(p=>`<button onclick="_pickAssist('${p.id}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:12px;border:2px solid #06b6d455;background:rgba(0,0,0,.25);color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
+  const cards=courtP.map(p=>`<button onclick="_pickAssist('${esc(p.id)}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:12px;border:2px solid #06b6d455;background:rgba(0,0,0,.25);color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
     <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:white">${p.number||"?"}</div>
     <div style="font-weight:800;font-size:12px;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${esc(_shortName(p.name))}</div>
   </button>`).join("");
@@ -6327,7 +6327,7 @@ function _chainRebound(shooterPid,action){
   el.onclick=e=>{if(e.target===el)el.remove();};
   const cards=courtP.map(p=>{
     const isShoot=p.id===shooterPid;
-    return `<button onclick="_pickRebound('${p.id}','ro')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:12px;border:2px solid #a855f755;background:${isShoot?"rgba(168,85,247,.12)":"rgba(0,0,0,.25)"};color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
+    return `<button onclick="_pickRebound('${esc(p.id)}','ro')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;border-radius:12px;border:2px solid #a855f755;background:${isShoot?"rgba(168,85,247,.12)":"rgba(0,0,0,.25)"};color:var(--tx);cursor:pointer;font-family:inherit;width:100%">
       <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,${teamColor},${teamColor}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:white">${p.number||"?"}</div>
       <div style="font-weight:800;font-size:12px;text-align:center;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${esc(_shortName(p.name))}</div>
       <div style="font-size:9px;color:#a855f7;font-weight:700">OF</div>
@@ -6606,7 +6606,7 @@ function openFoulTLModal(foulerPid, isTech, foulKind){
   const playerRows=rivalPlayers.length===0
     ?`<div style="font-size:13px;color:var(--tm);padding:12px 0;text-align:center">Sin jugadores del rival registrados.<br/>Añádelos en la convocatoria.</div>`
     :rivalPlayers.map(rp=>`
-      <button onclick="selectFoulRecipient(this,'${rp.id}')" data-rpid="${rp.id}" style="display:flex;align-items:center;gap:10px;width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;margin-bottom:6px;text-align:left">
+      <button onclick="selectFoulRecipient(this,'${esc(rp.id)}')" data-rpid="${rp.id}" style="display:flex;align-items:center;gap:10px;width:100%;background:var(--s2);border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;margin-bottom:6px;text-align:left">
         <div style="width:32px;height:32px;border-radius:7px;background:rgba(239,68,68,.2);border:1px solid rgba(239,68,68,.35);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#ef4444;flex-shrink:0">${rp.number||"?"}</div>
         <div style="font-weight:700;font-size:15px;color:var(--tx)">${rp.name}</div>
       </button>`).join("");
@@ -6963,7 +6963,7 @@ function openOurFoulTLModal(rpidOpt, foulKind){
   const rivalPlayers=m.rivalPlayers||[];
   const foulerName=rpidOpt?_shortName(rivalPlayers.find(p=>p.id===rpidOpt)?.name||"?"):"Rival";
 
-  const playerRowFor=(p,inPista)=>`<button onclick="selectOurTLShooter('${p.id}')" data-pid="${p.id}" style="display:flex;align-items:center;gap:10px;width:100%;background:${inPista?"rgba(240,99,24,.06)":"var(--s2)"};border:1.5px solid ${inPista?"rgba(240,99,24,.25)":"var(--border)"};border-radius:10px;padding:9px 11px;cursor:pointer;margin-bottom:5px;text-align:left">
+  const playerRowFor=(p,inPista)=>`<button onclick="selectOurTLShooter('${esc(p.id)}')" data-pid="${p.id}" style="display:flex;align-items:center;gap:10px;width:100%;background:${inPista?"rgba(240,99,24,.06)":"var(--s2)"};border:1.5px solid ${inPista?"rgba(240,99,24,.25)":"var(--border)"};border-radius:10px;padding:9px 11px;cursor:pointer;margin-bottom:5px;text-align:left">
     <div style="width:30px;height:30px;border-radius:7px;background:rgba(240,99,24,.2);border:1px solid rgba(240,99,24,.4);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--orange);flex-shrink:0">${p.number||"?"}</div>
     <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px"><span style="font-weight:700;font-size:14px">${esc(p.name)}</span>${inPista?'<span style="font-size:9px;color:var(--orange);font-weight:800;background:rgba(240,99,24,.15);padding:1px 5px;border-radius:4px">EN PISTA</span>':'<span style="font-size:9px;color:var(--td);font-weight:700;background:var(--s3);padding:1px 5px;border-radius:4px">BANQUILLO</span>'}</div>
   </button>`;
@@ -7064,7 +7064,7 @@ function openOurTLShootModal(pid,total){
     <div class="msub"><b style="color:var(--orange)">${esc(pname)}</b> — ${total} tiro${total>1?"s":""}. Toca los que <b style="color:#22c55e">entran</b>.</div>
     <div style="font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:10px">Por defecto fallados ✗</div>
     <div id="ourtl-btns-grid" style="display:flex;gap:8px;margin:14px 0">${Array.from({length:total},(_,i)=>btnHtml(i)).join("")}</div>
-    <button class="btn-p" id="ourtl-shoot-confirm" onclick="confirmOurTLShoot('${pid}',${total})">Guardar (0/${total} entran)</button>
+    <button class="btn-p" id="ourtl-shoot-confirm" onclick="confirmOurTLShoot('${esc(pid)}',${total})">Guardar (0/${total} entran)</button>
     <button class="btn-s" onclick="document.getElementById('m-ourtlshoot').remove()">Cancelar</button>
   </div>`;
   document.body.appendChild(el);
@@ -7297,7 +7297,7 @@ function openCourtSubModal(outId){
         const f=_totalFouls(st);
         const dq=_isDQ(st);
         const fc=dq?"#ef4444":f>=4?"#f59e0b":"var(--td)";
-        return`<div class="pr" style="${i===benchP.length-1?"border-bottom:none":""};cursor:pointer${dq?";opacity:.5":""}" onclick="${dq?"toast('⛔ Jugador descalificado, no puede entrar')":`subPlayer('${p.id}','${outId}');document.getElementById('m-sub').remove()`}">
+        return`<div class="pr" style="${i===benchP.length-1?"border-bottom:none":""};cursor:pointer${dq?";opacity:.5":""}" onclick="${dq?"toast('⛔ Jugador descalificado, no puede entrar')":`subPlayer('${esc(p.id)}','${esc(outId)}');document.getElementById('m-sub').remove()`}">
           <div class="pnum-wrap"><div class="pnum" style="background:linear-gradient(135deg,var(--orange),var(--orange2))">${p.number||"?"}</div></div>
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;font-size:15px">${esc(p.name)}${dq?' <span style="font-size:11px;color:#ef4444;font-weight:800">⛔ DQ</span>':''}</div>
@@ -7332,7 +7332,7 @@ function openCourtRivalSubModal(outId){
     </div>
     <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--td);margin-bottom:10px">¿Quién entra?</div>
     <div class="card">
-      ${benchP.length===0?'<div style="padding:18px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores rivales en banquillo.</div>':benchP.map((p,i)=>`<div class="pr" style="${i===benchP.length-1?"border-bottom:none":""};cursor:pointer" onclick="subRivalPlayer('${p.id}','${outId}');document.getElementById('m-rsub').remove()">
+      ${benchP.length===0?'<div style="padding:18px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores rivales en banquillo.</div>':benchP.map((p,i)=>`<div class="pr" style="${i===benchP.length-1?"border-bottom:none":""};cursor:pointer" onclick="subRivalPlayer('${esc(p.id)}','${esc(outId)}');document.getElementById('m-rsub').remove()">
         <div class="pnum-wrap"><div class="pnum" style="background:linear-gradient(135deg,#ef4444,#dc2626)">${p.number||"?"}</div></div>
         <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div></div>
         <span style="font-size:18px;color:#22c55e">⬆️</span>
@@ -7367,7 +7367,7 @@ function openSubModal(inId){
         const st=m.live.stats[p.id]||{};
         const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
         const f=st.foul||0;const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--td)";
-        return`<div class="pr" style="${i===courtP.length-1?"border-bottom:none":""};cursor:pointer" onclick="subPlayer('${inId}','${p.id}');document.getElementById('m-sub').remove()">
+        return`<div class="pr" style="${i===courtP.length-1?"border-bottom:none":""};cursor:pointer" onclick="subPlayer('${esc(inId)}','${esc(p.id)}');document.getElementById('m-sub').remove()">
           <div class="pnum" style="background:linear-gradient(135deg,var(--orange),#c2410c);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
           <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${pts} pts · <span style="color:${fc}">${f} faltas</span></div></div>
           <span style="font-size:20px;color:var(--td)">⬇️</span>
@@ -7423,7 +7423,7 @@ function openRivalSubModal(inId){
         const st=(m.live.rivalStats||{})[p.id]||{};
         const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
         const f=st.foul||0;const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--td)";
-        return`<div class="pr" style="${i===courtP2.length-1?"border-bottom:none":""};cursor:pointer" onclick="subRivalPlayer('${inId}','${p.id}');document.getElementById('m-rsub').remove()">
+        return`<div class="pr" style="${i===courtP2.length-1?"border-bottom:none":""};cursor:pointer" onclick="subRivalPlayer('${esc(inId)}','${esc(p.id)}');document.getElementById('m-rsub').remove()">
           <div class="pnum" style="background:linear-gradient(135deg,#ef4444,#b91c1c);width:32px;height:32px;border-radius:8px;font-size:13px">${p.number||"?"}</div>
           <div style="flex:1"><div style="font-weight:600;font-size:15px">${esc(p.name)}</div><div style="font-size:12px;color:var(--td)">${pts} pts · <span style="color:${fc}">${f} faltas</span></div></div>
           <span style="font-size:20px;color:var(--td)">⬇️</span>
