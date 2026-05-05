@@ -532,7 +532,8 @@ function startClock(){
           _clockAlert("🤝 ¡EMPATE! "+ourT+" – "+rivT,1500);
           setTimeout(()=>_showOTPrompt(m,curQ,otCount),1600);
         } else {
-          _clockAlert("🏀 ¡Final! "+periodName+" — "+(ourT>rivT?"Victoria":"Derrota")+" "+ourT+"–"+rivT,3500);
+          _clockAlert("🏀 ¡Final! "+periodName,1500);
+          setTimeout(()=>_showEndMatchOverlay(m,ourT,rivT,periodName),1600);
         }
       }
     }
@@ -2693,6 +2694,7 @@ function render(){
   else if(S.screen==="matchDetail")r.innerHTML=matchDetail();
   else if(S.screen==="liveGame")r.innerHTML=liveGame();
   else if(S.screen==="shotMap")r.innerHTML=shotMap();
+  else if(S.screen==="matchSummary")r.innerHTML=matchSummaryScreen();
   requestAnimationFrame(()=>setTimeout(_initCharts,0));
 }
 
@@ -2723,7 +2725,7 @@ function navBack(){
       // Fallback sensato según pantalla actual
       const fallbacks={att:'team',stats:'team',hist:'team',share:'att',
         matchList:'team',matchDetail:'matchList',liveGame:'matchDetail',
-        eventos:'team'};
+        matchSummary:'hoy',eventos:'team'};
       S.screen=fallbacks[S.screen]||'hoy';
       render();return;
     }
@@ -3808,6 +3810,63 @@ function removeLastOT(){
   if(m.live.qScores)m.live.qScores[otIdx]=[0,0];
   m.live.otCount=Math.max(0,m.live.otCount-1);
   save();render();
+}
+
+function _showEndMatchOverlay(m,ourT,rivT,periodName){
+  document.getElementById("m-endmatch")?.remove();
+  document.getElementById("m-end-period")?.remove();
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const live=m.live||{};
+  const players=pl(S.teamId);
+  const onCourt=(live.onCourt||[]).map(id=>players.find(p=>p.id===id)).filter(Boolean);
+  const rival=m.rival||"Rival";
+  const qIdx=(live.q||1)-1;
+  const isWin=ourT>rivT;
+  const resEmoji=isWin?"🏆":"❌";
+  const resColor=isWin?"#22c55e":"#ef4444";
+  const resText=isWin?"¡VICTORIA!":"DERROTA";
+  function playerBtns(pid){
+    const p=players.find(x=>x.id===pid);if(!p)return"";
+    return`<div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:800;color:var(--orange);margin-bottom:8px">${esc(p.name)} #${p.number||"?"}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <button onclick="_endPeriodAction('${p.id}','p2m',2,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+2 Canasta</button>
+        <button onclick="_endPeriodAction('${p.id}','p3m',3,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.12);color:#22c55e;font-weight:800;font-size:13px;cursor:pointer">+3 Triple</button>
+        <button onclick="_endPeriodAction('${p.id}','p1m',1,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(34,197,94,.1);color:#86efac;font-weight:800;font-size:13px;cursor:pointer">+1 TL</button>
+        <button onclick="_endPeriodAction('${p.id}','foul',0,${qIdx},false)" style="padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(239,68,68,.12);color:#ef4444;font-weight:800;font-size:13px;cursor:pointer">Falta</button>
+      </div>
+    </div>`;
+  }
+  window._emPlayerBtns=playerBtns;
+  const courtGrid=onCourt.map(p=>`<button onclick="document.getElementById('m-em-acts').innerHTML=window._emPlayerBtns('${p.id}')" style="padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-size:12px;font-weight:700;cursor:pointer;text-align:center">#${p.number||"?"}<br><span style="font-size:10px;color:var(--td)">${esc(_shortName(p.name))}</span></button>`).join("");
+  const el=document.createElement("div");el.id="m-endmatch";
+  el.style.cssText="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(7,15,30,.96);z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;overflow-y:auto;";
+  el.innerHTML=`<div style="background:var(--s);border:2px solid ${resColor}44;border-radius:18px;padding:22px 18px;width:100%;max-width:360px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:40px;margin-bottom:4px">${resEmoji}</div>
+      <div style="font-family:var(--font-d);font-weight:900;font-size:24px;color:${resColor};margin-bottom:2px">${resText}</div>
+      <div style="font-size:12px;color:var(--td);margin-bottom:8px">Fin del ${esc(periodName)}</div>
+      <div id="eop-score" style="font-family:var(--font-d);font-weight:900;font-size:48px;color:var(--tx);line-height:1">${ourT} — ${rivT}</div>
+      <span id="eop-fb" style="font-size:12px;color:#22c55e;font-weight:700;opacity:0;transition:opacity .3s"></span>
+    </div>
+    ${onCourt.length>0?`<div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--td);margin-bottom:8px">Acciones del último segundo</div>
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(onCourt.length,5)},1fr);gap:6px;margin-bottom:10px">${courtGrid}</div>
+    <div id="m-em-acts" style="margin-bottom:4px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px">
+      <button onclick="_endPeriodAction('rival','rival',2,${qIdx},true)" style="padding:9px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-weight:800;font-size:12px;cursor:pointer">+2 ${esc(rival)}</button>
+      <button onclick="_endPeriodAction('rival','rival',3,${qIdx},true)" style="padding:9px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-weight:800;font-size:12px;cursor:pointer">+3 ${esc(rival)}</button>
+    </div>`:"<div style='height:12px'></div>"}
+    <button onclick="document.getElementById('m-endmatch').remove()" style="width:100%;padding:13px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;background:var(--s2);color:var(--tx);margin-bottom:10px">⏱ Queda tiempo — Continuar</button>
+    <button onclick="document.getElementById('m-endmatch').remove();_finishAndShowSummary('${S.teamId}','${S.matchId}')" style="width:100%;padding:14px;border:none;border-radius:10px;font-weight:900;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;font-family:var(--font-d);letter-spacing:.5px">🏁 Finalizar partido</button>
+  </div>`;
+  document.body.appendChild(el);
+}
+function _finishAndShowSummary(teamId,matchId){
+  const m=mById(teamId,matchId);if(!m)return;
+  if(m.live){m.live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;}
+  m.finished=true;m.finishedAt=new Date().toISOString();
+  save();
+  navTo('matchSummary',{teamId,matchId});
 }
 
 /* ═══════════════════════════════════════
@@ -6166,55 +6225,88 @@ function liveGame(){
   const _ourLoc=m.location==="home"?"🏠 Local":"✈️ Visit.";
   const _rivLoc=m.location==="away"?"🏠 Local":"✈️ Visit.";
 
+  // v1.8.8: cuando jugamos de visitante, el rival (local) va a la izquierda
+  const _isAway=m.location==="away";
+  const _lName=_isAway?_rivName:_ourName;
+  const _lNameColor=_isAway?"var(--tx)":_tc;
+  const _lLoc=_isAway?_rivLoc:_ourLoc;
+  const _rName=_isAway?_ourName:_rivName;
+  const _rNameColor=_isAway?_tc:"var(--tx)";
+  const _rLoc=_isAway?_ourLoc:_rivLoc;
+  const _rivalScoreBtns=(justify)=>'<div style="display:flex;align-items:center;justify-content:'+justify+';gap:5px">'
+    +'<button onclick="rivalScoreLive(-1)" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--tx);cursor:pointer;font-size:20px;font-weight:900;flex-shrink:0">−</button>'
+    +'<div class="live-score" style="color:var(--tx);text-align:center;min-width:44px">'+theirTotal+'</div>'
+    +'<button onclick="rivalScoreLive(1)" style="width:34px;height:34px;border-radius:8px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:20px;font-weight:900;flex-shrink:0">+</button>'
+    +'</div>';
+  const _lScoreEl=_isAway
+    ?(rivalEnabled?'<div class="live-score" style="color:var(--tx);text-align:center">'+theirTotal+'</div>':_rivalScoreBtns("flex-start"))
+    :'<div class="live-score" style="color:'+_tc+';text-align:center">'+ourTotal+'</div>';
+  const _rScoreEl=_isAway
+    ?'<div class="live-score" style="color:'+_tc+';text-align:center">'+ourTotal+'</div>'
+    :(rivalEnabled?'<div class="live-score" style="color:var(--tx);text-align:center">'+theirTotal+'</div>':_rivalScoreBtns("flex-end"));
+  const _rivalFoulBtns='<button onclick="rivalFoulLive(-1)" style="width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;line-height:1;padding:0">−</button>'
+    +'<button onclick="rivalFoulLive(1)" style="width:18px;height:18px;border-radius:4px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:12px;line-height:1;padding:0">+</button>';
+  // TM rows for both sides — mirror alignment based on position
+  const _ourTMrowR=_tmLimit>0?'<div style="display:flex;align-items:center;justify-content:flex-end;gap:2px;margin-top:4px">'+_tmDots(_ourTMused,_tmLimit,_tc)+'<span style="font-size:9px;font-weight:700;color:var(--td);min-width:26px;text-align:right;text-transform:uppercase">T.M.</span></div>':"";
+  const _rivTMrowL=_tmLimit>0?'<div style="display:flex;align-items:center;gap:2px;margin-top:4px"><span style="font-size:9px;font-weight:700;color:var(--td);min-width:26px;text-transform:uppercase">T.M.</span>'+_tmDots(_rivTMused,_tmLimit,"#ef4444")+'</div>':"";
+  const _lFoulEl=_isAway
+    ?'<div>'
+      +'<div style="display:flex;align-items:center;justify-content:flex-start;gap:4px;margin-bottom:4px">'
+        +_rivalFoulBtns
+        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:0">'+_rivFwarn+_foulDots(_rivF,"#ef4444")+'</div>'
+      +_rivTMrowL
+    +'</div>'
+    :'<div>'
+      +'<div style="display:flex;align-items:center;justify-content:flex-start;gap:4px;margin-bottom:4px">'
+        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:0">'+_foulDots(_ourF,_tc)+_ourFwarn+'</div>'
+      +_ourTMrow
+    +'</div>';
+  const _rFoulEl=_isAway
+    ?'<div style="text-align:right">'
+      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:4px">'
+        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:0">'+_ourFwarn+_foulDots(_ourF,_tc)+'</div>'
+      +_ourTMrowR
+    +'</div>'
+    :'<div style="text-align:right">'
+      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:4px">'
+        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
+        +_rivalFoulBtns
+      +'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:0">'+_rivFwarn+_foulDots(_rivF,"#ef4444")+'</div>'
+      +_rivTMrow
+    +'</div>';
+
   const scoreboardHtml=
     '<div class="live-scoreboard">'
     // ── Team names ──
     +'<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;margin-bottom:6px">'
-      +'<div>'
-        +'<div style="font-size:11px;font-weight:800;color:'+_tc+';text-transform:uppercase;letter-spacing:.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_ourName+'</div>'
-        +'<div style="font-size:9px;color:var(--td)">'+_ourLoc+'</div>'
+      +'<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+        +'<div style="font-size:11px;font-weight:800;color:'+_lNameColor+';text-transform:uppercase;letter-spacing:.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_lName+'</div>'
+        +'<div style="font-size:9px;color:var(--td)">'+_lLoc+'</div>'
       +'</div>'
       +'<div style="text-align:center;padding:0 4px"><div class="live-diff" style="background:'+diffColor+'22;color:'+diffColor+';border:1px solid '+diffColor+'44">'+diffTxt+'</div></div>'
       +'<div style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
-        +'<div style="font-size:11px;font-weight:800;color:var(--td);text-transform:uppercase;letter-spacing:.5px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_rivName+'</div>'
-        +'<div style="font-size:9px;color:var(--td);text-align:right">'+_rivLoc+'</div>'
+        +'<div style="font-size:11px;font-weight:800;color:'+_rNameColor+';text-transform:uppercase;letter-spacing:.5px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_rName+'</div>'
+        +'<div style="font-size:9px;color:var(--td);text-align:right">'+_rLoc+'</div>'
       +'</div>'
     +'</div>'
     // ── Score row ──
     +'<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;margin-bottom:8px">'
-      +'<div class="live-score" style="color:'+_tc+';text-align:center">'+ourTotal+'</div>'
+      +_lScoreEl
       +'<div style="font-family:var(--font-d);font-weight:900;font-size:28px;color:var(--tm);text-align:center">:</div>'
-      +(rivalEnabled
-        ?'<div class="live-score" style="color:var(--tx);text-align:center">'+theirTotal+'</div>'
-        :('<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">'
-          +'<button onclick="rivalScoreLive(-1)" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--tx);cursor:pointer;font-size:20px;font-weight:900;flex-shrink:0">−</button>'
-          +'<div class="live-score" style="color:var(--tx);text-align:center;min-width:44px">'+theirTotal+'</div>'
-          +'<button onclick="rivalScoreLive(1)" style="width:34px;height:34px;border-radius:8px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:20px;font-weight:900;flex-shrink:0">+</button>'
-        +'</div>')
-      )
+      +_rScoreEl
     +'</div>'
     // ── Fouls + TM dots ──
     +'<div style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:8px;padding:8px 0;margin-bottom:8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">'
-      // Our side
-      +'<div>'
-        +'<div style="display:flex;align-items:center;justify-content:flex-start;gap:4px;margin-bottom:4px">'
-          +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
-        +'</div>'
-        +'<div style="display:flex;align-items:center;gap:0">'+_foulDots(_ourF,_tc)+_ourFwarn+'</div>'
-        +_ourTMrow
-      +'</div>'
-      // Divider
+      +_lFoulEl
       +'<div style="background:var(--border);height:44px;margin:0 auto"></div>'
-      // Rival side
-      +'<div style="text-align:right">'
-        +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:4px">'
-          +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
-          +'<button onclick="rivalFoulLive(-1)" style="width:18px;height:18px;border-radius:4px;border:1px solid var(--border);background:var(--s2);color:var(--td);cursor:pointer;font-size:12px;line-height:1;padding:0">−</button>'
-          +'<button onclick="rivalFoulLive(1)" style="width:18px;height:18px;border-radius:4px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:12px;line-height:1;padding:0">+</button>'
-        +'</div>'
-        +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:0">'+_rivFwarn+_foulDots(_rivF,"#ef4444")+'</div>'
-        +_rivTMrow
-      +'</div>'
+      +_rFoulEl
     +'</div>'
     // ── Period tabs ──
     +'<div style="display:flex;gap:4px">'+qTabs+'</div>'
@@ -6682,6 +6774,163 @@ function shotMap(){
     </div>`}
   </div>
   ${navBar()}`;
+}
+
+function matchSummaryScreen(){
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const m=mById(S.teamId,S.matchId);
+  if(!t||!m){navRoot('hoy');return'';}
+  const live=m.live||{};
+  const nQ=m.quarters||4;const pL=nQ===4?"Q":"P";
+  const otC=live.otCount||0;
+  const qs=(live.qScores||[]).map(s=>s||[0,0]);
+  const ourT=qs.reduce((s,q)=>s+(q[0]||0),0);
+  const rivT=qs.reduce((s,q)=>s+(q[1]||0),0);
+  const isWin=ourT>rivT;const isDraw=ourT===rivT&&ourT>0;
+  const resColor=isWin?"#22c55e":isDraw?"#f59e0b":"#ef4444";
+  const resEmoji=isWin?"🏆":isDraw?"🤝":"❌";
+  const resText=isWin?"VICTORIA":isDraw?"EMPATE":"DERROTA";
+  const _tc=t.color||"#f97316";
+  const otLabels=otC===1?["OT"]:Array.from({length:otC},(_,i)=>"OT"+(i+1));
+  const qlabels=[...[...Array(nQ).keys()].map(i=>pL+(i+1)),...otLabels];
+  const qHtml=qs.slice(0,qlabels.length).map((q,i)=>q[0]>0||q[1]>0
+    ?`<div style="text-align:center;padding:4px 8px;background:var(--s2);border-radius:6px;min-width:40px">
+        <div style="font-size:9px;color:var(--td);font-weight:700;margin-bottom:2px">${qlabels[i]||""}</div>
+        <div style="font-size:12px;font-weight:900;color:${q[0]>q[1]?_tc:q[1]>q[0]?"#ef4444":"var(--tx)"}">${q[0]}–${q[1]}</div>
+      </div>`:""
+  ).join("");
+  const activeTab=S._summaryTab||"stats";
+  const convP=pl(S.teamId).filter(p=>live.stats?.[p.id]&&Object.values(live.stats[p.id]).some(v=>v>0));
+  let tabContent="";
+  if(activeTab==="stats"){
+    const rows=convP.map(p=>{
+      const st=live.stats?.[p.id]||{};
+      const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+      const f=_totalFouls(st);const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--tx)";
+      const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
+      const minSec=_getMinSec(m,p.id);
+      const pm=_getPlusMinus(m,p.id);const pmStr=pm>0?"+"+pm:String(pm);
+      const pmColor=pm>0?"#22c55e":pm<0?"#ef4444":"var(--td)";
+      const eff=_calcEFF(st);const effColor=eff>0?"#22c55e":eff<0?"#ef4444":"var(--td)";
+      const efg=_calcEFGPct(st);
+      return`<tr>
+        <td style="font-weight:700;color:${_tc};position:sticky;left:0;background:var(--s)">${p.number||"?"}</td>
+        <td style="font-weight:600;position:sticky;left:28px;background:var(--s)"><div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:90px">${_shortName(p.name)}</div></td>
+        <td style="color:var(--td)">${_fmtMin(minSec)}</td>
+        <td style="font-weight:900;color:${_tc}">${pts}</td>
+        <td>${st.p2m||0}/${t2a}</td><td>${st.p3m||0}/${t3a}</td><td>${st.p1m||0}/${t1a}</td>
+        <td style="color:var(--td)">${efg||0}%</td>
+        <td style="color:#a855f7">${st.ro||0}</td><td style="color:#9ca3af">${st.rd||0}</td>
+        <td style="color:#06b6d4">${st.ast||0}</td>
+        <td style="color:${fc}">${f}</td>
+        <td style="color:#3b82f6">${st.stl||0}</td><td style="color:#8b5cf6">${st.blk||0}</td>
+        <td style="color:#ef4444">${st.to||0}</td>
+        <td style="color:${pmColor};font-weight:800">${pmStr}</td>
+        <td style="color:${effColor};font-weight:800">${eff}</td>
+      </tr>`;
+    }).join("");
+    const tP=p=>live.stats?.[p.id]||{};
+    const tPts=convP.reduce((s,p)=>{const st=tP(p);return s+(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;},0);
+    const tT2m=convP.reduce((s,p)=>s+((tP(p)).p2m||0),0),tT2a=convP.reduce((s,p)=>s+((tP(p)).p2m||0)+((tP(p)).p2a||0),0);
+    const tT3m=convP.reduce((s,p)=>s+((tP(p)).p3m||0),0),tT3a=convP.reduce((s,p)=>s+((tP(p)).p3m||0)+((tP(p)).p3a||0),0);
+    const tT1m=convP.reduce((s,p)=>s+((tP(p)).p1m||0),0),tT1a=convP.reduce((s,p)=>s+((tP(p)).p1m||0)+((tP(p)).p1a||0),0);
+    const tRo=convP.reduce((s,p)=>s+((tP(p)).ro||0),0),tRd=convP.reduce((s,p)=>s+((tP(p)).rd||0),0);
+    const tAst=convP.reduce((s,p)=>s+((tP(p)).ast||0),0),tF=convP.reduce((s,p)=>s+_totalFouls(tP(p)),0);
+    const tStl=convP.reduce((s,p)=>s+((tP(p)).stl||0),0),tBlk=convP.reduce((s,p)=>s+((tP(p)).blk||0),0),tTo=convP.reduce((s,p)=>s+((tP(p)).to||0),0);
+    const tEff=convP.reduce((s,p)=>s+_calcEFF(tP(p)),0);
+    const tEfg=tT2a+tT3a>0?Math.round(100*(tT2m+1.5*tT3m)/(tT2a+tT3a)):0;
+    const totRow=`<tr class="totrow" style="font-weight:900;font-size:11px">
+      <td style="position:sticky;left:0;background:var(--s2)">—</td>
+      <td style="position:sticky;left:28px;background:var(--s2);color:var(--td)">Totales</td>
+      <td style="color:var(--td)">—</td>
+      <td style="color:${_tc}">${tPts}</td>
+      <td>${tT2m}/${tT2a}</td><td>${tT3m}/${tT3a}</td><td>${tT1m}/${tT1a}</td>
+      <td style="color:var(--td)">${tEfg}%</td>
+      <td style="color:#a855f7">${tRo}</td><td style="color:#9ca3af">${tRd}</td>
+      <td style="color:#06b6d4">${tAst}</td>
+      <td style="color:${tF>=10?"#ef4444":"var(--td)"}">${tF}</td>
+      <td style="color:#3b82f6">${tStl}</td><td style="color:#8b5cf6">${tBlk}</td>
+      <td style="color:#ef4444">${tTo}</td>
+      <td style="color:var(--td)">—</td>
+      <td style="color:var(--tx)">${tEff}</td>
+    </tr>`;
+    tabContent=`<div style="overflow-x:auto;border-radius:10px;border:1px solid var(--border)">
+      <table class="stats-table" style="font-size:10px">
+        <thead><tr style="background:var(--s2)">
+          <th style="position:sticky;left:0;background:var(--s2);min-width:28px">#</th>
+          <th style="position:sticky;left:28px;background:var(--s2);min-width:82px">Jugador</th>
+          <th title="Minutos">MIN</th>
+          <th style="color:${_tc}">PTS</th>
+          <th>T2</th><th>T3</th><th>TL</th>
+          <th title="eFG%">eFG%</th>
+          <th style="color:#a855f7">RO</th><th style="color:#9ca3af">RD</th>
+          <th style="color:#06b6d4">AST</th><th>F</th>
+          <th style="color:#3b82f6">ROB</th><th style="color:#8b5cf6">TAP</th>
+          <th style="color:#ef4444">PER</th>
+          <th>+/-</th><th>EFF</th>
+        </tr></thead>
+        <tbody>${rows}${totRow}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="shareMatchResult()" style="flex:1;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#25d366,#128c7e);color:white;font-weight:800;font-size:14px;cursor:pointer">💬 WhatsApp</button>
+      <button onclick="(()=>{const lines=['📊 ${esc(t.name)} vs ${esc(m.rival||"Rival")}',...convP.map(p=>{const st=live.stats?.[p.id]||{};const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0);return '#'+(p.number||'?')+' '+_shortName(p.name)+': '+pts+'pts T2:'+((st.p2m||0)+'/'+t2a)+' T3:'+((st.p3m||0)+'/'+t3a)+' AST:'+(st.ast||0)+' REB:'+((st.ro||0)+(st.rd||0));})];navigator.clipboard?.writeText(lines.join('\\n')).then(()=>toast('📋 Stats copiadas'));})();" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-weight:800;font-size:14px;cursor:pointer">📋 Copiar stats</button>
+    </div>`;
+  } else if(activeTab==="mins"){
+    const hasMin=convP.filter(p=>_getMinSec(m,p.id)>0).sort((a,b)=>_getMinSec(m,b.id)-_getMinSec(m,a.id));
+    const totalSec=(nQ+(otC||0))*(m.qMins||10)*60;
+    const minRows=hasMin.map(p=>{
+      const secs=_getMinSec(m,p.id);
+      const pct=Math.round(100*secs/Math.max(totalSec,1));
+      const st=live.stats?.[p.id]||{};
+      const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+      return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:${_tc};min-width:28px">#${p.number||"?"}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;margin-bottom:4px">${esc(p.name)}</div>
+          <div style="height:4px;border-radius:2px;background:var(--border)">
+            <div style="height:4px;border-radius:2px;background:${_tc};width:${Math.min(pct,100)}%"></div>
+          </div>
+        </div>
+        <div style="text-align:right;min-width:52px">
+          <div style="font-size:14px;font-weight:800;color:var(--tx)">${_fmtMin(secs)}</div>
+          <div style="font-size:11px;color:var(--td)">${pts} pts</div>
+        </div>
+      </div>`;
+    }).join("");
+    tabContent=`<div>${minRows||'<div style="text-align:center;padding:24px;color:var(--td);font-size:13px">Sin datos de minutos registrados</div>'}</div>`;
+  } else {
+    tabContent=`<div style="text-align:center;padding:24px 0">
+      <div style="font-size:32px;margin-bottom:10px">🗺️</div>
+      <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px">Mapa de tiro</div>
+      <div style="font-size:12px;color:var(--td);margin-bottom:16px">Ver distribución de tiros del partido</div>
+      <button onclick="navTo('shotMap',{teamId:S.teamId,matchId:S.matchId})" style="width:100%;padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-weight:800;font-size:15px;cursor:pointer">🗺️ Abrir mapa de tiro</button>
+    </div>`;
+  }
+  return`<div class="page">
+    <div class="page-header">
+      <button class="back-btn" onclick="navRoot('hoy')">←</button>
+      <div class="page-title">Resumen del partido</div>
+    </div>
+    <div style="padding:16px 16px 0">
+      <div style="text-align:center;padding:16px;background:${resColor}11;border:1px solid ${resColor}33;border-radius:14px;margin-bottom:0">
+        <div style="font-size:36px;margin-bottom:4px">${resEmoji}</div>
+        <div style="font-family:var(--font-d);font-weight:900;font-size:22px;color:${resColor};margin-bottom:2px">${resText}</div>
+        <div style="font-size:12px;color:var(--td);margin-bottom:8px">${esc(t.name)} vs ${esc(m.rival||"Rival")}${m.date?" · "+fd(m.date,true):""}</div>
+        <div style="font-family:var(--font-d);font-size:48px;font-weight:900;color:var(--tx);line-height:1;margin-bottom:8px">${ourT} — ${rivT}</div>
+        <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap">${qHtml}</div>
+      </div>
+    </div>
+    <div style="display:flex;border-bottom:1px solid var(--border);margin:12px 16px 0">
+      <button onclick="S._summaryTab='stats';render()" style="flex:1;padding:10px 4px;border:none;border-bottom:2px solid ${activeTab==='stats'?'var(--orange)':'transparent'};background:transparent;color:${activeTab==='stats'?'var(--tx)':'var(--td)'};font-weight:700;font-size:13px;cursor:pointer">📊 Stats</button>
+      <button onclick="S._summaryTab='mins';render()" style="flex:1;padding:10px 4px;border:none;border-bottom:2px solid ${activeTab==='mins'?'var(--orange)':'transparent'};background:transparent;color:${activeTab==='mins'?'var(--tx)':'var(--td)'};font-weight:700;font-size:13px;cursor:pointer">⏱ Minutos</button>
+      <button onclick="S._summaryTab='map';render()" style="flex:1;padding:10px 4px;border:none;border-bottom:2px solid ${activeTab==='map'?'var(--orange)':'transparent'};background:transparent;color:${activeTab==='map'?'var(--tx)':'var(--td)'};font-weight:700;font-size:13px;cursor:pointer">🗺️ Tiros</button>
+    </div>
+    <div style="padding:16px">${tabContent}</div>
+    <div style="padding:0 16px 32px">
+      <button onclick="navRoot('hoy')" style="width:100%;padding:15px;border:none;border-radius:12px;font-weight:900;font-size:16px;cursor:pointer;background:linear-gradient(135deg,var(--orange),${_tc});color:white;font-family:var(--font-d)">🏠 Volver al inicio</button>
+    </div>
+  </div>`;
 }
 
 function liveAction(pid,action,pts){
