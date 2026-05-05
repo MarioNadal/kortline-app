@@ -6186,7 +6186,7 @@ function liveGame(){
       +'<div style="font-family:var(--font-d);font-weight:900;font-size:28px;color:var(--tm);text-align:center">:</div>'
       +(rivalEnabled
         ?'<div class="live-score" style="color:var(--tx);text-align:center">'+theirTotal+'</div>'
-        :('<div style="display:flex;align-items:center;justify-content:center;gap:5px">'
+        :('<div style="display:flex;align-items:center;justify-content:flex-end;gap:5px">'
           +'<button onclick="rivalScoreLive(-1)" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--s2);color:var(--tx);cursor:pointer;font-size:20px;font-weight:900;flex-shrink:0">−</button>'
           +'<div class="live-score" style="color:var(--tx);text-align:center;min-width:44px">'+theirTotal+'</div>'
           +'<button onclick="rivalScoreLive(1)" style="width:34px;height:34px;border-radius:8px;border:1px solid rgba(239,68,68,.35);background:rgba(239,68,68,.1);color:#ef4444;cursor:pointer;font-size:20px;font-weight:900;flex-shrink:0">+</button>'
@@ -6197,7 +6197,9 @@ function liveGame(){
     +'<div style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:8px;padding:8px 0;margin-bottom:8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">'
       // Our side
       +'<div>'
-        +'<div style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Faltas</div>'
+        +'<div style="display:flex;align-items:center;justify-content:flex-start;gap:4px;margin-bottom:4px">'
+          +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
+        +'</div>'
         +'<div style="display:flex;align-items:center;gap:0">'+_foulDots(_ourF,_tc)+_ourFwarn+'</div>'
         +_ourTMrow
       +'</div>'
