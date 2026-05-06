@@ -84,7 +84,7 @@ if("serviceWorker" in navigator){
       if(document.getElementById("kl-sw-update"))return;
       const b=document.createElement("div");
       b.id="kl-sw-update";
-      b.style.cssText="position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:10000;background:#070f1e;border:1.5px solid #F06318;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-family:system-ui,sans-serif;color:#fff;font-size:13px;font-weight:600;max-width:92vw";
+      b.style.cssText="position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);z-index:10000;background:#070f1e;border:1.5px solid #F06318;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 30px rgba(0,0,0,.5);font-family:system-ui,sans-serif;color:#fff;font-size:13px;font-weight:600;max-width:92vw";
       b.innerHTML='<span>🔄 Nueva versión disponible</span><button id="kl-sw-reload" style="background:#F06318;border:none;color:#fff;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer">Actualizar</button><button id="kl-sw-dismiss" style="background:transparent;border:none;color:#9ca3af;cursor:pointer;font-size:18px;line-height:1">×</button>';
       document.body.appendChild(b);
       document.getElementById("kl-sw-reload").onclick=()=>{
@@ -179,7 +179,8 @@ body{font-family:var(--font-b);background:var(--bg);color:var(--tx);min-height:1
 .modal::-webkit-scrollbar{width:4px;}
 .modal::-webkit-scrollbar-track{background:var(--s);}
 .modal::-webkit-scrollbar-thumb{background:var(--navy2);border-radius:2px;}
-.mhandle{width:34px;height:4px;background:var(--s3);border-radius:2px;margin:0 auto 16px;cursor:grab;touch-action:none;}
+.mhandle{width:64px;height:20px;background:transparent;margin:-4px auto 12px;cursor:grab;touch-action:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mhandle::after{content:"";display:block;width:34px;height:4px;background:var(--s3);border-radius:2px;pointer-events:none;}
 .mtitle{font-family:var(--font-d);font-weight:900;font-size:22px;margin-bottom:4px;letter-spacing:.5px;}
 .msub{font-size:13px;color:var(--td);margin-bottom:14px;line-height:1.5;}
 
@@ -1881,19 +1882,19 @@ function _initDragDismiss(){
       if(overlay)overlay.style.background="rgba(0,0,0,"+Math.max(0,.88-dy/500)+")";
     }
     function onUp(){
-      handle.removeEventListener("pointermove",onMove);
-      handle.removeEventListener("pointerup",onUp);
-      handle.removeEventListener("pointercancel",onUp);
+      document.removeEventListener("pointermove",onMove);
+      document.removeEventListener("pointerup",onUp);
+      document.removeEventListener("pointercancel",onUp);
       modal.style.transition="transform .25s ease";
       // Si supera el umbral pero hay cambios sin guardar en este modal,
       // rebota el modal a su posición y lanza el gate dirty (v1.6.10).
-      if(dy>120 && _dirty && _dirty.ctx==="modal" && overlay && overlay.id===_dirty.modalId){
+      if(dy>80 && _dirty && _dirty.ctx==="modal" && overlay && overlay.id===_dirty.modalId){
         modal.style.transform="translateX(-50%) translateY(0)";
         if(overlay)overlay.style.background="rgba(0,0,0,.88)";
         _guardedExit(()=>overlay?.remove());
         return;
       }
-      if(dy>120){
+      if(dy>80){
         modal.style.transform="translateX(-50%) translateY(100%)";
         setTimeout(()=>{overlay?.remove();},250);
       }else{
@@ -1901,9 +1902,9 @@ function _initDragDismiss(){
         if(overlay)overlay.style.background="rgba(0,0,0,.88)";
       }
     }
-    handle.addEventListener("pointermove",onMove);
-    handle.addEventListener("pointerup",onUp);
-    handle.addEventListener("pointercancel",onUp);
+    document.addEventListener("pointermove",onMove);
+    document.addEventListener("pointerup",onUp);
+    document.addEventListener("pointercancel",onUp);
   });
 }
 _initDragDismiss();
@@ -2914,7 +2915,7 @@ function hoy(){
         <div style="display:flex;gap:8px">
           <button onclick="navTo('liveGame',{teamId:'${t.id}',matchId:'${m.id}'})" style="flex:1;padding:11px;border-radius:9px;border:none;font-weight:800;font-size:14px;cursor:pointer;background:${started?"linear-gradient(135deg,#ef4444,#b91c1c)":"linear-gradient(135deg,var(--orange),var(--orange2))"};color:white">${started?"🔴 Continuar partido":"▶ Empezar partido"}</button>
           <button onclick="S.teamId='${t.id}';navTo('matchDetail',{matchId:'${m.id}'})" style="width:46px;height:46px;border-radius:9px;background:var(--s2);border:1px solid var(--border);cursor:pointer;font-size:18px">📋</button>
-          ${inProgress?`<button onclick="confirmFinishMatch('${t.id}','${m.id}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar partido">🏁</button>`:""}
+          ${inProgress?`<button onclick="_finishAndShowSummary('${t.id}','${m.id}')" style="width:46px;height:46px;border-radius:9px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:18px" title="Finalizar y ver resumen">🏁</button>`:""}
         </div>
       </div>
     </div>`;
@@ -3243,13 +3244,15 @@ function stats(){
   const matchList=(S.matches[S.teamId]||[]).filter(mm=>mm.live&&mm.live.stats&&Object.keys(mm.live.stats).length>0);
   const matchAgg={};
   matchList.forEach(mm=>{Object.entries(mm.live.stats).forEach(([pid,st])=>{
-    if(!matchAgg[pid])matchAgg[pid]={pj:0,pts:0,p2m:0,p2a:0,p3m:0,p3a:0,p1m:0,p1a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0};
+    if(!matchAgg[pid])matchAgg[pid]={pj:0,pts:0,p2m:0,p2a:0,p3m:0,p3a:0,p1m:0,p1a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0,minSec:0,eff:0};
     const a=matchAgg[pid];
     a.pj++;a.pts+=(st.p2m||0)*2+(st.p3m||0)*3+(st.p1m||0);
     a.p2m+=st.p2m||0;a.p2a+=st.p2a||0;a.p3m+=st.p3m||0;a.p3a+=st.p3a||0;
     a.p1m+=st.p1m||0;a.p1a+=st.p1a||0;a.ro+=st.ro||0;a.rd+=st.rd||0;
     a.ast+=st.ast||0;a.foul+=(st.foul||0)+(st.ftech||0)+(st.funsport||0)+(st.fdq||0);
     a.stl+=st.stl||0;a.blk+=st.blk||0;a.to+=st.to||0;
+    a.minSec+=_getMinSec(mm,pid);
+    a.eff+=_calcEFF(st);
   });});
   const matchesHTML=matchList.length===0
     ?`<div style="text-align:center;padding:30px 20px;color:var(--tm)"><div style="font-size:40px;opacity:.4;margin-bottom:10px">🏀</div><div style="font-size:14px">Sin partidos con estadísticas aún.<br/>Activa el seguimiento de jugadores en un partido para verlas aquí.</div></div>`
@@ -3260,10 +3263,14 @@ function stats(){
         const t2pct=a.p2a>0?Math.round(a.p2m/a.p2a*100)+"%":"—";
         const t3pct=a.p3a>0?Math.round(a.p3m/a.p3a*100)+"%":"—";
         const tlpct=a.p1a>0?Math.round(a.p1m/a.p1a*100)+"%":"—";
+        const avgMin=a.pj>0?_fmtMin(Math.round(a.minSec/a.pj)):"—";
+        const avgEff=a.pj>0?(a.eff/a.pj).toFixed(1):"—";
+        const effColor=a.eff>0?"#22c55e":a.eff<0?"#ef4444":"var(--td)";
         return`<tr>
           <td style="font-weight:700;color:var(--td)">${p.number??""}</td>
-          <td style="text-align:left;font-weight:600;white-space:nowrap">${esc(_shortName(p.name))}</td>
+          <td style="text-align:left;font-weight:600;white-space:nowrap;position:sticky;left:0;background:var(--s)">${esc(_shortName(p.name))}</td>
           <td style="color:var(--td)">${a.pj}</td>
+          <td style="color:var(--td)">${avgMin}</td>
           <td style="font-weight:800;color:var(--orange)">${a.pts}</td>
           <td style="color:var(--td)">${ppp}</td>
           <td>${t2pct}</td><td>${t3pct}</td><td>${tlpct}</td>
@@ -3271,15 +3278,28 @@ function stats(){
           <td style="color:#06b6d4">${a.ast}</td>
           <td style="color:#ef4444">${a.foul}</td>
           <td>${a.stl}</td><td>${a.blk}</td><td>${a.to}</td>
+          <td style="color:${effColor};font-weight:800">${avgEff}</td>
         </tr>`;
       }).join("");
       return`<div style="font-size:11px;color:var(--td);margin-bottom:10px">${matchList.length} partido${matchList.length===1?"":"s"} con estadísticas · ordenado por puntos totales</div>
         <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--border)">
-        <table class="stats-table">
-          <thead><tr>
-            <th>#</th><th style="text-align:left;min-width:70px">Jugador</th><th title="Partidos jugados">PJ</th><th>PTS</th><th title="Puntos por partido">PPP</th>
-            <th>T2%</th><th>T3%</th><th>TL%</th><th title="Rebote ofensivo">RO</th><th title="Rebote defensivo">RD</th>
-            <th title="Asistencias">AST</th><th title="Faltas">F</th><th title="Robos">ROB</th><th title="Tapones">TAP</th><th title="Pérdidas">PER</th>
+        <table class="stats-table" style="font-size:10px">
+          <thead><tr style="background:var(--s2)">
+            <th>#</th>
+            <th style="text-align:left;min-width:70px;position:sticky;left:0;background:var(--s2)">Jugador</th>
+            <th title="Partidos jugados">PJ</th>
+            <th title="Minutos por partido">MIN</th>
+            <th style="color:var(--orange)">PTS</th>
+            <th title="Puntos por partido">PPP</th>
+            <th>T2%</th><th>T3%</th><th>TL%</th>
+            <th title="Rebote ofensivo" style="color:#a855f7">RO</th>
+            <th title="Rebote defensivo" style="color:#9ca3af">RD</th>
+            <th title="Asistencias" style="color:#06b6d4">AST</th>
+            <th title="Faltas" style="color:#ef4444">F</th>
+            <th title="Robos" style="color:#3b82f6">ROB</th>
+            <th title="Tapones" style="color:#8b5cf6">TAP</th>
+            <th title="Pérdidas" style="color:#ef4444">PER</th>
+            <th title="Valoración media por partido">VAL</th>
           </tr></thead>
           <tbody>${_rows}</tbody>
         </table></div>`;
@@ -6249,49 +6269,48 @@ function liveGame(){
   // TM rows for both sides — mirror alignment based on position
   const _ourTMrowR=_tmLimit>0?'<div style="display:flex;align-items:center;justify-content:flex-end;gap:2px;margin-top:4px">'+_tmDots(_ourTMused,_tmLimit,_tc)+'<span style="font-size:9px;font-weight:700;color:var(--td);min-width:26px;text-align:right;text-transform:uppercase">T.M.</span></div>':"";
   const _rivTMrowL=_tmLimit>0?'<div style="display:flex;align-items:center;gap:2px;margin-top:4px"><span style="font-size:9px;font-weight:700;color:var(--td);min-width:26px;text-transform:uppercase">T.M.</span>'+_tmDots(_rivTMused,_tmLimit,"#ef4444")+'</div>':"";
+  // Fouls display helpers — count number + dots
+  function _foulCell(n,col,warn,tmRow,isRight,editBtns){
+    const numStyle='font-family:var(--font-d);font-size:22px;font-weight:900;color:'+(n>=5?"#ef4444":n>=4?"#f59e0b":col)+';line-height:1;min-width:20px;text-align:center;';
+    const lbl='<span style="font-size:8px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">F.EQP.</span>';
+    const btns=editBtns||"";
+    if(!isRight){
+      return'<div>'
+        +'<div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">'+lbl+btns+'</div>'
+        +'<div style="display:flex;align-items:center;gap:4px">'
+          +'<span style="'+numStyle+'">'+n+'</span>'
+          +'<div style="display:flex;align-items:center;gap:0">'+_foulDots(n,col)+warn+'</div>'
+        +'</div>'
+        +tmRow
+      +'</div>';
+    }else{
+      return'<div style="text-align:right">'
+        +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:4px">'+btns+lbl+'</div>'
+        +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">'
+          +'<div style="display:flex;align-items:center;gap:0">'+warn+_foulDots(n,col)+'</div>'
+          +'<span style="'+numStyle+'">'+n+'</span>'
+        +'</div>'
+        +tmRow
+      +'</div>';
+    }
+  }
   const _lFoulEl=_isAway
-    ?'<div>'
-      +'<div style="display:flex;align-items:center;justify-content:flex-start;gap:4px;margin-bottom:4px">'
-        +_rivalFoulBtns
-        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:0">'+_rivFwarn+_foulDots(_rivF,"#ef4444")+'</div>'
-      +_rivTMrowL
-    +'</div>'
-    :'<div>'
-      +'<div style="display:flex;align-items:center;justify-content:flex-start;gap:4px;margin-bottom:4px">'
-        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;gap:0">'+_foulDots(_ourF,_tc)+_ourFwarn+'</div>'
-      +_ourTMrow
-    +'</div>';
+    ?_foulCell(_rivF,"#ef4444",_rivFwarn,_rivTMrowL,false,_rivalFoulBtns)
+    :_foulCell(_ourF,_tc,_ourFwarn,_ourTMrow,false,"");
   const _rFoulEl=_isAway
-    ?'<div style="text-align:right">'
-      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:4px">'
-        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
-      +'</div>'
-      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:0">'+_ourFwarn+_foulDots(_ourF,_tc)+'</div>'
-      +_ourTMrowR
-    +'</div>'
-    :'<div style="text-align:right">'
-      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-bottom:4px">'
-        +'<span style="font-size:9px;font-weight:700;color:var(--td);text-transform:uppercase;letter-spacing:.5px">Faltas</span>'
-        +_rivalFoulBtns
-      +'</div>'
-      +'<div style="display:flex;align-items:center;justify-content:flex-end;gap:0">'+_rivFwarn+_foulDots(_rivF,"#ef4444")+'</div>'
-      +_rivTMrow
-    +'</div>';
+    ?_foulCell(_ourF,_tc,_ourFwarn,_ourTMrowR,true,"")
+    :_foulCell(_rivF,"#ef4444",_rivFwarn,_rivTMrow,true,_rivalFoulBtns);
 
   const scoreboardHtml=
     '<div class="live-scoreboard">'
     // ── Team names ──
     +'<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;margin-bottom:6px">'
-      +'<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      +'<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">'
         +'<div style="font-size:11px;font-weight:800;color:'+_lNameColor+';text-transform:uppercase;letter-spacing:.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_lName+'</div>'
         +'<div style="font-size:9px;color:var(--td)">'+_lLoc+'</div>'
       +'</div>'
-      +'<div style="text-align:center;padding:0 4px"><div class="live-diff" style="background:'+diffColor+'22;color:'+diffColor+';border:1px solid '+diffColor+'44">'+diffTxt+'</div></div>'
-      +'<div style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+      +'<div style="text-align:center;padding:0 4px;flex-shrink:0"><div class="live-diff" style="background:'+diffColor+'22;color:'+diffColor+';border:1px solid '+diffColor+'44">'+diffTxt+'</div></div>'
+      +'<div style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">'
         +'<div style="font-size:11px;font-weight:800;color:'+_rNameColor+';text-transform:uppercase;letter-spacing:.5px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_rName+'</div>'
         +'<div style="font-size:9px;color:var(--td);text-align:right">'+_rLoc+'</div>'
       +'</div>'
@@ -6357,10 +6376,9 @@ function liveGame(){
     </div>
     <div style="display:flex;gap:5px;align-items:center">
       ${bonus?`<span style="background:rgba(245,158,11,.25);color:#f59e0b;border:1px solid rgba(245,158,11,.4);border-radius:6px;font-size:10px;font-weight:800;padding:2px 6px">BONUS</span>`:""}
-      <div style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700;color:var(--td)">F:${teamFouls}/4</div>
       ${m.shotChart?`<button onclick="navTo('shotMap')" style="width:32px;height:32px;border-radius:7px;background:rgba(240,99,24,.15);border:1px solid rgba(240,99,24,.4);color:var(--orange);cursor:pointer;font-size:14px;font-weight:900" title="Mapa de tiros">📍</button>`:""}
       <button onclick="shareMatchResult()" style="width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:15px" title="Compartir marcador">📤</button>
-      <button onclick="confirmFinishMatch('${S.teamId}','${S.matchId}')" style="width:32px;height:32px;border-radius:7px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:15px" title="Finalizar partido">🏁</button>
+      <button onclick="_finishAndShowSummary('${S.teamId}','${S.matchId}')" style="width:32px;height:32px;border-radius:7px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:15px" title="Finalizar partido">🏁</button>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.3);border:1px solid ${live.clockSec===0?"rgba(239,68,68,.5)":live.clockRunning?"rgba(34,197,94,.3)":"var(--border)"};border-radius:10px;padding:7px 10px">
@@ -6873,7 +6891,7 @@ function matchSummaryScreen(){
       </table>
     </div>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button onclick="shareMatchResult()" style="flex:1;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#25d366,#128c7e);color:white;font-weight:800;font-size:14px;cursor:pointer">💬 WhatsApp</button>
+      <button onclick="shareMatchResult()" style="flex:1;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#25d366,#128c7e);color:white;font-weight:800;font-size:14px;cursor:pointer">💬 Compartir resultado</button>
       <button onclick="(()=>{const lines=['📊 ${esc(t.name)} vs ${esc(m.rival||"Rival")}',...convP.map(p=>{const st=live.stats?.[p.id]||{};const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0);return '#'+(p.number||'?')+' '+_shortName(p.name)+': '+pts+'pts T2:'+((st.p2m||0)+'/'+t2a)+' T3:'+((st.p3m||0)+'/'+t3a)+' AST:'+(st.ast||0)+' REB:'+((st.ro||0)+(st.rd||0));})];navigator.clipboard?.writeText(lines.join('\\n')).then(()=>toast('📋 Stats copiadas'));})();" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-weight:800;font-size:14px;cursor:pointer">📋 Copiar stats</button>
     </div>`;
   } else if(activeTab==="mins"){
@@ -6907,21 +6925,19 @@ function matchSummaryScreen(){
       <button onclick="navTo('shotMap',{teamId:S.teamId,matchId:S.matchId})" style="width:100%;padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--tx);font-weight:800;font-size:15px;cursor:pointer">🗺️ Abrir mapa de tiro</button>
     </div>`;
   }
-  return`<div class="page">
-    <div class="page-header">
-      <button class="back-btn" onclick="navRoot('hoy')">←</button>
-      <div class="page-title">Resumen del partido</div>
-    </div>
-    <div style="padding:16px 16px 0">
-      <div style="text-align:center;padding:16px;background:${resColor}11;border:1px solid ${resColor}33;border-radius:14px;margin-bottom:0">
+  return`<header class="header"><div class="hrow">
+    <button class="bbtn" onclick="navRoot('hoy')">←</button>
+    <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">Resumen del partido</div></div>
+  </div></header>
+  <div class="content">
+    <div style="text-align:center;padding:16px;background:${resColor}11;border:1px solid ${resColor}33;border-radius:14px;margin-bottom:0">
         <div style="font-size:36px;margin-bottom:4px">${resEmoji}</div>
         <div style="font-family:var(--font-d);font-weight:900;font-size:22px;color:${resColor};margin-bottom:2px">${resText}</div>
         <div style="font-size:12px;color:var(--td);margin-bottom:8px">${esc(t.name)} vs ${esc(m.rival||"Rival")}${m.date?" · "+fd(m.date,true):""}</div>
         <div style="font-family:var(--font-d);font-size:48px;font-weight:900;color:var(--tx);line-height:1;margin-bottom:8px">${ourT} — ${rivT}</div>
         <div style="display:flex;justify-content:center;gap:6px;flex-wrap:wrap">${qHtml}</div>
       </div>
-    </div>
-    <div style="display:flex;border-bottom:1px solid var(--border);margin:12px 16px 0">
+    <div style="display:flex;border-bottom:1px solid var(--border);margin:12px 0 0">
       <button onclick="S._summaryTab='stats';render()" style="flex:1;padding:10px 4px;border:none;border-bottom:2px solid ${activeTab==='stats'?'var(--orange)':'transparent'};background:transparent;color:${activeTab==='stats'?'var(--tx)':'var(--td)'};font-weight:700;font-size:13px;cursor:pointer">📊 Stats</button>
       <button onclick="S._summaryTab='mins';render()" style="flex:1;padding:10px 4px;border:none;border-bottom:2px solid ${activeTab==='mins'?'var(--orange)':'transparent'};background:transparent;color:${activeTab==='mins'?'var(--tx)':'var(--td)'};font-weight:700;font-size:13px;cursor:pointer">⏱ Minutos</button>
       <button onclick="S._summaryTab='map';render()" style="flex:1;padding:10px 4px;border:none;border-bottom:2px solid ${activeTab==='map'?'var(--orange)':'transparent'};background:transparent;color:${activeTab==='map'?'var(--tx)':'var(--td)'};font-weight:700;font-size:13px;cursor:pointer">🗺️ Tiros</button>
