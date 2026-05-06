@@ -476,11 +476,13 @@ label{-webkit-tap-highlight-color:transparent;}
    las listas de partidos, equipos y jugadores.
 ════════════════════════════════════════════════════════════ */
 @media (min-width: 600px) {
+  /* 1 · Root ocupa ancho completo — en tablet ya no queda encajonado en 430px */
+  #root{max-width:100%;}
   /* 1 · Columna central */
   .content{max-width:700px;margin-left:auto;margin-right:auto;padding-left:24px;padding-right:24px;}
   .hrow{max-width:700px;margin-left:auto;margin-right:auto;}
-  .nav{max-width:700px;}
-  .modal{max-width:620px;}
+  .nav{max-width:768px;}
+  .modal{max-width:680px;}
   /* FAB alineado con borde derecho del content */
   .fab{right:calc(50% - 335px);}
 
@@ -548,6 +550,63 @@ label{-webkit-tap-highlight-color:transparent;}
   .live-rotate-hint{display:none;}
   /* Fase 3b: col izq solo tiene el marcador → grid de 1 sola fila */
   .live-2col{grid-template-rows:auto;grid-template-areas:"scoreboard court";}
+}
+
+/* ════════════════════════════════════════════════════════════
+   TABLET MEDIANO  ≥ 768 px  (portrait + landscape)
+   FABs alineados con content de 700px; cards más grandes.
+════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+  /* FABs: borde derecho del content 700px (50% + 350px - 24px padding) */
+  .fab-add{right:calc(50% - 308px);}
+  .fab{right:calc(50% - 308px);}
+  /* Asistencia: 6 columnas (más cómodo en tablet) */
+  .agrid{grid-template-columns:repeat(6,1fr);}
+  /* Cards de jugadores en pista más grandes */
+  .court-card{padding:11px 6px;}
+  .live-player-pts{font-size:22px;}
+  .live-player-name{max-width:80px;}
+  /* Botones de acción un poco mayores */
+  .action-btn{padding:11px 4px;font-size:12px;}
+  /* Marcador del partido en portrait: ligeramente mayor que el base 62px */
+  .live-score{font-size:70px;}
+}
+
+/* ════════════════════════════════════════════════════════════
+   TABLET GRANDE  ≥ 1024 px  (iPad / Android ≥ 10")
+   Amplía columna de contenido y nav para aprovechar pantalla.
+════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .content{max-width:880px;}
+  .hrow{max-width:880px;}
+  .nav{max-width:1024px;}
+  .modal{max-width:800px;}
+  /* Asistencia: 8 columnas */
+  .agrid{grid-template-columns:repeat(8,1fr);}
+  /* Stat grid de 4 cols en home */
+  .stat-grid{grid-template-columns:repeat(4,1fr);}
+}
+
+/* ════════════════════════════════════════════════════════════
+   LIVE GAME · LANDSCAPE TABLET  ≥ 700px × ≥ 501px altura
+   Fase 2 pone 38px de score para phones (sin espacio vertical).
+   En tablets en landscape sí hay espacio: marcador más legible.
+════════════════════════════════════════════════════════════ */
+@media (min-width:700px) and (orientation:landscape) and (min-height:501px){
+  /* Marcador más legible — sobreescribe 38px de Fase 2 */
+  .live-score{font-size:54px;}
+  .live-scoreboard{padding:14px 12px;border-radius:14px;}
+  .live-diff{font-size:13px;padding:3px 8px;margin:4px 0;}
+  .live-foul-row{padding:8px 0!important;margin-bottom:8px!important;}
+  .qtab-btn{padding:5px 2px;}
+  /* Cards de jugadores en pista más cómodas */
+  .court-card{padding:13px 6px;}
+  .live-player-pts{font-size:24px;}
+  .live-player-name{max-width:84px;}
+  /* Botones de acción más grandes */
+  .action-btn{padding:12px 6px;font-size:13px;}
+  /* Nav siempre visible en landscape tablet (phones la ocultan vía max-height:500px) */
+  .nav{display:flex!important;}
 }
 </style>
 </head>

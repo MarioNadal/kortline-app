@@ -9,7 +9,37 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.22 — VAL (Valoración) en modal de stats _(actual)_
+### v1.8.23 — Responsive completo: tablet portrait + landscape _(actual)_
+
+Auditoría responsive completa en tablet, iPhone y Android (portrait y landscape):
+
+**Causa raíz tablet no giraba:** `manifest.json` tenía `"orientation":"portrait"` → cambiado a `"orientation":"any"`. La PWA instalada ya puede rotar libremente.
+
+**Layout tablet:**
+- `#root` ya no queda encajonado en 430px: a partir de ≥600px ocupa el 100% del ancho disponible.
+- Nav/modal se amplían progresivamente: 768px → 768px nav / 680px modal; 1024px → 1024px nav / 800px modal.
+- Contenido centrado en 700px (600px) → 880px (1024px) con márgenes laterales cómodos.
+- FABs alineados con el borde derecho del content en tablet (768px+).
+- Asistencia: de 4 columnas (phone) a 6 (tablet) a 8 (large tablet).
+- Stat grid en home: de 2 a 4 columnas en 1024px.
+
+**Live game portrait tablet (768px+):**
+- Marcador del partido: 62px → 70px.
+- Cards en pista: más padding, pts a 22px, nombres más anchos.
+- Botones de acción más grandes (padding y font-size).
+
+**Live game landscape tablet (≥700px × ≥501px alto):**
+- El layout 2 columnas (marcador izq + pista der) ahora **funciona realmente** porque `#root` ya puede expandirse.
+- Marcador: 38px (phone) → 54px (tablet landscape).
+- Scoreboard con padding normal, foul-row con más espacio.
+- Cards en pista: 24px pts, 84px de nombre, padding mayor.
+- Nav visible en landscape de tablet (sólo se oculta en phones ≤500px alto).
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.23"`
+
+---
+
+### v1.8.22 — VAL (Valoración) en modal de stats
 
 Añadida columna **VAL** (Valoración/Eficiencia) a todas las vistas del modal de estadísticas:
 - **Cards landscape**: cada card muestra `VAL N` al pie, en verde si positivo y rojo si negativo.
