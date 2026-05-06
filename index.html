@@ -3899,6 +3899,8 @@ function _finishAndShowSummary(teamId,matchId){
   const m=mById(teamId,matchId);if(!m)return;
   if(m.live){m.live.clockRunning=false;clearInterval(_liveTimer);_liveTimer=null;}
   m.finished=true;m.finishedAt=new Date().toISOString();
+  // v1.8.12 · B-11: sincronizar live.qScores → m.q[] al finalizar
+  _syncQFromLive(m);
   save();
   navTo('matchSummary',{teamId,matchId});
 }
@@ -5003,6 +5005,9 @@ function matchDetail(){
   const t=S.teams.find(x=>x.id===S.teamId);
   const m=mById(S.teamId,S.matchId);
   if(!t||!m){S.screen="matchList";render();return"";}
+  // v1.8.12 · B-11: auto-sync live→manual si m.q está vacío y hay datos live
+  const _hasLiveQ=!!(m.live?.qScores?.some(q=>(q[0]||0)+(q[1]||0)>0));
+  if(_hasLiveQ&&!_hasManualQ(m)){if(_syncQFromLive(m))save();}
   const players=pl(S.teamId);
   const sorted=[...players].sort((a,b)=>(a.number||99)-(b.number||99));
   const sc=mScore(m);const r=mResult(m);
@@ -5097,7 +5102,10 @@ function matchDetail(){
       <button onclick="navTo('liveGame')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#b91c1c);color:white;font-weight:800;font-size:13px;cursor:pointer">🔴 ${hasLive?"Continuar en vivo":"Seguimiento en vivo"}</button>
     </div>
     ${scoreboardHtml}
-    <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td);margin-bottom:8px">Marcador por cuartos (Local / Visitante)</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">Marcador por cuartos (Local / Visitante)</div>
+      ${_hasLiveQ?`<button onclick="syncMatchQFromLive()" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:7px;border:1px solid rgba(240,99,24,.35);background:rgba(240,99,24,.1);color:var(--orange);font-size:11px;font-weight:700;cursor:pointer">🔄 Sync live</button>`:""}
+    </div>
     ${quartersHtml}
 
     <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
@@ -5577,6 +5585,35 @@ function saveMatchMeta(mid,eid){
   }
   return true;
 }
+// v1.8.12 · B-11: sincroniza live.qScores → m.q[] (marcador manual).
+// Respeta ubicación (local/visitante). Devuelve true si hubo datos.
+function _syncQFromLive(m){
+  if(!m?.live?.qScores?.length)return false;
+  const qs=m.live.qScores;
+  const isAway=m.location==="away";
+  const newQ=[];
+  let hasData=false;
+  qs.forEach((qScore,qi)=>{
+    const our=qScore[0]||0;
+    const riv=qScore[1]||0;
+    if(our>0||riv>0)hasData=true;
+    // m.q[]: pares [local, visitante]. Si somos local: nuestros=local, rival=visitante.
+    if(isAway){newQ[qi*2]=riv;newQ[qi*2+1]=our;}
+    else{newQ[qi*2]=our;newQ[qi*2+1]=riv;}
+  });
+  if(!hasData)return false;
+  m.q=newQ;
+  return true;
+}
+// Devuelve true si m.q[] tiene al menos un valor real (>0 o !=null).
+function _hasManualQ(m){
+  return !!(m.q||[]).some(v=>v!=null&&v!==""&&parseInt(v)>=0&&!(v==null));
+}
+window.syncMatchQFromLive=function(){
+  const m=mById(S.teamId,S.matchId);if(!m)return;
+  if(_syncQFromLive(m)){save();render();toast("🔄 Marcadores sincronizados con el live");}
+  else toast("Sin datos live para sincronizar");
+};
 function _qStep(idx,delta){
   const m=mById(S.teamId,S.matchId);if(!m)return;
   if(!m.q)m.q=[null,null,null,null,null,null,null,null,null,null];
