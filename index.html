@@ -465,6 +465,54 @@ input[type="checkbox"]{min-width:20px;min-height:20px;cursor:pointer;}
 .content{-webkit-overflow-scrolling:touch;}
 /* Eliminar highlight azul en toque sobre labels en iOS */
 label{-webkit-tap-highlight-color:transparent;}
+
+/* ════════════════════════════════════════════════════════════
+   TABLET / RESPONSIVE  —  Phase 1  (≥ 600 px)
+   Centra la columna, amplía modales y sube a 2 columnas
+   las listas de partidos, equipos y jugadores.
+════════════════════════════════════════════════════════════ */
+@media (min-width: 600px) {
+  /* 1 · Columna central */
+  .content{max-width:700px;margin-left:auto;margin-right:auto;padding-left:24px;padding-right:24px;}
+  .hrow{max-width:700px;margin-left:auto;margin-right:auto;}
+  .nav{max-width:700px;}
+  .modal{max-width:620px;}
+  /* FAB alineado con borde derecho del content */
+  .fab{right:calc(50% - 335px);}
+
+  /* 2 · Grid de tarjetas (partidos / equipos / items) */
+  .cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .cards-grid .match-card,.cards-grid .team-card{margin-bottom:0;}
+
+  /* 3 · Lista de jugadores en 2 columnas */
+  .card-2col{display:grid;grid-template-columns:1fr 1fr;}
+  .card-2col .pr{border-bottom:1px solid var(--border);border-right:1px solid var(--border);}
+  .card-2col .pr:nth-child(even){border-right:none;}
+  /* quitar borde inferior de los dos últimos items (última fila) */
+  .card-2col .pr:nth-last-child(-n+2):not(:nth-last-child(-n+1) ~ .pr){border-bottom:none;}
+  .card-2col .pr:last-child{border-bottom:none;}
+  .card-2col .pr:nth-last-child(2):not(:nth-child(odd)){border-bottom:none;}
+
+  /* 4 · Tarjetas de stats en 2 columnas */
+  .stats-cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .stats-cards-grid>div{margin-bottom:0;}
+
+  /* 5 · Scoreboard y elementos visuales */
+  .sb-score{font-size:64px;}
+  .sb-name{font-size:18px;}
+  .scoreboard{padding:18px 20px;}
+
+  /* 6 · Tabla de stats más legible */
+  .stats-table{font-size:12px;}
+  .stats-table th{font-size:10px;padding:6px 5px;}
+  .stats-table td{padding:7px 5px;}
+
+  /* 7 · Header con más aire */
+  .header{padding-left:24px;padding-right:24px;}
+
+  /* 8 · Botones principales más grandes */
+  .btn-p,.btn-s{font-size:16px;padding:14px;}
+}
 </style>
 </head>
 <body>
@@ -2803,7 +2851,7 @@ function equiposScreen(){
     <div style="font-size:11px;color:var(--orange);font-weight:700;letter-spacing:2px;text-transform:uppercase">Equipos</div></div>
     <button class="bbtn" onclick="openTeamModal()">＋</button>
   </div></header>
-  <div class="content">${cards}</div>
+  <div class="content"><div class="cards-grid">${cards}</div></div>
   ${navBar()}`;
 }
 
@@ -2836,7 +2884,7 @@ function statsHomeScreen(){
     </div>`;
   }).join("");
   return`<header class="header"><div class="hrow"><div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div><div style="font-size:11px;color:var(--orange)">Selecciona un equipo</div></div></div></header>
-  <div class="content">${cards}</div>
+  <div class="content"><div class="cards-grid">${cards}</div></div>
   ${navBar()}`;
 }
 
@@ -3120,7 +3168,7 @@ function att(){
     <div class="agrid">${agrid}</div>
     ${filterBanner}
     ${bulkRow}
-    <div class="card">${prows}</div>
+    <div class="card card-2col">${prows}</div>
     ${exercisesHtml}${photoHtml}${teamScoreHtml}
     <div class="fg"><label class="fl">📝 Notas del entrenador</label><input class="fi" id="att-notes" value="${esc(notesVal)}" placeholder="Solo visibles para el entrenador..." oninput="_attAutoSave()"/></div>
     <div style="display:flex;gap:8px;align-items:stretch">
@@ -3363,7 +3411,7 @@ function stats(){
       ${f==="risk"?`<div style="font-size:12px;color:var(--tm);margin:-8px 0 12px;padding:8px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">⚠️ Asistencia por debajo del <b style="color:var(--orange)">${thr}%</b>. La FEB exige este mínimo para competir.</div>`:""}
       ${f==="str"?`<div style="font-size:12px;color:var(--tm);margin:-8px 0 12px;padding:8px 10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">📉 Llevan 2 o más sesiones consecutivas faltando sin justificar.</div>`:""}
       ${teamScoreStatHtml}
-      ${tableRows}
+      <div class="stats-cards-grid">${tableRows}</div>
     `}
   </div>
   ${navBar()}`;
@@ -4965,8 +5013,8 @@ function matchList(){
     ${st.total>0&&st.w+st.l+st.d>0?`<div style="width:1px;background:var(--border);height:36px"></div><div style="flex:1.2;text-align:center"><div class="season-sv" style="color:var(--tx)">${Math.round(st.w/(st.w+st.l+st.d)*100)}%</div><div class="season-sl">% Victoria</div></div>`:""}
   </div>`;
 
-  const cards=matches.length===0?`<div class="empty"><div style="font-size:52px;margin-bottom:14px">🏟️</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Sin partidos aún</div><div style="font-size:14px;color:var(--tm);line-height:1.6">Añade el primer partido con el botón ＋.</div></div>`:
-    matches.map(m=>{
+  const _matchCards=matches.length===0?`<div class="empty"><div style="font-size:52px;margin-bottom:14px">🏟️</div><div style="font-weight:800;font-size:18px;margin-bottom:8px">Sin partidos aún</div><div style="font-size:14px;color:var(--tm);line-height:1.6">Añade el primer partido con el botón ＋.</div></div>`:
+    `<div class="cards-grid">`+matches.map(m=>{
       const r=mResult(m);const sc=mScore(m);
       const our=mOurScore(m),their=mTheirScore(m);
       const cls=r==="W"?"win":r==="L"?"loss":r==="D"?"draw":"pending";
@@ -4987,14 +5035,14 @@ function matchList(){
           ${convCnt>0?`<div style="font-size:12px;color:var(--td)">👥 ${convCnt} convocados${(m.titulares||[]).length?` · ⭐ ${m.titulares.length} titulares`:""}</div>`:""}
         </div>
       </div>`;
-    }).join("");
+    }).join("")+"</div>";
 
   return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">🏟️ Partidos</div><div style="font-size:11px;color:var(--orange)">${esc(t.name)} · ${matches.length} partidos</div></div>
     <button class="bbtn" onclick="openMatchModal()">＋</button>
   </div></header>
-  <div class="content">${seasonBar}${cards}</div>
+  <div class="content">${seasonBar}${_matchCards}</div>
   ${navBar()}`;
 }
 
