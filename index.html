@@ -6767,6 +6767,99 @@ function _refreshLiveStatsModal(view){
   if(btns[1]){btns[1].style.background=view==='rival'?'#ef4444':'transparent';btns[1].style.color=view==='rival'?'white':'var(--td)';}
 }
 
+// Construye las cards compactas de jugadores (vista landscape de un vistazo)
+function _buildLiveStatsCards(teamId,matchId,view){
+  const m=mById(teamId,matchId);if(!m?.live)return'';
+  const t=S.teams.find(x=>x.id===teamId);
+  const live=m.live;
+  const isRival=view==='rival';
+  const tc=isRival?'#ef4444':(t?.color||'var(--orange)');
+  const players=pl(teamId);
+  const convIds=m.convocados||[];
+  const onCourt=isRival?(live.rivalOnCourt||[]):(live.onCourt||[]);
+  const stats=isRival?(live.rivalStats||{}):(live.stats||{});
+  let list=[];
+  if(isRival){
+    list=[...(m.rivalPlayers||[])].sort((a,b)=>(a.number||99)-(b.number||99));
+  } else {
+    list=players.filter(p=>convIds.includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+  }
+  if(!list.length)return'<div style="padding:20px;text-align:center;color:var(--tm);font-size:13px">Sin jugadores registrados</div>';
+  // On-court first, then bench
+  const court=list.filter(p=>onCourt.includes(p.id));
+  const bench=list.filter(p=>!onCourt.includes(p.id));
+  const ordered=[...court,...bench];
+  const cards=ordered.map(p=>{
+    const st=stats[p.id]||{};
+    const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+    const f=st.foul||0;
+    const fc=f>=5?'#ef4444':f>=4?'#f59e0b':'var(--td)';
+    const inPista=onCourt.includes(p.id);
+    const t2m=st.p2m||0,t2a=t2m+(st.p2a||0);
+    const t3m=st.p3m||0,t3a=t3m+(st.p3a||0);
+    const rb=(st.ro||0)+(st.rd||0);
+    const fDots='●'.repeat(Math.min(f,5))+'○'.repeat(Math.max(0,5-f));
+    return`<div style="border-radius:11px;border:2px solid ${inPista?tc+'88':'var(--border)'};background:${inPista?tc+'14':'var(--s2)'};padding:9px 7px 8px;text-align:center;position:relative">
+      ${inPista?`<div style="position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:${tc};box-shadow:0 0 4px ${tc}"></div>`:''}
+      <div style="font-size:10px;font-weight:800;color:${inPista?tc:'var(--td)'};">#${p.number||'?'}</div>
+      <div style="font-size:11px;font-weight:700;color:${inPista?'var(--tx)':'var(--tm)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;margin:1px auto">${esc(_shortName(p.name))}</div>
+      <div style="font-family:var(--font-d);font-weight:900;font-size:30px;line-height:1.1;color:${inPista?tc:'var(--tx)'};margin:3px 0">${pts}</div>
+      <div style="font-size:8px;color:var(--td);margin-bottom:4px">PTS</div>
+      <div style="display:flex;gap:3px;justify-content:center;font-size:9px;font-weight:700;color:var(--td)">
+        <span style="background:var(--bg);border-radius:4px;padding:1px 4px">${t2m}/${t2a}<span style="color:var(--tm)"> T2</span></span>
+        <span style="background:var(--bg);border-radius:4px;padding:1px 4px">${t3m}/${t3a}<span style="color:var(--tm)"> T3</span></span>
+      </div>
+      <div style="margin-top:4px;display:flex;gap:3px;justify-content:center;font-size:9px;font-weight:700;color:var(--td)">
+        <span title="Rebotes" style="background:var(--bg);border-radius:4px;padding:1px 4px">${rb}<span style="color:var(--tm)"> RB</span></span>
+        <span style="color:${fc};background:var(--bg);border-radius:4px;padding:1px 4px;font-weight:${f>=4?900:700}">${f}<span style="color:var(--tm)"> F</span></span>
+      </div>
+    </div>`;
+  }).join('');
+  return`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px">${cards}</div>`;
+}
+
+function _refreshLiveStatsModal(view){
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  m.live.statsView=view;save();
+  const isLandscape=window.matchMedia('(orientation:landscape)').matches;
+  const tbl=document.getElementById('m-livestats-table');
+  if(tbl){
+    if(isLandscape&&document.getElementById('m-livestats-mode')?.dataset.mode!=='table'){
+      tbl.innerHTML=_buildLiveStatsCards(S.teamId,S.matchId,view);
+    } else {
+      const{ours,rival}=_buildLiveStatsHtml(S.teamId,S.matchId);
+      tbl.innerHTML=view==='rival'?rival:ours;
+    }
+  }
+  // update toggle buttons
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const tc=t?.color||'var(--orange)';
+  const btns=document.querySelectorAll('#m-livestats .lstg-btn');
+  if(btns[0]){btns[0].style.background=view!=='rival'?tc:'transparent';btns[0].style.color=view!=='rival'?'white':'var(--td)';}
+  if(btns[1]){btns[1].style.background=view==='rival'?'#ef4444':'transparent';btns[1].style.color=view==='rival'?'white':'var(--td)';}
+}
+
+function _toggleLiveStatsView(toMode){
+  // toMode: 'cards' | 'table'
+  const modeEl=document.getElementById('m-livestats-mode');
+  if(modeEl)modeEl.dataset.mode=toMode;
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  const view=m.live.statsView||'our';
+  const tbl=document.getElementById('m-livestats-table');
+  if(!tbl)return;
+  if(toMode==='cards'){
+    tbl.innerHTML=_buildLiveStatsCards(S.teamId,S.matchId,view);
+  } else {
+    const{ours,rival}=_buildLiveStatsHtml(S.teamId,S.matchId);
+    tbl.innerHTML=view==='rival'?rival:ours;
+  }
+  // toggle button labels
+  const btnCards=document.getElementById('m-ls-btn-cards');
+  const btnTable=document.getElementById('m-ls-btn-table');
+  if(btnCards){btnCards.style.background=toMode==='cards'?'rgba(99,179,237,.25)':'transparent';btnCards.style.color=toMode==='cards'?'#63b3ed':'var(--td)';}
+  if(btnTable){btnTable.style.background=toMode==='table'?'rgba(99,179,237,.25)':'transparent';btnTable.style.color=toMode==='table'?'#63b3ed':'var(--td)';}
+}
+
 function openLiveStatsModal(){
   document.getElementById('m-livestats')?.remove();
   const m=mById(S.teamId,S.matchId);if(!m?.live)return;
@@ -6776,29 +6869,48 @@ function openLiveStatsModal(){
   const tc=t?.color||'var(--orange)';
   const tName=esc((t?.name||'Equipo').length>14?(t?.name||'Equipo').slice(0,13)+'…':(t?.name||'Equipo'));
   const rName=esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+'…':(m.rival||'Rival'));
+  const isLandscape=window.matchMedia('(orientation:landscape)').matches;
+  // Cards en landscape (vistazo), tabla en portrait
+  const initMode=isLandscape?'cards':'table';
+  const initContent=isLandscape
+    ?_buildLiveStatsCards(S.teamId,S.matchId,view)
+    :(view==='rival'?rival:ours);
   const toggleHtml=rivalEnabled
     ?`<div style="display:flex;gap:4px;margin-bottom:10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px">
         <button class="lstg-btn" onclick="_refreshLiveStatsModal('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${view!=='rival'?tc:'transparent'};color:${view!=='rival'?'white':'var(--td)'}">${tName}</button>
         <button class="lstg-btn" onclick="_refreshLiveStatsModal('rival')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${view==='rival'?'#ef4444':'transparent'};color:${view==='rival'?'white':'var(--td)'}">${rName}</button>
       </div>`:'';
-  const currentTable=view==='rival'?rival:ours;
+  // Vista cards/tabla toggle (solo en landscape)
+  const modeToggle=isLandscape
+    ?`<div style="display:flex;gap:3px;background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:2px">
+        <button id="m-ls-btn-cards" onclick="_toggleLiveStatsView('cards')" style="padding:4px 9px;border-radius:5px;border:none;cursor:pointer;font-size:10px;font-weight:700;background:rgba(99,179,237,.25);color:#63b3ed">⊞ Cards</button>
+        <button id="m-ls-btn-table" onclick="_toggleLiveStatsView('table')" style="padding:4px 9px;border-radius:5px;border:none;cursor:pointer;font-size:10px;font-weight:700;background:transparent;color:var(--td)">☰ Tabla</button>
+      </div>`:'';
+  // En landscape: modal centrado flotante (no slide desde abajo)
+  const modalStyle=isLandscape
+    ?'width:min(96%,720px);margin:auto;max-height:82vh;overflow-y:auto;border-radius:16px;padding:12px 14px 18px'
+    :'width:min(100%,540px);margin:0 auto;max-height:88vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:16px 16px 36px';
+  const alignStyle=isLandscape?'align-items:center;padding:12px':'align-items:flex-end';
   const el=document.createElement('div');
   el.id='m-livestats';
   el.innerHTML=`
     <div onclick="if(event.target===this)document.getElementById('m-livestats')?.remove()"
-         style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:flex-end">
-      <div class="modal" style="width:min(100%,540px);margin:0 auto;max-height:88vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:16px 16px 36px">
-        <div class="mhandle"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">📊 Estadísticas del partido</div>
+         style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;${alignStyle}">
+      <div class="modal" id="m-livestats-mode" data-mode="${initMode}" style="${modalStyle}">
+        ${!isLandscape?'<div class="mhandle"></div>':''}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">📊 Stats del partido</div>
+            ${modeToggle}
+          </div>
           <button onclick="document.getElementById('m-livestats')?.remove()" style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:4px 10px;color:var(--td);font-size:12px;font-weight:700;cursor:pointer">✕</button>
         </div>
         ${toggleHtml}
-        <div id="m-livestats-table">${currentTable}</div>
+        <div id="m-livestats-table">${initContent}</div>
       </div>
     </div>`;
   document.body.appendChild(el);
-  _initDragDismiss(el);
+  if(!isLandscape)_initDragDismiss(el);
 }
 
 /* ═══════════════════════════════════════

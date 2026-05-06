@@ -9,7 +9,23 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.20 — Stats en landscape: botón 📊 → modal slide-up _(actual)_
+### v1.8.21 — Stats modal landscape: card grid "de un vistazo" _(actual)_
+
+El modal de estadísticas en landscape ahora abre en modo **card grid** en lugar de tabla:
+- Cada jugador = una card (~88px min) con: #dorsal, nombre, **PTS grande**, T2/T3, RB, faltas.
+- Players en pista primero (borde y dot de color del equipo), banquillo después (más atenuado).
+- Grid `auto-fill minmax(88px,1fr)` → ocupa el ancho disponible sin scroll horizontal.
+- **Toggle ⊞ Cards / ☰ Tabla** en el header del modal para cambiar entre las dos vistas.
+- El modal en landscape es **centrado/flotante** (`border-radius:16px` por todos lados, `max-height:82vh`) en vez de slide-up desde abajo.
+- En portrait sigue siendo slide-up con tabla completa (el botón 📊 solo aparece en landscape de todas formas).
+- Nuevas funciones: `_buildLiveStatsCards()`, `_toggleLiveStatsView()`.
+- `_refreshLiveStatsModal()` respeta el modo activo (cards/tabla) al cambiar equipo/rival.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.21"`
+
+---
+
+### v1.8.20 — Stats en landscape: botón 📊 → modal slide-up
 
 En landscape, la tabla de estadísticas del partido ya no está incrustada en la columna izquierda. En su lugar:
 - **Botón 📊** en el header (junto a 📍 📤 🏁), visible solo en landscape (`display:none` por defecto, `display:flex` en landscape).
