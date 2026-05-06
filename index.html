@@ -3099,6 +3099,9 @@ function att(){
     const st=sess[p.id];
     return (st&&st!=="present")||sess[p.id+"_jr"]||sess[p.id+"_jn"];
   });
+  // v1.8.16 · B-confirm: ¿existe ya la sesión en storage? Si no, mostramos
+  // botón "Confirmar sesión" en vez del indicador de autoguardado.
+  const sessionExists=!!S.sessions[sk(S.teamId,S.date)];
   const bulkRow=(!activeFilterValid&&hasChanges)
     ?`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
         <button onclick="confirmResetAtt()" style="background:none;border:none;color:var(--tm);cursor:pointer;font-size:12px;font-weight:600;padding:4px 8px;text-decoration:underline;text-underline-offset:2px">↺ Resetear a presentes</button>
@@ -3192,7 +3195,10 @@ function att(){
     ${exercisesHtml}${photoHtml}${teamScoreHtml}
     <div class="fg"><label class="fl">📝 Notas del entrenador</label><input class="fi" id="att-notes" value="${esc(notesVal)}" placeholder="Solo visibles para el entrenador..." oninput="_attAutoSave()"/></div>
     <div style="display:flex;gap:8px;align-items:stretch">
-      <div style="flex:1;display:flex;align-items:center;gap:8px;padding:0 12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.22);border-radius:10px;font-size:12.5px;color:var(--tm);font-weight:600;transition:color .2s"><span id="att-saved-ic" style="font-size:15px">💾</span><span id="att-saved-hint">Autoguardado activo</span></div>
+      ${!sessionExists
+        ?`<button onclick="confirmSession()" class="btn-p" style="flex:1;font-size:15px;padding:14px;margin:0">✅ Confirmar sesión</button>`
+        :`<div style="flex:1;display:flex;align-items:center;gap:8px;padding:0 12px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.22);border-radius:10px;font-size:12.5px;color:var(--tm);font-weight:600;transition:color .2s"><span id="att-saved-ic" style="font-size:15px">💾</span><span id="att-saved-hint">Autoguardado activo</span></div>`
+      }
       <button onclick="saveAttAndShare()" title="Compartir por WhatsApp" style="width:50px;height:50px;border-radius:8px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:22px;flex-shrink:0">📤</button>
     </div>
   </div>
@@ -4540,6 +4546,14 @@ function confirmResetAtt(){
     setAll("present");
     toast("↺ Todos en presente");
   });
+}
+// v1.8.16 · B-confirm: crea la sesión con el estado actual de todos los
+// jugadores (present por defecto, excused si están lesionados). Resuelve el
+// caso en que todos asisten y el coach no toca nada → antes no se guardaba nada.
+function confirmSession(){
+  _flushSess(); // crea sesión, marca todos explícitamente, guarda
+  render();
+  toast("✅ Sesión confirmada");
 }
 
 function toggleAttFilter(f){
