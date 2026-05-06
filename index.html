@@ -3251,12 +3251,13 @@ function stats(){
   const matchList=(S.matches[S.teamId]||[]).filter(mm=>mm.live&&mm.live.stats&&Object.keys(mm.live.stats).length>0&&(!S.statsMonth||(mm.date||"").startsWith(S.statsMonth)));
   const matchAgg={};
   matchList.forEach(mm=>{Object.entries(mm.live.stats).forEach(([pid,st])=>{
-    if(!matchAgg[pid])matchAgg[pid]={pj:0,pts:0,p2m:0,p2a:0,p3m:0,p3a:0,p1m:0,p1a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0,minSec:0,eff:0};
+    if(!matchAgg[pid])matchAgg[pid]={pj:0,pts:0,p2m:0,p2a:0,p3m:0,p3a:0,p1m:0,p1a:0,ro:0,rd:0,ast:0,foul:0,frecv:0,stl:0,blk:0,to:0,minSec:0,eff:0};
     const a=matchAgg[pid];
     a.pj++;a.pts+=(st.p2m||0)*2+(st.p3m||0)*3+(st.p1m||0);
     a.p2m+=st.p2m||0;a.p2a+=st.p2a||0;a.p3m+=st.p3m||0;a.p3a+=st.p3a||0;
     a.p1m+=st.p1m||0;a.p1a+=st.p1a||0;a.ro+=st.ro||0;a.rd+=st.rd||0;
     a.ast+=st.ast||0;a.foul+=(st.foul||0)+(st.ftech||0)+(st.funsport||0)+(st.fdq||0);
+    a.frecv+=st.frecv||0;
     a.stl+=st.stl||0;a.blk+=st.blk||0;a.to+=st.to||0;
     a.minSec+=_getMinSec(mm,pid);
     a.eff+=_calcEFF(st);
@@ -3284,6 +3285,7 @@ function stats(){
           <td>${a.ro}</td><td>${a.rd}</td>
           <td style="color:#06b6d4">${a.ast}</td>
           <td style="color:#ef4444">${a.foul}</td>
+          <td style="color:#0ea5e9">${a.frecv||0}</td>
           <td>${a.stl}</td><td>${a.blk}</td><td>${a.to}</td>
           <td style="color:${effColor};font-weight:800">${avgEff}</td>
         </tr>`;
@@ -3303,6 +3305,7 @@ function stats(){
             <th title="Rebote defensivo" style="color:#9ca3af">RD</th>
             <th title="Asistencias" style="color:#06b6d4">AST</th>
             <th title="Faltas" style="color:#ef4444">F</th>
+            <th title="Faltas recibidas" style="color:#0ea5e9">FR</th>
             <th title="Robos" style="color:#3b82f6">ROB</th>
             <th title="Tapones" style="color:#8b5cf6">TAP</th>
             <th title="Pérdidas" style="color:#ef4444">PER</th>
@@ -4651,6 +4654,11 @@ function _attFlushDraft(){
   const d=S._attDraft;
   if(!d)return;
   const k=sk(d.teamId,d.date);
+  // v1.8.11 · B-5: no crear sesión vacía si no se ha pasado lista y las notas/ejercicios
+  // están vacíos. Evita "fantasmas" al navegar entre días sin registrar nada.
+  const sessionExists=!!S.sessions[k];
+  const hasContent=(d.notes!=null&&d.notes.trim()!=="")||(d.ex!=null&&d.ex.trim()!=="");
+  if(!sessionExists&&!hasContent){S._attDraft=null;return;}
   const sess={...S.sessions[k]||{}};
   if(d.notes!=null)sess._notes=d.notes;
   if(d.ex!=null)sess._exercises=d.ex.trim();
@@ -5823,6 +5831,7 @@ function liveGame(){
     {id:"p3a",l:"Fallo 3",emoji:"✗",c:"#ef4444",pts:0},{id:"p1a",l:"Fallo TL",emoji:"✗",c:"#ef4444",pts:0},
     {id:"ro",l:"R.Ofen",emoji:"📦",c:"#a855f7",pts:0},{id:"rd",l:"R.Def",emoji:"🛡",c:"#6b7280",pts:0},
     {id:"ast",l:"Asist",emoji:"🎁",c:"#06b6d4",pts:0},{id:"foul",l:"Falta",emoji:"🤚",c:"#f59e0b",pts:0},
+    {id:"frecv",l:"F.Rec.",emoji:"🆙",c:"#0ea5e9",pts:0},
     {id:"stl",l:"Robo",emoji:"✋",c:"#3b82f6",pts:0},{id:"blk",l:"Tapón",emoji:"🚫",c:"#8b5cf6",pts:0},
     {id:"to",l:"Pérdida",emoji:"❌",c:"#ef4444",pts:0}
   ];
@@ -6453,7 +6462,7 @@ function liveGame(){
 /* ═══════════════════════════════════════
    LIVE GAME ACTIONS
 ═══════════════════════════════════════ */
-const _ACTLABELS={p2m:"+2 Canasta",p3m:"+3 Triple",p1m:"+1 TL",p2a:"Fallo 2pt",p3a:"Fallo 3pt",p1a:"Fallo TL",ro:"Reb. Ofensivo",rd:"Reb. Defensivo",ast:"Asistencia",foul:"Falta",ftech:"Falta Técnica",funsport:"Falta Antideportiva",fdq:"Falta Descalificante",p2tl:"2 TL Recibidos",stl:"Robo",blk:"Tapón",to:"Pérdida",rival:"Rival +pts",timeout:"Tiempo muerto",sub:"Sustitución"};
+const _ACTLABELS={p2m:"+2 Canasta",p3m:"+3 Triple",p1m:"+1 TL",p2a:"Fallo 2pt",p3a:"Fallo 3pt",p1a:"Fallo TL",ro:"Reb. Ofensivo",rd:"Reb. Defensivo",ast:"Asistencia",foul:"Falta",ftech:"Falta Técnica",funsport:"Falta Antideportiva",fdq:"Falta Descalificante",frecv:"Falta Recibida",p2tl:"2 TL Recibidos",stl:"Robo",blk:"Tapón",to:"Pérdida",rival:"Rival +pts",timeout:"Tiempo muerto",sub:"Sustitución"};
 const _ACTCOLOR={p2m:"#22c55e",p3m:"#22c55e",p1m:"#22c55e",p2a:"#ef4444",p3a:"#ef4444",p1a:"#ef4444",ro:"#a855f7",rd:"#9ca3af",ast:"#06b6d4",foul:"#f59e0b",ftech:"#ef4444",funsport:"#ef4444",fdq:"#dc2626",p2tl:"#22c55e",stl:"#3b82f6",blk:"#8b5cf6",to:"#ef4444",rival:"#ef4444",timeout:"#f59e0b",sub:"#06b6d4"};
 function selectLivePid(pid){
   const m=mById(S.teamId,S.matchId);if(!m||!m.live)return;
@@ -6852,6 +6861,7 @@ function matchSummaryScreen(){
         <td style="color:#a855f7">${st.ro||0}</td><td style="color:#9ca3af">${st.rd||0}</td>
         <td style="color:#06b6d4">${st.ast||0}</td>
         <td style="color:${fc}">${f}</td>
+        <td style="color:#0ea5e9">${st.frecv||0}</td>
         <td style="color:#3b82f6">${st.stl||0}</td><td style="color:#8b5cf6">${st.blk||0}</td>
         <td style="color:#ef4444">${st.to||0}</td>
         <td style="color:${pmColor};font-weight:800">${pmStr}</td>
@@ -6865,6 +6875,7 @@ function matchSummaryScreen(){
     const tT1m=convP.reduce((s,p)=>s+((tP(p)).p1m||0),0),tT1a=convP.reduce((s,p)=>s+((tP(p)).p1m||0)+((tP(p)).p1a||0),0);
     const tRo=convP.reduce((s,p)=>s+((tP(p)).ro||0),0),tRd=convP.reduce((s,p)=>s+((tP(p)).rd||0),0);
     const tAst=convP.reduce((s,p)=>s+((tP(p)).ast||0),0),tF=convP.reduce((s,p)=>s+_totalFouls(tP(p)),0);
+    const tFrecv=convP.reduce((s,p)=>s+((tP(p)).frecv||0),0);
     const tStl=convP.reduce((s,p)=>s+((tP(p)).stl||0),0),tBlk=convP.reduce((s,p)=>s+((tP(p)).blk||0),0),tTo=convP.reduce((s,p)=>s+((tP(p)).to||0),0);
     const tEff=convP.reduce((s,p)=>s+_calcEFF(tP(p)),0);
     const tEfg=tT2a+tT3a>0?Math.round(100*(tT2m+1.5*tT3m)/(tT2a+tT3a)):0;
@@ -6878,6 +6889,7 @@ function matchSummaryScreen(){
       <td style="color:#a855f7">${tRo}</td><td style="color:#9ca3af">${tRd}</td>
       <td style="color:#06b6d4">${tAst}</td>
       <td style="color:${tF>=10?"#ef4444":"var(--td)"}">${tF}</td>
+      <td style="color:#0ea5e9">${tFrecv}</td>
       <td style="color:#3b82f6">${tStl}</td><td style="color:#8b5cf6">${tBlk}</td>
       <td style="color:#ef4444">${tTo}</td>
       <td style="color:var(--td)">—</td>
@@ -6894,6 +6906,7 @@ function matchSummaryScreen(){
           <th title="eFG%">eFG%</th>
           <th style="color:#a855f7">RO</th><th style="color:#9ca3af">RD</th>
           <th style="color:#06b6d4">AST</th><th>F</th>
+          <th style="color:#0ea5e9" title="Faltas recibidas">FR</th>
           <th style="color:#3b82f6">ROB</th><th style="color:#8b5cf6">TAP</th>
           <th style="color:#ef4444">PER</th>
           <th>+/-</th><th>EFF</th>
@@ -7465,7 +7478,28 @@ function openOurFoulTLModal(rpidOpt, foulKind){
 
 window.selectOurTLShooter=function(pid){
   const el=document.getElementById("m-ourtl");if(!el)return;
+  const m=mById(S.teamId,S.matchId);if(!m)return;
+  const onCourt=m.live?.onCourt||[];
+  const isBench=!onCourt.includes(pid);
+  // v1.8.11 · B-7: jugador de banquillo → aviso de entrada en pista
+  if(isBench){
+    const p=pl(S.teamId).find(x=>x.id===pid);
+    const pname=_shortName(p?.name||"?");
+    // Mostrar banner informativo en el modal (no bloquear selección)
+    let banner=document.getElementById("ourtl-bench-notice");
+    if(!banner){
+      banner=document.createElement("div");
+      banner.id="ourtl-bench-notice";
+      banner.style.cssText="background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#f59e0b;border-radius:9px;padding:9px 12px;margin-bottom:10px;font-size:13px;font-weight:700;text-align:center";
+      const courtDiv=document.getElementById("ourtl-court");
+      if(courtDiv)courtDiv.parentNode.insertBefore(banner,courtDiv);
+    }
+    banner.textContent="⚠️ "+pname+" está en el banquillo — entrará en pista al tirar";
+  } else {
+    document.getElementById("ourtl-bench-notice")?.remove();
+  }
   el._pid=pid;
+  el._fromBench=isBench;
   document.querySelectorAll('#m-ourtl button[data-pid]').forEach(b=>{
     const sel=b.dataset.pid===pid;
     b.style.borderColor=sel?"var(--orange)":(b.style.borderColor.includes("240")?"rgba(240,99,24,.25)":"var(--border)");
@@ -7491,12 +7525,37 @@ function confirmOurTL(){
   const pid=el._pid;
   const total=el._tl||0;
   if(!pid){toast("⚠️ Selecciona quién tira");return;}
+  // v1.8.11 · B-7: si viene del banquillo, confirmar sustitución y meterlo en pista
+  const fromBench=el._fromBench;
+  el.remove();
+  const m=mById(S.teamId,S.matchId);
+  if(fromBench&&m&&m.live){
+    if(!m.live.onCourt.includes(pid)){
+      m.live.onCourt=[...m.live.onCourt,pid];
+      const nowMs=Date.now();
+      if(!m.live.inSince)m.live.inSince={};
+      m.live.inSince[pid]=nowMs;
+      if(!m.live.minTracked)m.live.minTracked={};
+      if(!m.live.minTracked[pid])m.live.minTracked[pid]=0;
+      const p=pl(S.teamId).find(x=>x.id===pid);
+      const pname=_shortName(p?.name||"?");
+      toast("🔄 "+pname+" entra en pista para tirar TL");
+    }
+  }
+  // v1.8.11 · B-8: registrar "Falta Recibida" automáticamente cuando se asigna tirador
+  if(m&&m.live&&pid){
+    const live=m.live;
+    if(!live.stats[pid])live.stats[pid]={p1m:0,p1a:0,p2m:0,p2a:0,p3m:0,p3a:0,ro:0,rd:0,ast:0,foul:0,ftech:0,funsport:0,fdq:0,frecv:0,stl:0,blk:0,to:0};
+    live.stats[pid].frecv=(live.stats[pid].frecv||0)+1;
+    const pname2=_shortName(pl(S.teamId).find(p=>p.id===pid)?.name||"?");
+    const qi=(live.q||1)-1;_ensureQSlot(live,qi);
+    live.log=[{pid,action:"frecv",pts:0,q:live.q,clockAt:live.clockSec,desc:pname2+" — Falta Recibida"},...(live.log||[])].slice(0,80);
+    save();
+  }
   if(total===0){
-    el.remove();
     toast("✅ Falta del rival registrada, sin tiros libres");
     return;
   }
-  el.remove();
   openOurTLShootModal(pid,total);
 }
 
