@@ -9,7 +9,21 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.19 — Scoreboard compacto en landscape (fix móvil 2 columnas) _(actual)_
+### v1.8.20 — Stats en landscape: botón 📊 → modal slide-up _(actual)_
+
+En landscape, la tabla de estadísticas del partido ya no está incrustada en la columna izquierda. En su lugar:
+- **Botón 📊** en el header (junto a 📍 📤 🏁), visible solo en landscape (`display:none` por defecto, `display:flex` en landscape).
+- Al pulsarlo → **modal slide-up** (drag-to-dismiss) con la tabla completa, toggle nuestro equipo / rival si hay jugadores del rival registrados, y botón ✕.
+- El toggle del modal llama a `_refreshLiveStatsModal(view)` que actualiza solo el DOM del modal (sin `render()` completo).
+- En portrait el botón no aparece y las stats siguen al fondo del scroll como antes (v1.8.18).
+- La columna izquierda en landscape ahora solo tiene el marcador, sin el bloque de stats debajo; el grid pasa a 1 sola fila `"scoreboard court"`.
+- Nueva función reutilizable `_buildLiveStatsHtml(teamId, matchId)` que construye las tablas (nuestro equipo + rival) desde el estado actual del partido.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.20"`
+
+---
+
+### v1.8.19 — Scoreboard compacto en landscape (fix móvil 2 columnas)
 
 **Bug.** En landscape en móvil (~375px de alto), el marcador ocupaba ~220px (score a 62px, padding 16px, sección de faltas con márgenes altos) dejando las stats sin espacio visible ni interactuable.
 

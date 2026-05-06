@@ -542,6 +542,11 @@ label{-webkit-tap-highlight-color:transparent;}
   .stats-table td{padding:8px 7px;}
   /* Fase 3: en landscape no hace falta el aviso de rotar */
   .live-rotate-hint{display:none;}
+  /* Fase 3b: en landscape las stats van en modal (botón 📊), no inline */
+  .live-stats-wrap{display:none!important;}
+  .live-stats-btn{display:flex!important;}
+  /* Fase 3b: col izq solo tiene el marcador → grid de 1 sola fila */
+  .live-2col{grid-template-rows:auto;grid-template-areas:"scoreboard court";}
 }
 </style>
 </head>
@@ -6562,6 +6567,7 @@ function liveGame(){
     <div style="display:flex;gap:5px;align-items:center">
       ${bonus?`<span style="background:rgba(245,158,11,.25);color:#f59e0b;border:1px solid rgba(245,158,11,.4);border-radius:6px;font-size:10px;font-weight:800;padding:2px 6px">BONUS</span>`:""}
       ${m.shotChart?`<button onclick="navTo('shotMap')" style="width:32px;height:32px;border-radius:7px;background:rgba(240,99,24,.15);border:1px solid rgba(240,99,24,.4);color:var(--orange);cursor:pointer;font-size:14px;font-weight:900" title="Mapa de tiros">📍</button>`:""}
+      <button class="live-stats-btn" onclick="openLiveStatsModal()" style="width:32px;height:32px;border-radius:7px;background:rgba(99,179,237,.15);border:1px solid rgba(99,179,237,.4);color:#63b3ed;cursor:pointer;font-size:15px;display:none" title="Ver estadísticas">📊</button>
       <button onclick="shareMatchResult()" style="width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:15px" title="Compartir marcador">📤</button>
       <button onclick="_finishAndShowSummary('${S.teamId}','${S.matchId}')" style="width:32px;height:32px;border-radius:7px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:15px" title="Finalizar partido">🏁</button>
     </div>
@@ -6640,6 +6646,159 @@ function liveGame(){
   </div>
   </div>
   ${navBar()}`;
+}
+
+/* ═══════════════════════════════════════
+   LIVE STATS MODAL (v1.8.20)
+   Botón 📊 en header → modal con tabla de stats.
+   En landscape la tabla inline está oculta y solo
+   se accede desde aquí. En portrait el botón no
+   aparece (la tabla ya está al fondo del scroll).
+═══════════════════════════════════════ */
+function _buildLiveStatsHtml(teamId,matchId){
+  const m=mById(teamId,matchId);if(!m?.live)return{ours:'',rival:'',rivalEnabled:false};
+  const t=S.teams.find(x=>x.id===teamId);
+  const live=m.live;
+  const players=pl(teamId);
+  const convIds=m.convocados||[];
+  const convP=players.filter(p=>convIds.includes(p.id)).sort((a,b)=>(a.number||99)-(b.number||99));
+  const onCourt=live.onCourt||[];
+  const qScores=live.qScores||[];
+  const ourTotal=qScores.reduce((s,q)=>s+(q&&q[0]||0),0);
+  const rivalEnabled=!!(m.rivalPlayers&&m.rivalPlayers.length>0);
+  const rivalPlayers=m.rivalPlayers||[];
+  const rivalOnCourt=live.rivalOnCourt||[];
+  function totSt(fn){return convP.reduce((s,p)=>s+(fn(live.stats[p.id]||{})||0),0);}
+  const ours=`<div style="overflow-x:auto;border-radius:10px;border:1px solid var(--border)">
+    <table class="stats-table">
+      <thead><tr style="background:var(--s2)">
+        <th>#</th><th>Jugador</th><th>PTS</th>
+        <th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>
+      </tr></thead>
+      <tbody>
+        ${convP.map((p,i)=>{
+          const st=live.stats[p.id]||{};
+          const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+          const f=st.foul||0;const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--tx)";
+          const inPista=onCourt.includes(p.id);
+          const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
+          return`<tr style="background:${inPista?"rgba(240,99,24,.06)":i%2?"rgba(255,255,255,.015)":"transparent"}">
+            <td style="font-weight:700;color:var(--td)">${p.number||"?"}</td>
+            <td style="font-weight:600;white-space:nowrap;color:${inPista?"var(--tx)":"var(--td)"}">
+              ${esc(_shortName(p.name))}${inPista?`<span style="font-size:9px;color:var(--td);margin-left:3px">▶</span>`:""}
+            </td>
+            <td style="font-weight:700;color:var(--tx)">${pts}</td>
+            <td>${st.p2m||0}/${t2a}</td><td>${st.p3m||0}/${t3a}</td>
+            <td>${st.p1m||0}/${t1a}</td>
+            <td>${st.ro||0}</td><td>${st.rd||0}</td><td>${st.ast||0}</td>
+            <td style="font-weight:700;color:${fc}">${f||0}</td>
+            <td>${st.stl||0}</td><td>${st.blk||0}</td><td>${st.to||0}</td>
+          </tr>`;
+        }).join("")}
+        <tr class="totrow">
+          <td colspan="2" style="color:var(--td);font-size:10px;font-weight:700;padding:5px 8px">EQUIPO</td>
+          <td style="font-family:var(--font-d);font-weight:900;font-size:14px;color:var(--orange)">${ourTotal}</td>
+          <td style="color:var(--td)">${totSt(s=>s.p2m)}/${totSt(s=>(s.p2m||0)+(s.p2a||0))}</td>
+          <td style="color:var(--td)">${totSt(s=>s.p3m)}/${totSt(s=>(s.p3m||0)+(s.p3a||0))}</td>
+          <td style="color:var(--td)">${totSt(s=>s.p1m)}/${totSt(s=>(s.p1m||0)+(s.p1a||0))}</td>
+          <td style="color:var(--td)">${totSt(s=>s.ro)}</td><td style="color:var(--td)">${totSt(s=>s.rd)}</td>
+          <td style="color:var(--td)">${totSt(s=>s.ast)}</td>
+          <td style="color:var(--td)">${totSt(s=>s.foul)}</td>
+          <td style="color:var(--td)">${totSt(s=>s.stl)}</td>
+          <td style="color:var(--td)">${totSt(s=>s.blk)}</td>
+          <td style="color:var(--td)">${totSt(s=>s.to)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+  let rival='<div style="text-align:center;padding:20px;color:var(--tm);font-size:13px">Sin jugadores del rival registrados</div>';
+  if(rivalEnabled&&rivalPlayers.length>0){
+    const rs=live.rivalStats||{};
+    const rivTotal=qScores.reduce((s,q)=>s+(q&&q[1]||0),0);
+    function rTot(fn){return rivalPlayers.reduce((s,p)=>s+(fn(rs[p.id]||{})||0),0);}
+    let rows="";
+    [...rivalPlayers].sort((a,b)=>(a.number||99)-(b.number||99)).forEach((p,i)=>{
+      const st=rs[p.id]||{};
+      const pts=(st.p1m||0)+(st.p2m||0)*2+(st.p3m||0)*3;
+      const f=st.foul||0;const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--tx)";
+      const inPista=rivalOnCourt.includes(p.id);
+      const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
+      rows+="<tr style='background:"+(inPista?"rgba(239,68,68,.06)":i%2?"rgba(255,255,255,.015)":"transparent")+"'>"
+        +"<td style='font-weight:700;color:var(--td)'>"+(p.number||"?")+"</td>"
+        +"<td style='font-weight:600;white-space:nowrap;color:"+(inPista?"var(--tx)":"var(--td)")+"'>"+esc(_shortName(p.name))+(inPista?"<span style='font-size:9px;color:var(--td);margin-left:3px'>▶</span>":"")+"</td>"
+        +"<td style='font-weight:700;color:var(--tx)'>"+pts+"</td>"
+        +"<td>"+(st.p2m||0)+"/"+(t2a)+"</td><td>"+(st.p3m||0)+"/"+(t3a)+"</td>"
+        +"<td>"+(st.p1m||0)+"/"+(t1a)+"</td>"
+        +"<td>"+(st.ro||0)+"</td><td>"+(st.rd||0)+"</td><td>"+(st.ast||0)+"</td>"
+        +"<td style='font-weight:700;color:"+fc+"'>"+(f||0)+"</td>"
+        +"<td>"+(st.stl||0)+"</td><td>"+(st.blk||0)+"</td><td>"+(st.to||0)+"</td>"
+        +"</tr>";
+    });
+    rival='<div style="overflow-x:auto;border-radius:10px;border:1px solid rgba(239,68,68,.3)">'
+      +'<table class="stats-table" style="border-color:rgba(239,68,68,.15)">'
+      +'<thead><tr style="background:rgba(239,68,68,.1)">'
+      +'<th>#</th><th>Jugador</th><th>PTS</th><th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>'
+      +'</tr></thead><tbody>'+rows
+      +'<tr class="totrow"><td colspan="2" style="color:var(--td);font-size:10px;font-weight:700;padding:5px 8px">RIVAL</td>'
+      +'<td style="font-family:var(--font-d);font-weight:900;font-size:14px;color:#ef4444">'+rivTotal+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.p2m||0)+'/'+rTot(s=>(s.p2m||0)+(s.p2a||0))+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.p3m||0)+'/'+rTot(s=>(s.p3m||0)+(s.p3a||0))+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.p1m||0)+'/'+rTot(s=>(s.p1m||0)+(s.p1a||0))+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.ro||0)+'</td><td style="color:var(--td)">'+rTot(s=>s.rd||0)+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.ast||0)+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.foul||0)+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.stl||0)+'</td><td style="color:var(--td)">'+rTot(s=>s.blk||0)+'</td>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.to||0)+'</td></tr>'
+      +'</tbody></table></div>';
+  }
+  return{ours,rival,rivalEnabled,t};
+}
+
+function _refreshLiveStatsModal(view){
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  m.live.statsView=view;save();
+  const{ours,rival}=_buildLiveStatsHtml(S.teamId,S.matchId);
+  const tbl=document.getElementById('m-livestats-table');
+  if(tbl)tbl.innerHTML=view==='rival'?rival:ours;
+  const t=S.teams.find(x=>x.id===S.teamId);
+  const tc=t?.color||'var(--orange)';
+  const btns=document.querySelectorAll('#m-livestats .lstg-btn');
+  if(btns[0]){btns[0].style.background=view!=='rival'?tc:'transparent';btns[0].style.color=view!=='rival'?'white':'var(--td)';}
+  if(btns[1]){btns[1].style.background=view==='rival'?'#ef4444':'transparent';btns[1].style.color=view==='rival'?'white':'var(--td)';}
+}
+
+function openLiveStatsModal(){
+  document.getElementById('m-livestats')?.remove();
+  const m=mById(S.teamId,S.matchId);if(!m?.live)return;
+  const{ours,rival,rivalEnabled,t}=_buildLiveStatsHtml(S.teamId,S.matchId);
+  const live=m.live;
+  const view=live.statsView||'our';
+  const tc=t?.color||'var(--orange)';
+  const tName=esc((t?.name||'Equipo').length>14?(t?.name||'Equipo').slice(0,13)+'…':(t?.name||'Equipo'));
+  const rName=esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+'…':(m.rival||'Rival'));
+  const toggleHtml=rivalEnabled
+    ?`<div style="display:flex;gap:4px;margin-bottom:10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px">
+        <button class="lstg-btn" onclick="_refreshLiveStatsModal('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${view!=='rival'?tc:'transparent'};color:${view!=='rival'?'white':'var(--td)'}">${tName}</button>
+        <button class="lstg-btn" onclick="_refreshLiveStatsModal('rival')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${view==='rival'?'#ef4444':'transparent'};color:${view==='rival'?'white':'var(--td)'}">${rName}</button>
+      </div>`:'';
+  const currentTable=view==='rival'?rival:ours;
+  const el=document.createElement('div');
+  el.id='m-livestats';
+  el.innerHTML=`
+    <div onclick="if(event.target===this)document.getElementById('m-livestats')?.remove()"
+         style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:flex-end">
+      <div class="modal" style="width:min(100%,540px);margin:0 auto;max-height:88vh;overflow-y:auto;border-radius:20px 20px 0 0;padding:16px 16px 36px">
+        <div class="mhandle"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">📊 Estadísticas del partido</div>
+          <button onclick="document.getElementById('m-livestats')?.remove()" style="background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:4px 10px;color:var(--td);font-size:12px;font-weight:700;cursor:pointer">✕</button>
+        </div>
+        ${toggleHtml}
+        <div id="m-livestats-table">${currentTable}</div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+  _initDragDismiss(el);
 }
 
 /* ═══════════════════════════════════════

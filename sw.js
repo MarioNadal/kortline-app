@@ -2,7 +2,7 @@
 // Cache-first para los assets de la app shell, network-first para el resto.
 // Bump CACHE_VERSION en cada release para invalidar caché vieja en clientes.
 
-const CACHE_VERSION = "kortline-v1.8.19";
+const CACHE_VERSION = "kortline-v1.8.20";
 const APP_SHELL = [
   "./",
   "./index.html",
