@@ -525,6 +525,14 @@ label{-webkit-tap-highlight-color:transparent;}
   .live-scoreboard-wrap{grid-area:scoreboard;position:sticky;top:0;}
   .live-stats-wrap{grid-area:stats;}
   .live-col-r{grid-area:court;}
+  /* Fase 2: scoreboard compacto en landscape — en móvil el alto es ~375px,
+     el marcador en tamaño portrait (62px score, padding 16px) ocupa ~220px
+     y deja sin espacio a las stats. Se reduce todo para que quepan. */
+  .live-scoreboard{padding:8px 10px;margin-bottom:6px;border-radius:10px;}
+  .live-score{font-size:38px;}
+  .live-diff{font-size:11px;padding:1px 6px;margin:2px 0;}
+  .live-foul-row{padding:5px 0!important;margin-bottom:5px!important;}
+  .qtab-btn{padding:3px 2px;}
 
   /* Fase 3: pantalla de stats más ancha → tabla de partidos respira */
   .stats-content{max-width:960px!important;}
@@ -6499,7 +6507,7 @@ function liveGame(){
       +_rScoreEl
     +'</div>'
     // ── Fouls + TM dots ──
-    +'<div style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:8px;padding:8px 0;margin-bottom:8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">'
+    +'<div class="live-foul-row" style="display:grid;grid-template-columns:1fr 1px 1fr;align-items:start;gap:8px;padding:8px 0;margin-bottom:8px;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">'
       +_lFoulEl
       +'<div style="background:var(--border);height:44px;margin:0 auto"></div>'
       +_rFoulEl

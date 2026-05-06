@@ -9,7 +9,24 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.18 — Stats al pie en portrait, drag-to-dismiss mejorado, titular+capitán sin re-render _(actual)_
+### v1.8.19 — Scoreboard compacto en landscape (fix móvil 2 columnas) _(actual)_
+
+**Bug.** En landscape en móvil (~375px de alto), el marcador ocupaba ~220px (score a 62px, padding 16px, sección de faltas con márgenes altos) dejando las stats sin espacio visible ni interactuable.
+
+**Fix.** Dentro del `@media landscape` se añaden overrides compactos:
+- `.live-scoreboard`: padding 8px / margin-bottom 6px / border-radius 10px
+- `.live-score`: font-size 38px (era 62px)
+- `.live-diff`: 11px / padding mínimo
+- `.live-foul-row` (nueva clase en la sección de faltas): padding 5px / margin-bottom 5px
+- `.qtab-btn`: padding reducido
+
+El scoreboard pasa de ~220px a ~120px en landscape, dejando la tabla de stats visible y usable desde la columna izquierda.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.19"`
+
+---
+
+### v1.8.18 — Stats al pie en portrait, drag-to-dismiss mejorado, titular+capitán sin re-render
 
 **Fix portrait stats (B-portrait)** — En portrait, la tabla de estadísticas del partido ahora aparece siempre al pie, debajo del quinteto/acciones/banquillo. La fase 2 (v1.8.14) había movido las stats a la columna izquierda del grid, lo que en portrait las dejaba en mitad de pantalla. Solución: se separan los contenidos en tres divs independientes (`.live-scoreboard-wrap`, `.live-col-r`, `.live-stats-wrap`) ordenados en el DOM para portrait, y en landscape se usan `grid-template-areas` para mantener el layout de 2 columnas (marcador izq-arriba / stats izq-abajo / quinteto der).
 
