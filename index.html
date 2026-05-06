@@ -513,6 +513,16 @@ label{-webkit-tap-highlight-color:transparent;}
   /* 8 · Botones principales más grandes */
   .btn-p,.btn-s{font-size:16px;padding:14px;}
 }
+
+/* ─── FASE 2 · Live en landscape 2 columnas (≥700px landscape) ─────────── */
+@media (min-width:700px) and (orientation:landscape){
+  /* El live ocupa todo el ancho disponible */
+  .live-game-content{max-width:1100px!important;}
+  /* Grid: marcador+stats a la izq, quinteto+acciones a la der */
+  .live-2col{display:grid;grid-template-columns:2fr 3fr;gap:14px;align-items:start;}
+  /* La col izq se queda sticky para que el marcador no desaparezca */
+  .live-col-l{position:sticky;top:0;}
+}
 </style>
 </head>
 <body>
@@ -6494,13 +6504,36 @@ function liveGame(){
     <button onclick="openTimeoutModal()" style="width:36px;height:36px;border-radius:9px;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.1);color:#f59e0b;cursor:pointer;font-size:13px;font-weight:900">T.M</button>
   </div>
 </header>
-  <div class="content" style="padding-bottom:82px">
+  <div class="content live-game-content" style="padding-bottom:82px">
+  <div class="live-2col">
 
-    <!-- Scoreboard integrado -->
-    ${scoreboardHtml}
+    <!-- COL IZQ · marcador + stats + log ──────────────────────────────── -->
+    <div class="live-col-l">
 
-    <!-- Team toggle (only when rival stats enabled) · v1.8.5 · F4c: dot de color + _teamShort -->
-    ${rivalEnabled?`
+      <!-- Scoreboard integrado -->
+      ${scoreboardHtml}
+
+      <!-- Stats (selector equipo + tabla) -->
+      ${rivalEnabled?`
+    <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px">
+      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">${esc(t.name.length>14?t.name.slice(0,13)+"…":t.name)}</button>
+      <button onclick="setStatsView('rival')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${live.statsView==='rival'?'#ef4444':'transparent'};color:${live.statsView==='rival'?'white':'var(--td)'}">${esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+'…':m.rival||'Rival')}</button>
+    </div>`:""}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">Estadísticas del partido</div>
+        <div style="font-size:10px;color:var(--tm);font-weight:600">🔄 gira para ver completa</div>
+      </div>
+      ${(live.statsView==='rival'&&rivalEnabled)?rivalStatsTable:statsTable}
+
+      <!-- Historial de acciones -->
+      ${logPanel}
+    </div>
+
+    <!-- COL DER · quinteto + acciones + banquillo ─────────────────────── -->
+    <div class="live-col-r">
+
+      <!-- Team toggle (only when rival stats enabled) · v1.8.5 · F4c -->
+      ${rivalEnabled?`
     <div style="display:flex;gap:4px;margin-bottom:10px;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:4px">
       <button onclick="setActiveTeam('our')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 6px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:800;transition:all .15s;background:${live.activeTeam!=='rival'?t.color:'transparent'};color:${live.activeTeam!=='rival'?'white':'var(--td)'};min-width:0">
         <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${t.color};box-shadow:0 0 0 1.5px ${live.activeTeam!=='rival'?'rgba(255,255,255,.6)':'transparent'};flex-shrink:0"></span>
@@ -6512,34 +6545,22 @@ function liveGame(){
       </button>
     </div>`:""}
 
-    <!-- On Court -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${live.activeTeam==='rival'?'#ef4444':t.color}">▶ EN PISTA (${live.activeTeam==='rival'?rivalCourtP.length:courtP.length}/5)</div>
-      <div style="font-size:11px;color:var(--tm)">Toca un jugador → sustituir</div>
+      <!-- On Court -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:${live.activeTeam==='rival'?'#ef4444':t.color}">▶ EN PISTA (${live.activeTeam==='rival'?rivalCourtP.length:courtP.length}/5)</div>
+        <div style="font-size:11px;color:var(--tm)">Toca un jugador → sustituir</div>
+      </div>
+      ${teamOnly
+        ? '<div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">👥</span><div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange)">Modo equipo</div><div style="font-size:12px;color:var(--td);margin-top:1px">Stats globales · sin seguimiento individual</div></div></div>'+teamActionBlock
+        : '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px">'+(live.activeTeam==='rival'?rivalCourtCards:courtCards)+'</div>'+actionBlock
+      }
+      ${undoBtn}
+
+      <!-- Bench -->
+      ${live.activeTeam==="rival"?rivalBenchCards:benchCards}
     </div>
-    ${teamOnly
-      ? '<div style="background:rgba(249,115,22,.07);border:1px solid rgba(249,115,22,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">👥</span><div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--orange)">Modo equipo</div><div style="font-size:12px;color:var(--td);margin-top:1px">Stats globales · sin seguimiento individual</div></div></div>'+teamActionBlock
-      : '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px">'+(live.activeTeam==='rival'?rivalCourtCards:courtCards)+'</div>'+actionBlock
-    }
-    ${undoBtn}
 
-    <!-- Bench -->
-    ${live.activeTeam==="rival"?rivalBenchCards:benchCards}
-
-    <!-- Stats -->
-    ${rivalEnabled?`
-    <div style="display:flex;gap:4px;margin-bottom:8px;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:3px">
-      <button onclick="setStatsView('our')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${(live.statsView||'our')!=='rival'?t.color:'transparent'};color:${(live.statsView||'our')!=='rival'?'white':'var(--td)'}">${esc(t.name.length>14?t.name.slice(0,13)+"…":t.name)}</button>
-      <button onclick="setStatsView('rival')" style="flex:1;padding:6px;border-radius:6px;border:none;cursor:pointer;font-size:11px;font-weight:800;background:${live.statsView==='rival'?'#ef4444':'transparent'};color:${live.statsView==='rival'?'white':'var(--td)'}">${esc((m.rival||'Rival').length>14?(m.rival||'Rival').slice(0,13)+'…':m.rival||'Rival')}</button>
-    </div>`:""}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">Estadísticas del partido</div>
-      <div style="font-size:10px;color:var(--tm);font-weight:600">🔄 gira el móvil para verla completa</div>
-    </div>
-    ${(live.statsView==='rival'&&rivalEnabled)?rivalStatsTable:statsTable}
-
-    <!-- Historial de acciones -->
-    ${logPanel}
+  </div>
   </div>
   ${navBar()}`;
 }
