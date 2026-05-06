@@ -1805,7 +1805,7 @@ const DEFAULT_CFG={riskThreshold:75,features:{teamScore:false,playerScore:false,
 /* ═══════════════════════════════════════
    STATE
 ═══════════════════════════════════════ */
-let S={screen:"hoy",teamId:null,date:td(),teams:[],players:{},sessions:{},matches:{},events:{},sf:"all",histMonth:null,clubLogo:null,clubName:"Kortline",clubAbrev:"",clubLema:"",cfg:{...DEFAULT_CFG},statsView:"table",matchId:null,eventId:null,navStack:[]};
+let S={screen:"hoy",teamId:null,date:td(),teams:[],players:{},sessions:{},matches:{},events:{},sf:"all",histMonth:null,statsMonth:null,clubLogo:null,clubName:"Kortline",clubAbrev:"",clubLema:"",cfg:{...DEFAULT_CFG},statsView:"table",matchId:null,eventId:null,navStack:[]};
 let shareOpen={parents:true,internal:false};
 
 /* ═══════════════════════════════════════
@@ -3138,22 +3138,29 @@ function stats(){
   const t=S.teams.find(x=>x.id===S.teamId);
   const players=pl(S.teamId);
   const sessList=Object.entries(S.sessions).filter(([k])=>k.startsWith(S.teamId+"_")).map(([k,v])=>({date:k.replace(S.teamId+"_",""),data:v}));
-  const allSess=sessList.map(s=>s.data);
-  const total=sessList.length;
   const thr=S.cfg.riskThreshold;
   const feat=S.cfg.features;
   const view=S.statsView||"table";
 
-  if(total===0)return`<header class="header"><div class="hrow">
+  // ── Mes seleccionado ──────────────────────────────────────────────────────
+  const sessMonths=[...new Set(sessList.map(s=>s.date.slice(0,7)))].sort().reverse();
+  const matchMonthsSrc=(S.matches[S.teamId]||[]).filter(mm=>mm.date&&mm.live?.stats&&Object.keys(mm.live.stats).length>0).map(mm=>mm.date.slice(0,7));
+  const allMonths=[...new Set([...sessMonths,...matchMonthsSrc])].sort().reverse();
+  const filteredSess=S.statsMonth?sessList.filter(s=>s.date.startsWith(S.statsMonth)):sessList;
+  const allSess=filteredSess.map(s=>s.data);
+  const total=filteredSess.length;
+  const totalAll=sessList.length;
+
+  if(totalAll===0)return`<header class="header"><div class="hrow">
     <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1"><div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div><div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}</div></div>
   </div></header>
   <div class="content"><div class="empty"><div style="font-size:48px;margin-bottom:12px;opacity:.4">📊</div><div style="font-size:14px;color:var(--tm);margin-bottom:14px">Sin sesiones aún.<br/>Pasa lista primero.</div><button class="btn-p" style="max-width:240px;margin:0 auto" onclick="navTo('att',{date:td()})">✅ Pasar lista ahora</button></div></div>
   ${navBar()}`;
 
-  const sortedSess=[...sessList].sort((a,b)=>b.date.localeCompare(a.date));
+  const sortedSess=[...filteredSess].sort((a,b)=>b.date.localeCompare(a.date));
   const pst=players.map(p=>{
-    const c=_countAtt(p,sessList);
+    const c=_countAtt(p,filteredSess);
     let streak=0;
     for(const s of sortedSess){const v=s.data[p.id]||"present";if(v==="absent")streak++;else break;}
     let scoreSum=0,scoreCnt=0;
@@ -3241,7 +3248,7 @@ function stats(){
   const avgAll=pc(sumPr,sumPs);
 
   // Estadísticas de partidos — agregado por jugador
-  const matchList=(S.matches[S.teamId]||[]).filter(mm=>mm.live&&mm.live.stats&&Object.keys(mm.live.stats).length>0);
+  const matchList=(S.matches[S.teamId]||[]).filter(mm=>mm.live&&mm.live.stats&&Object.keys(mm.live.stats).length>0&&(!S.statsMonth||(mm.date||"").startsWith(S.statsMonth)));
   const matchAgg={};
   matchList.forEach(mm=>{Object.entries(mm.live.stats).forEach(([pid,st])=>{
     if(!matchAgg[pid])matchAgg[pid]={pj:0,pts:0,p2m:0,p2a:0,p3m:0,p3a:0,p1m:0,p1a:0,ro:0,rd:0,ast:0,foul:0,stl:0,blk:0,to:0,minSec:0,eff:0};
@@ -3309,14 +3316,18 @@ function stats(){
     <button class="bbtn" onclick="navBack()">←</button>
     <div style="flex:1">
       <div style="font-family:var(--font-d);font-weight:900;font-size:18px">📊 Estadísticas</div>
-      <div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")} · ${total} entrenos · umbral ${thr}%</div>
+      <div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}${S.statsMonth?" · "+cap(fMonth(S.statsMonth)):" · "+totalAll+" entrenos"} · umbral ${thr}%</div>
     </div>
   </div></header>
   <div class="content">
+    ${allMonths.length>1?`<div class="month-row" style="margin-bottom:10px"><select class="fi" style="flex:1" onchange="S.statsMonth=this.value||null;render()">
+      <option value="" ${!S.statsMonth?"selected":""}>📅 Todos los meses (${totalAll} entrenos · ${(S.matches[S.teamId]||[]).filter(mm=>mm.live?.stats&&Object.keys(mm.live.stats).length>0).length} partidos)</option>
+      ${allMonths.map(m=>{const sc=sessList.filter(s=>s.date.startsWith(m)).length;const mc=(S.matches[S.teamId]||[]).filter(mm=>mm.date?.startsWith(m)&&mm.live?.stats&&Object.keys(mm.live.stats).length>0).length;const parts=[];if(sc)parts.push(sc+" entr.");if(mc)parts.push(mc+" part.");return`<option value="${m}" ${S.statsMonth===m?"selected":""}>${cap(fMonth(m))}  —  ${parts.join(", ")||"sin datos"}</option>`;}).join("")}
+    </select></div>`:""}
     <!-- Overview row -->
     <div style="display:flex;gap:8px;margin-bottom:14px">
       <div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
-        <div style="font-family:var(--font-d);font-weight:900;font-size:28px;color:${avgAll>=90?"#22c55e":avgAll>=thr?"#f59e0b":"#ef4444"}">${avgAll}%</div>
+        <div style="font-family:var(--font-d);font-weight:900;font-size:28px;color:${avgAll>=90?"#22c55e":avgAll>=thr?"#f59e0b":"#ef4444"}">${total>0?avgAll+"<span style='font-size:16px'>%</span>":"—"}</div>
         <div style="font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase;letter-spacing:1px">Media</div>
       </div>
       <div style="flex:1;background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
