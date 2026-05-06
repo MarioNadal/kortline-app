@@ -9,7 +9,75 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.5 — Pulido UX live game: confirmación cuarto, bonus toast, modo rápido, selector equipo _(actual)_
+### v1.8.18 — Stats al pie en portrait, drag-to-dismiss mejorado, titular+capitán sin re-render _(actual)_
+
+**Fix portrait stats (B-portrait)** — En portrait, la tabla de estadísticas del partido ahora aparece siempre al pie, debajo del quinteto/acciones/banquillo. La fase 2 (v1.8.14) había movido las stats a la columna izquierda del grid, lo que en portrait las dejaba en mitad de pantalla. Solución: se separan los contenidos en tres divs independientes (`.live-scoreboard-wrap`, `.live-col-r`, `.live-stats-wrap`) ordenados en el DOM para portrait, y en landscape se usan `grid-template-areas` para mantener el layout de 2 columnas (marcador izq-arriba / stats izq-abajo / quinteto der).
+
+**Drag-to-dismiss mejorado** — El `.mhandle` de todos los bottom sheets ahora ocupa el ancho completo y tiene 36 px de área táctil. Se elimina el `e.preventDefault()` del `pointerdown` (evitaba el scroll del contenido) y se mueve al `onMove` con umbral de 8 px (solo cancela scroll cuando ya hay intención real de arrastre). Resuelve el bloqueo momentáneo al tocar cerca de la barra en modales como "Crear partido" o "Crear jugador".
+
+**Select-all sin flash** — `_convSelectAll()` y `_convClearAll()` reconstruyen el HTML del modal pero bloquean la animación `modalSlideUp` al instante (`modal.style.animation="none"; modal.style.transform="translateX(-50%) translateY(0)"`). El modal ya no desaparece y reaparece al convocar a todos o a ninguno.
+
+**Titular y capitán in-place en matchDetail** — `setCapitan()` y `toggleTitular()` ya no llaman a `save();render()`. En su lugar usan `_mdConvRefreshRow(pid)` (actualiza solo la fila DOM del jugador) y `_mdConvRefreshSubtitle()` (actualiza el contador de convocados/titulares). Elimina el parpadeo y el scroll al inicio de página al tocar ⭐ o (C).
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.18"`
+
+---
+
+### v1.8.17 — Eliminado botón "🔄 Sync live" redundante
+
+El botón "🔄 Sync live" en el detalle del partido ya no aparece. El sync de stats del live al marcador manual se hace automáticamente; el botón era innecesario y confundía. El div que lo contenía (con `space-between`) se simplifica a un `margin-bottom` plano.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.17"`
+
+---
+
+### v1.8.16 — Botón "✅ Confirmar sesión" para entrenamientos con todos presentes (B-confirm)
+
+**Problema.** Si todos los jugadores asisten al entreno (el estado por defecto es "presente"), el coach no toca ningún botón y la sesión nunca se guarda en `localStorage`. Al día siguiente no hay registro de esa sesión.
+
+**Solución.** `att()` detecta si existe ya la sesión del día (`sessionExists = !!S.sessions[sk(teamId, date)]`). Si no existe, el pie del pase de lista muestra un botón naranja grande **✅ Confirmar sesión** en lugar del indicador de autoguardado. Al pulsarlo, `confirmSession()` llama a `_flushSess()` (que marca a todos los jugadores explícitamente), guarda y muestra el toast `✅ Sesión confirmada`. Una vez guardada, el botón desaparece y aparece el indicador de autoguardado habitual.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.16"`
+
+---
+
+### v1.8.15 — Stats más grandes en landscape, hint de rotar oculto en landscape (Fase 3)
+
+Dentro del `@media (min-width:700px) and (orientation:landscape)`:
+- `.stats-content{max-width:960px!important;}` — la pantalla de stats aprovecha todo el ancho.
+- `.stats-table{font-size:13px;}` / `th{font-size:11px;padding:7px}` / `td{padding:8px 7px}` — tabla más legible.
+- `.live-rotate-hint{display:none;}` — en landscape ya no hace falta el aviso "🔄 gira para ver completa".
+
+El div `stats()` pasa a usar `class="content stats-content"`.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.15"`
+
+---
+
+### v1.8.14 — Live game en landscape: layout 2 columnas (Fase 2)
+
+En `@media (min-width:700px) and (orientation:landscape)` el live game muestra:
+- **Columna izquierda (2fr):** marcador sticky + tabla de stats.
+- **Columna derecha (3fr):** quinteto en pista + acciones + banquillo.
+
+CSS nuevo: `.live-game-content{max-width:1100px!important;}`, `.live-2col{display:grid;grid-template-columns:2fr 3fr;…}`, `.live-col-l{position:sticky;top:0;}`.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.14"`
+
+---
+
+### v1.8.13 — Grids responsivos en estadísticas y equipos (Fase 1)
+
+- `stats()` envuelve las cards de jugadores en `<div class="stats-cards-grid">` con CSS grid 2 columnas a partir de 600 px.
+- `equiposScreen()` envuelve las cards de equipos en `<div class="cards-grid">` con el mismo grid.
+
+Mejora la legibilidad en tablet/desktop sin romper la vista móvil de una columna.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.13"`
+
+---
+
+### v1.8.5 — Pulido UX live game: confirmación cuarto, bonus toast, modo rápido, selector equipo
 
 Cierre del informe `QA_LIVE_UX_v1614.md`. Cuatro mejoras que reducen fricción del anotador en partido real, todas activadas tras la auditoría regresión de v1.8.4.
 
