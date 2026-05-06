@@ -515,13 +515,23 @@ label{-webkit-tap-highlight-color:transparent;}
 }
 
 /* ─── FASE 2 · Live en landscape 2 columnas (≥700px landscape) ─────────── */
+/* ─── FASE 3 · Tablas de stats horizontales en landscape ────────────────── */
 @media (min-width:700px) and (orientation:landscape){
-  /* El live ocupa todo el ancho disponible */
+  /* Fase 2: live ocupa todo el ancho disponible */
   .live-game-content{max-width:1100px!important;}
-  /* Grid: marcador+stats a la izq, quinteto+acciones a la der */
+  /* Fase 2: grid marcador+stats izq / quinteto+acciones der */
   .live-2col{display:grid;grid-template-columns:2fr 3fr;gap:14px;align-items:start;}
-  /* La col izq se queda sticky para que el marcador no desaparezca */
+  /* Fase 2: col izq sticky para que el marcador no desaparezca */
   .live-col-l{position:sticky;top:0;}
+
+  /* Fase 3: pantalla de stats más ancha → tabla de partidos respira */
+  .stats-content{max-width:960px!important;}
+  /* Fase 3: tablas de stats más legibles en landscape */
+  .stats-table{font-size:13px;}
+  .stats-table th{font-size:11px;padding:7px 7px;}
+  .stats-table td{padding:8px 7px;}
+  /* Fase 3: en landscape no hace falta el aviso de rotar */
+  .live-rotate-hint{display:none;}
 }
 </style>
 </head>
@@ -3380,7 +3390,7 @@ function stats(){
       <div style="font-size:11px;color:var(--orange)">${esc(t?.name||"")}${S.statsMonth?" · "+cap(fMonth(S.statsMonth)):" · "+totalAll+" entrenos"} · umbral ${thr}%</div>
     </div>
   </div></header>
-  <div class="content">
+  <div class="content stats-content">
     ${allMonths.length>1?`<div class="month-row" style="margin-bottom:10px"><select class="fi" style="flex:1" onchange="S.statsMonth=this.value||null;render()">
       <option value="" ${!S.statsMonth?"selected":""}>📅 Todos los meses (${totalAll} entrenos · ${(S.matches[S.teamId]||[]).filter(mm=>mm.live?.stats&&Object.keys(mm.live.stats).length>0).length} partidos)</option>
       ${allMonths.map(m=>{const sc=sessList.filter(s=>s.date.startsWith(m)).length;const mc=(S.matches[S.teamId]||[]).filter(mm=>mm.date?.startsWith(m)&&mm.live?.stats&&Object.keys(mm.live.stats).length>0).length;const parts=[];if(sc)parts.push(sc+" entr.");if(mc)parts.push(mc+" part.");return`<option value="${m}" ${S.statsMonth===m?"selected":""}>${cap(fMonth(m))}  —  ${parts.join(", ")||"sin datos"}</option>`;}).join("")}
@@ -6521,7 +6531,7 @@ function liveGame(){
     </div>`:""}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--td)">Estadísticas del partido</div>
-        <div style="font-size:10px;color:var(--tm);font-weight:600">🔄 gira para ver completa</div>
+        <div class="live-rotate-hint" style="font-size:10px;color:var(--tm);font-weight:600">🔄 gira para ver completa</div>
       </div>
       ${(live.statsView==='rival'&&rivalEnabled)?rivalStatsTable:statsTable}
 
