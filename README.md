@@ -9,7 +9,19 @@ Repositorio: [github.com/MarioNadal/kortline-app](https://github.com/MarioNadal/
 
 ## Historial de versiones
 
-### v1.8.21 — Stats modal landscape: card grid "de un vistazo" _(actual)_
+### v1.8.22 — VAL (Valoración) en modal de stats _(actual)_
+
+Añadida columna **VAL** (Valoración/Eficiencia) a todas las vistas del modal de estadísticas:
+- **Cards landscape**: cada card muestra `VAL N` al pie, en verde si positivo y rojo si negativo.
+- **Tabla (modo tabla en portrait o landscape)**: columna `VAL` al final de la cabecera, valor por jugador con color (verde/rojo), y suma total en la fila `EQUIPO`/`RIVAL`.
+- El valor se calcula con la fórmula existente `_calcEFF()` → entero, sin decimales.
+- También fix residual v1.8.22: botón 📊 siempre visible (portrait + landscape), `.live-stats-wrap` siempre oculta hasta pulsar el botón.
+
+**SW bump.** `CACHE_VERSION = "kortline-v1.8.22"`
+
+---
+
+### v1.8.21 — Stats modal landscape: card grid "de un vistazo"
 
 El modal de estadísticas en landscape ahora abre en modo **card grid** en lugar de tabla:
 - Cada jugador = una card (~88px min) con: #dorsal, nombre, **PTS grande**, T2/T3, RB, faltas.

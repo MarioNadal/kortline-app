@@ -1,8 +1,8 @@
-// Kortline · Service Worker v1.8.19
+// Kortline · Service Worker v1.8.22
 // Cache-first para los assets de la app shell, network-first para el resto.
 // Bump CACHE_VERSION en cada release para invalidar caché vieja en clientes.
 
-const CACHE_VERSION = "kortline-v1.8.21";
+const CACHE_VERSION = "kortline-v1.8.22";
 const APP_SHELL = [
   "./",
   "./index.html",

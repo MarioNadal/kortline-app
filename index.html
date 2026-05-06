@@ -394,6 +394,10 @@ select.fi{padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xml
 .season-sl{font-size:10px;color:var(--td);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
 /* ── Live Game ── */
 .live-header{background:linear-gradient(135deg,rgba(239,68,68,.18),rgba(180,20,20,.1));border-bottom:1px solid rgba(239,68,68,.35);}
+/* Botón 📊 siempre visible, icon centrado */
+.live-stats-btn{display:flex!important;align-items:center;justify-content:center;}
+/* Stats inline siempre ocultas → se abren con el botón 📊 */
+.live-stats-wrap{display:none!important;}
 .live-scoreboard{background:var(--s2);border:1px solid var(--border);border-radius:16px;padding:16px 14px;margin-bottom:10px;text-align:center;}
 .live-score{font-family:var(--font-d);font-weight:900;font-size:62px;line-height:1;color:var(--tx);}
 .live-diff{font-size:14px;font-weight:800;padding:2px 10px;border-radius:8px;display:inline-block;margin:4px 0;}
@@ -542,9 +546,6 @@ label{-webkit-tap-highlight-color:transparent;}
   .stats-table td{padding:8px 7px;}
   /* Fase 3: en landscape no hace falta el aviso de rotar */
   .live-rotate-hint{display:none;}
-  /* Fase 3b: en landscape las stats van en modal (botón 📊), no inline */
-  .live-stats-wrap{display:none!important;}
-  .live-stats-btn{display:flex!important;}
   /* Fase 3b: col izq solo tiene el marcador → grid de 1 sola fila */
   .live-2col{grid-template-rows:auto;grid-template-areas:"scoreboard court";}
 }
@@ -6567,7 +6568,7 @@ function liveGame(){
     <div style="display:flex;gap:5px;align-items:center">
       ${bonus?`<span style="background:rgba(245,158,11,.25);color:#f59e0b;border:1px solid rgba(245,158,11,.4);border-radius:6px;font-size:10px;font-weight:800;padding:2px 6px">BONUS</span>`:""}
       ${m.shotChart?`<button onclick="navTo('shotMap')" style="width:32px;height:32px;border-radius:7px;background:rgba(240,99,24,.15);border:1px solid rgba(240,99,24,.4);color:var(--orange);cursor:pointer;font-size:14px;font-weight:900" title="Mapa de tiros">📍</button>`:""}
-      <button class="live-stats-btn" onclick="openLiveStatsModal()" style="width:32px;height:32px;border-radius:7px;background:rgba(99,179,237,.15);border:1px solid rgba(99,179,237,.4);color:#63b3ed;cursor:pointer;font-size:15px;display:none" title="Ver estadísticas">📊</button>
+      <button class="live-stats-btn" onclick="openLiveStatsModal()" style="width:32px;height:32px;border-radius:7px;background:rgba(99,179,237,.15);border:1px solid rgba(99,179,237,.4);color:#63b3ed;cursor:pointer;font-size:15px" title="Ver estadísticas">📊</button>
       <button onclick="shareMatchResult()" style="width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;cursor:pointer;font-size:15px" title="Compartir marcador">📤</button>
       <button onclick="_finishAndShowSummary('${S.teamId}','${S.matchId}')" style="width:32px;height:32px;border-radius:7px;background:rgba(107,114,128,.15);border:1px solid #6b728055;cursor:pointer;font-size:15px" title="Finalizar partido">🏁</button>
     </div>
@@ -6673,7 +6674,7 @@ function _buildLiveStatsHtml(teamId,matchId){
     <table class="stats-table">
       <thead><tr style="background:var(--s2)">
         <th>#</th><th>Jugador</th><th>PTS</th>
-        <th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>
+        <th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th><th>VAL</th>
       </tr></thead>
       <tbody>
         ${convP.map((p,i)=>{
@@ -6682,6 +6683,7 @@ function _buildLiveStatsHtml(teamId,matchId){
           const f=st.foul||0;const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--tx)";
           const inPista=onCourt.includes(p.id);
           const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
+          const eff=_calcEFF(st);const ec=eff>0?"#22c55e":eff<0?"#ef4444":"var(--td)";
           return`<tr style="background:${inPista?"rgba(240,99,24,.06)":i%2?"rgba(255,255,255,.015)":"transparent"}">
             <td style="font-weight:700;color:var(--td)">${p.number||"?"}</td>
             <td style="font-weight:600;white-space:nowrap;color:${inPista?"var(--tx)":"var(--td)"}">
@@ -6693,6 +6695,7 @@ function _buildLiveStatsHtml(teamId,matchId){
             <td>${st.ro||0}</td><td>${st.rd||0}</td><td>${st.ast||0}</td>
             <td style="font-weight:700;color:${fc}">${f||0}</td>
             <td>${st.stl||0}</td><td>${st.blk||0}</td><td>${st.to||0}</td>
+            <td style="font-weight:700;color:${ec}">${eff}</td>
           </tr>`;
         }).join("")}
         <tr class="totrow">
@@ -6707,6 +6710,7 @@ function _buildLiveStatsHtml(teamId,matchId){
           <td style="color:var(--td)">${totSt(s=>s.stl)}</td>
           <td style="color:var(--td)">${totSt(s=>s.blk)}</td>
           <td style="color:var(--td)">${totSt(s=>s.to)}</td>
+          <td style="font-weight:700;color:var(--td)">${convP.reduce((s,p)=>s+_calcEFF(live.stats[p.id]||{}),0)}</td>
         </tr>
       </tbody>
     </table>
@@ -6723,6 +6727,7 @@ function _buildLiveStatsHtml(teamId,matchId){
       const f=st.foul||0;const fc=f>=5?"#ef4444":f>=4?"#f59e0b":"var(--tx)";
       const inPista=rivalOnCourt.includes(p.id);
       const t2a=(st.p2m||0)+(st.p2a||0),t3a=(st.p3m||0)+(st.p3a||0),t1a=(st.p1m||0)+(st.p1a||0);
+      const reff=_calcEFF(st);const rec=reff>0?"#22c55e":reff<0?"#ef4444":"var(--td)";
       rows+="<tr style='background:"+(inPista?"rgba(239,68,68,.06)":i%2?"rgba(255,255,255,.015)":"transparent")+"'>"
         +"<td style='font-weight:700;color:var(--td)'>"+(p.number||"?")+"</td>"
         +"<td style='font-weight:600;white-space:nowrap;color:"+(inPista?"var(--tx)":"var(--td)")+"'>"+esc(_shortName(p.name))+(inPista?"<span style='font-size:9px;color:var(--td);margin-left:3px'>▶</span>":"")+"</td>"
@@ -6732,12 +6737,13 @@ function _buildLiveStatsHtml(teamId,matchId){
         +"<td>"+(st.ro||0)+"</td><td>"+(st.rd||0)+"</td><td>"+(st.ast||0)+"</td>"
         +"<td style='font-weight:700;color:"+fc+"'>"+(f||0)+"</td>"
         +"<td>"+(st.stl||0)+"</td><td>"+(st.blk||0)+"</td><td>"+(st.to||0)+"</td>"
+        +"<td style='font-weight:700;color:"+rec+"'>"+reff+"</td>"
         +"</tr>";
     });
     rival='<div style="overflow-x:auto;border-radius:10px;border:1px solid rgba(239,68,68,.3)">'
       +'<table class="stats-table" style="border-color:rgba(239,68,68,.15)">'
       +'<thead><tr style="background:rgba(239,68,68,.1)">'
-      +'<th>#</th><th>Jugador</th><th>PTS</th><th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th>'
+      +'<th>#</th><th>Jugador</th><th>PTS</th><th>T2</th><th>T3</th><th>TL</th><th>RO</th><th>RD</th><th>AST</th><th>F</th><th>ROB</th><th>TAP</th><th>PER</th><th>VAL</th>'
       +'</tr></thead><tbody>'+rows
       +'<tr class="totrow"><td colspan="2" style="color:var(--td);font-size:10px;font-weight:700;padding:5px 8px">RIVAL</td>'
       +'<td style="font-family:var(--font-d);font-weight:900;font-size:14px;color:#ef4444">'+rivTotal+'</td>'
@@ -6748,7 +6754,8 @@ function _buildLiveStatsHtml(teamId,matchId){
       +'<td style="color:var(--td)">'+rTot(s=>s.ast||0)+'</td>'
       +'<td style="color:var(--td)">'+rTot(s=>s.foul||0)+'</td>'
       +'<td style="color:var(--td)">'+rTot(s=>s.stl||0)+'</td><td style="color:var(--td)">'+rTot(s=>s.blk||0)+'</td>'
-      +'<td style="color:var(--td)">'+rTot(s=>s.to||0)+'</td></tr>'
+      +'<td style="color:var(--td)">'+rTot(s=>s.to||0)+'</td>'
+      +'<td style="font-weight:700;color:var(--td)">'+rivalPlayers.reduce((s,p)=>s+_calcEFF(rs[p.id]||{}),0)+'</td></tr>'
       +'</tbody></table></div>';
   }
   return{ours,rival,rivalEnabled,t};
@@ -6799,6 +6806,7 @@ function _buildLiveStatsCards(teamId,matchId,view){
     const t3m=st.p3m||0,t3a=t3m+(st.p3a||0);
     const rb=(st.ro||0)+(st.rd||0);
     const fDots='●'.repeat(Math.min(f,5))+'○'.repeat(Math.max(0,5-f));
+    const eff=_calcEFF(st);const ec=eff>0?'#22c55e':eff<0?'#ef4444':'var(--td)';
     return`<div style="border-radius:11px;border:2px solid ${inPista?tc+'88':'var(--border)'};background:${inPista?tc+'14':'var(--s2)'};padding:9px 7px 8px;text-align:center;position:relative">
       ${inPista?`<div style="position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:${tc};box-shadow:0 0 4px ${tc}"></div>`:''}
       <div style="font-size:10px;font-weight:800;color:${inPista?tc:'var(--td)'};">#${p.number||'?'}</div>
@@ -6813,6 +6821,7 @@ function _buildLiveStatsCards(teamId,matchId,view){
         <span title="Rebotes" style="background:var(--bg);border-radius:4px;padding:1px 4px">${rb}<span style="color:var(--tm)"> RB</span></span>
         <span style="color:${fc};background:var(--bg);border-radius:4px;padding:1px 4px;font-weight:${f>=4?900:700}">${f}<span style="color:var(--tm)"> F</span></span>
       </div>
+      <div style="margin-top:4px;font-size:9px;font-weight:800;color:${ec}">VAL&nbsp;${eff}</div>
     </div>`;
   }).join('');
   return`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px">${cards}</div>`;
